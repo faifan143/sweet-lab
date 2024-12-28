@@ -1,101 +1,172 @@
-import Image from "next/image";
+"use client";
+import ActionButton from "@/components/common/ActionButtons";
+import CloseShiftModal from "@/components/common/CloseShiftModal";
+import Navbar from "@/components/common/Navbar";
+import ShiftModal, { ShiftType } from "@/components/common/ShiftModal";
+import SplineBackground from "@/components/common/SplineBackground";
+import StatBox from "@/components/common/StatBox";
+import TabContent from "@/components/common/TableContent";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  DollarSign,
+  Package,
+  Play,
+  StopCircle,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
 
-export default function Home() {
+export default function Page() {
+  const [activeTab, setActiveTab] = useState("بسطة");
+  const [isShiftOpen, setIsShiftOpen] = useState(false);
+  const [currentShiftType, setCurrentShiftType] = useState<ShiftType>(null);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+
+  const stats = [
+    {
+      title: "المبيعات اليومية",
+      value: "12,500$",
+      icon: TrendingUp,
+      trend: 12,
+    },
+    { title: "العملاء النشطون", value: "320", icon: Users, trend: -5 },
+    { title: "الإيرادات", value: "45,000$", icon: DollarSign, trend: 8 },
+    { title: "المخزون", value: "1,250", icon: Package, trend: 3 },
+  ];
+
+  const handleAddIncome = (type: string) => {
+    console.log(`Adding income for ${type}...`);
+  };
+
+  const handleAddExpense = (type: string) => {
+    console.log(`Adding expense for ${type}...`);
+  };
+
+  const handleShiftOpen = () => {
+    setShowShiftModal(true);
+  };
+
+  const handleShiftTypeSelect = (type: ShiftType) => {
+    setCurrentShiftType(type);
+    setIsShiftOpen(true);
+    setShowShiftModal(false);
+  };
+
+  // Initiates shift closing process
+  const handleShiftClose = () => {
+    setShowCloseShiftModal(true);
+  };
+
+  // Confirms shift closing
+  const handleConfirmShiftClose = () => {
+    setIsShiftOpen(false);
+    setCurrentShiftType(null);
+    setActiveTab("بسطة");
+    setShowCloseShiftModal(false);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative">
+      <SplineBackground activeTab={activeTab} />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      {/* Modals */}
+      <AnimatePresence>
+        {showShiftModal && (
+          <ShiftModal
+            onClose={() => setShowShiftModal(false)}
+            onSelect={handleShiftTypeSelect}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCloseShiftModal && currentShiftType && (
+          <CloseShiftModal
+            onClose={() => setShowCloseShiftModal(false)}
+            onConfirm={handleConfirmShiftClose}
+            shiftType={currentShiftType}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        )}
+      </AnimatePresence>
+
+      <div className="relative z-10">
+        <Navbar />
+        <main className="pt-32 p-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Stats Grid */}
+            <div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+              dir="rtl"
+            >
+              {stats.map((stat, index) => (
+                <StatBox key={index} {...stat} />
+              ))}
+            </div>
+
+            {/* Shift Control Buttons */}
+            <div
+              className="flex flex-wrap gap-4 mb-8 justify-end items-center"
+              dir="rtl"
+            >
+              {currentShiftType && (
+                <span className="text-slate-400">
+                  الوردية الحالية: {currentShiftType}
+                </span>
+              )}
+              {!isShiftOpen ? (
+                <ActionButton
+                  icon={<Play className="h-5 w-5" />}
+                  label="فتح وردية"
+                  onClick={handleShiftOpen}
+                  variant="success"
+                />
+              ) : (
+                <ActionButton
+                  icon={<StopCircle className="h-5 w-5" />}
+                  label="اغلاق وردية"
+                  onClick={handleShiftClose}
+                  variant="danger"
+                />
+              )}
+            </div>
+
+            {/* Tabs and Content - Only visible when shift is open */}
+            {isShiftOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="mt-8"
+                dir="rtl"
+              >
+                <div className="flex space-x-4 border-b border-slate-700/50">
+                  {["بسطة", "جامعة", "عام"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${
+                        activeTab === tab
+                          ? "text-sky-400 border-b-2 border-sky-400"
+                          : "text-slate-400 hover:text-slate-300"
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                <TabContent
+                  type={activeTab}
+                  onAddIncome={() => handleAddIncome(activeTab)}
+                  onAddExpense={() => handleAddExpense(activeTab)}
+                />
+              </motion.div>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
