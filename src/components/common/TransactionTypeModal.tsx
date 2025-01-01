@@ -1,46 +1,96 @@
-// TransactionTypeModal.tsx
-import { FC } from "react";
+"use client";
+import { motion } from "framer-motion";
+import { Receipt, CreditCard, Wallet, X } from "lucide-react";
+import React from "react";
 
-interface TransactionTypeModalProps {
+export type TransactionType = "منتجات" | "مباشر" | "دين" | null;
+export type TransactionMode = "income" | "expense";
+
+export interface TransactionTypeModalProps {
   onClose: () => void;
-  onSelect: (type: string) => void;
+  onSelect: (type: TransactionType) => void;
+  mode: TransactionMode;
 }
 
-const TransactionTypeModal: FC<TransactionTypeModalProps> = ({
+const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
   onClose,
   onSelect,
+  mode,
 }) => {
-  const handleSelection = (type: string) => {
-    onSelect(type);
-    onClose(); // Close modal after selection
-  };
+  const types = [
+    {
+      id: "منتجات",
+      icon: Receipt,
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-500/10 hover:bg-emerald-500/20",
+      description:
+        mode === "income" ? "فاتورة بيع منتجات" : "فاتورة شراء منتجات",
+    },
+    {
+      id: "مباشر",
+      icon: CreditCard,
+      color: "text-blue-400",
+      bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
+      description:
+        mode === "income" ? "دخل مباشر بدون فاتورة" : "مصروف مباشر بدون فاتورة",
+    },
+    {
+      id: "دين",
+      icon: Wallet,
+      color: "text-purple-400",
+      bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
+      description: mode === "income" ? "تحصيل دين" : "تسجيل دين جديد",
+    },
+  ];
 
   return (
-    <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
-      <div className="bg-white p-6 rounded-lg">
-        <h2 className="text-xl font-bold mb-4">اختر نوع العملية</h2>
-        <div className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-slate-100">
+            {mode === "income" ? "نوع الدخل" : "نوع المصروف"}
+          </h2>
           <button
-            onClick={() => handleSelection("فاتورة منتجات")}
-            className="w-full bg-blue-500 text-white py-2 rounded"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-300 transition-colors"
           >
-            فاتورة منتجات
-          </button>
-          <button
-            onClick={() => handleSelection("مباشرة")}
-            className="w-full bg-green-500 text-white py-2 rounded"
-          >
-            مباشرة
-          </button>
-          <button
-            onClick={() => handleSelection("صرف")}
-            className="w-full bg-red-500 text-white py-2 rounded"
-          >
-            صرف
+            <X size={24} />
           </button>
         </div>
-      </div>
-    </div>
+
+        <div className="grid grid-cols-1 gap-4" dir="rtl">
+          {types.map((type) => (
+            <button
+              key={type.id}
+              onClick={() => onSelect(type.id as TransactionType)}
+              className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
+            >
+              <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
+                <type.icon size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-semibold ${type.color} text-lg`}>
+                  {type.id}
+                </h3>
+                <p className="text-slate-400 text-sm">{type.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

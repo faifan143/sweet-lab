@@ -1,16 +1,25 @@
+"use client";
 import { motion } from "framer-motion";
-import { BookOpenCheck, Package, X, Menu } from "lucide-react";
+import {
+  BookOpenCheck,
+  Menu,
+  Moon,
+  Package,
+  Receipt,
+  Sun,
+  X,
+} from "lucide-react";
 import { useState } from "react";
+import { useTheme } from "../providers/ThemeProvider";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { name: "دفتر اليومية", icon: BookOpenCheck, href: "/" },
     { name: "المواد", icon: Package, href: "/materials" },
-    // { name: "الفواتير", icon: Receipt, href: "/invoices" },
-    // { name: "الديون", icon: Wallet, href: "/debts" },
-    // { name: "المستودع", icon: BoxIcon, href: "/warehouse" },
+    { name: "الفواتير", icon: Receipt, href: "/invoices" },
   ];
 
   const containerVariants = {
@@ -38,12 +47,20 @@ const Navbar = () => {
 
   return (
     <nav className="fixed w-full top-0 z-50" dir="rtl">
-      {/* Softer gradient background with blur */}
-      <div className="bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-md border-b border-slate-700/30">
+      <div className="bg-navbar-bg backdrop-blur-md border-b border-navbar-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
+            {/* Logo/Brand */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center"
+            >
+              <span className="text-xl font-bold text-primary">SweetLab</span>
+            </motion.div>
+
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center justify-between flex-1 mr-8">
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
@@ -58,22 +75,59 @@ const Navbar = () => {
                   >
                     <a
                       href={item.href}
-                      className="flex  items-center px-3 py-2 text-slate-300 hover:text-sky-300 transition-colors duration-300 gap-2 group"
+                      className="flex items-center px-3 py-2 text-muted-foreground hover:text-primary transition-colors duration-300 gap-2 group"
                     >
                       <item.icon className="h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity duration-300" />
                       <span>{item.name}</span>
                     </a>
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-300/50 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-right" />
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary/50 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-right" />
                   </motion.div>
                 ))}
               </motion.div>
+
+              {/* Theme Toggle */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-secondary text-secondary-foreground hover:text-primary transition-colors duration-300 mr-4"
+              >
+                <motion.div
+                  initial={false}
+                  animate={{ rotate: theme === "dark" ? 0 : 180 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </motion.div>
+              </motion.button>
             </div>
 
-            {/* Mobile menu button */}
-            <div className="flex items-center md:hidden">
+            {/* Mobile Menu and Theme Toggle */}
+            <div className="md:hidden flex items-center gap-4">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-secondary text-secondary-foreground hover:text-primary transition-colors duration-300"
+              >
+                <motion.div
+                  initial={false}
+                  animate={{ rotate: theme === "dark" ? 0 : 180 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </motion.div>
+              </motion.button>
+
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="text-slate-300 hover:text-sky-300 transition-colors duration-300"
+                className="text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 {isOpen ? (
                   <X className="h-6 w-6" />
@@ -82,15 +136,6 @@ const Navbar = () => {
                 )}
               </button>
             </div>
-
-            {/* Logo/Brand */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center"
-            >
-              <span className="text-xl font-bold text-sky-300">SweetLab</span>
-            </motion.div>
           </div>
         </div>
 
@@ -108,7 +153,7 @@ const Navbar = () => {
               <a
                 key={item.name}
                 href={item.href}
-                className="flex items-center px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/50 hover:text-sky-300 transition-all duration-300 gap-2"
+                className="flex items-center px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-all duration-300 gap-2"
               >
                 <item.icon className="h-4 w-4 opacity-70" />
                 <span>{item.name}</span>

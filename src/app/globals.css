@@ -6,3 +6,84 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   pointer-events: none;
 }
+
+/* add the code bellow */
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+  :root {
+    --background: theme("colors.white");
+    --foreground: theme("colors.gray.900");
+
+    --card: theme("colors.white");
+    --card-foreground: theme("colors.gray.900");
+
+    --navbar-bg: theme("colors.white/90");
+    --navbar-border: theme("colors.gray.200/30");
+
+    --primary: theme("colors.sky.500");
+    --primary-foreground: theme("colors.gray.50");
+
+    --secondary: theme("colors.gray.100");
+    --secondary-foreground: theme("colors.gray.900");
+
+    --muted: theme("colors.gray.100");
+    --muted-foreground: theme("colors.gray.600");
+
+    --accent: theme("colors.gray.100");
+    --accent-foreground: theme("colors.gray.900");
+
+    --success: theme("colors.emerald.500");
+    --warning: theme("colors.yellow.500");
+    --danger: theme("colors.red.500");
+
+    --border: theme("colors.gray.200");
+    --input: theme("colors.gray.200");
+    --ring: theme("colors.gray.950");
+  }
+
+  .dark {
+    --background: theme("colors.slate.950");
+    --foreground: theme("colors.slate.50");
+
+    --card: theme("colors.slate.800/50");
+    --card-foreground: theme("colors.slate.50");
+
+    --navbar-bg: theme("colors.slate.900/90");
+    --navbar-border: theme("colors.slate.700/30");
+
+    --primary: theme("colors.sky.400");
+    --primary-foreground: theme("colors.gray.50");
+
+    --secondary: theme("colors.slate.800");
+    --secondary-foreground: theme("colors.slate.50");
+
+    --muted: theme("colors.slate.800");
+    --muted-foreground: theme("colors.slate.400");
+
+    --accent: theme("colors.slate.800");
+    --accent-foreground: theme("colors.slate.50");
+
+    --success: theme("colors.emerald.400");
+    --warning: theme("colors.yellow.400");
+    --danger: theme("colors.red.400");
+
+    --border: theme("colors.slate.700");
+    --input: theme("colors.slate.700");
+    --ring: theme("colors.slate.300");
+  }
+}

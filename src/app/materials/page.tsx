@@ -53,7 +53,7 @@ const sampleMaterials: Material[] = [
 
 const MaterialsPage = () => {
   const [materials, setMaterials] = useState<Material[]>(sampleMaterials);
-  const [categories] = useState<Category[]>(sampleCategories);
+  const [categories, setCategories] = useState<Category[]>(sampleCategories);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -69,7 +69,7 @@ const MaterialsPage = () => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleAddOrUpdateMaterial = (materialData: any) => {
+  const handleAddOrUpdateMaterial = (materialData: Material) => {
     if (editingMaterial) {
       setMaterials((prev) =>
         prev.map((m) =>
@@ -84,6 +84,10 @@ const MaterialsPage = () => {
     }
     setModalVisible(false);
     setEditingMaterial(null);
+  };
+
+  const handleAddCategory = (newCategory: Category) => {
+    setCategories((prev) => [...prev, newCategory]);
   };
 
   const handleDeleteMaterial = (id: number) => {
@@ -224,14 +228,13 @@ const MaterialsPage = () => {
         </main>
       </div>
 
-      {/* Material Modal */}
       {modalVisible && (
         <MaterialModal
           onClose={() => setModalVisible(false)}
           onSubmit={handleAddOrUpdateMaterial}
           material={editingMaterial}
           categories={categories}
-          onAddCategory={() => {}}
+          onAddCategory={handleAddCategory}
         />
       )}
     </div>

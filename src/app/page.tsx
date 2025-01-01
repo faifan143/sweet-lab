@@ -1,11 +1,16 @@
 "use client";
 import ActionButton from "@/components/common/ActionButtons";
 import CloseShiftModal from "@/components/common/CloseShiftModal";
+import InvoiceForm from "@/components/common/InvoiceForm";
 import Navbar from "@/components/common/Navbar";
 import ShiftModal, { ShiftType } from "@/components/common/ShiftModal";
 import SplineBackground from "@/components/common/SplineBackground";
 import StatBox from "@/components/common/StatBox";
-import TabContent from "@/components/common/TableContent";
+import TabContent, { TableItem } from "@/components/common/TableContent";
+import TransactionTypeModal, {
+  TransactionType,
+  TransactionMode,
+} from "@/components/common/TransactionTypeModal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   DollarSign,
@@ -19,10 +24,30 @@ import { useState } from "react";
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState("بسطة");
+  const [tableData, setTableData] = useState<{ [key: string]: TableItem[] }>({
+    بسطة: [
+      { id: 1, name: "منتج 1", quantity: 50, price: 100 },
+      { id: 2, name: "منتج 2", quantity: 30, price: 150 },
+    ],
+    جامعة: [
+      { id: 1, name: "كتاب", quantity: 20, price: 200 },
+      { id: 2, name: "قرطاسية", quantity: 100, price: 50 },
+    ],
+    عام: [
+      { id: 1, name: "منتج عام 1", quantity: 75, price: 80 },
+      { id: 2, name: "منتج عام 2", quantity: 60, price: 120 },
+    ],
+  });
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [currentShiftType, setCurrentShiftType] = useState<ShiftType>(null);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [transactionMode, setTransactionMode] =
+    useState<TransactionMode>("income");
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [selectedTransactionType, setSelectedTransactionType] =
+    useState<TransactionType>(null);
 
   const stats = [
     {
@@ -36,17 +61,7 @@ export default function Page() {
     { title: "المخزون", value: "1,250", icon: Package, trend: 3 },
   ];
 
-  const handleAddIncome = (type: string) => {
-    console.log(`Adding income for ${type}...`);
-  };
-
-  const handleAddExpense = (type: string) => {
-    console.log(`Adding expense for ${type}...`);
-  };
-
-  const handleShiftOpen = () => {
-    setShowShiftModal(true);
-  };
+  const handleShiftOpen = () => setShowShiftModal(true);
 
   const handleShiftTypeSelect = (type: ShiftType) => {
     setCurrentShiftType(type);
@@ -54,12 +69,8 @@ export default function Page() {
     setShowShiftModal(false);
   };
 
-  // Initiates shift closing process
-  const handleShiftClose = () => {
-    setShowCloseShiftModal(true);
-  };
+  const handleShiftClose = () => setShowCloseShiftModal(true);
 
-  // Confirms shift closing
   const handleConfirmShiftClose = () => {
     setIsShiftOpen(false);
     setCurrentShiftType(null);
@@ -67,8 +78,46 @@ export default function Page() {
     setShowCloseShiftModal(false);
   };
 
+  const handleAddIncome = (type: string) => {
+    console.log("types are : " + type);
+    setTransactionMode("income");
+    setShowTransactionModal(true);
+  };
+
+  const handleAddExpense = (type: string) => {
+    console.log("types are : " + type);
+    setTransactionMode("expense");
+    setShowTransactionModal(true);
+  };
+
+  const handleTransactionTypeSelect = (type: TransactionType) => {
+    setSelectedTransactionType(type);
+    setShowTransactionModal(false);
+    setShowInvoiceForm(true);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleInvoiceSubmit = (data: any) => {
+    if (!selectedTransactionType || !activeTab) return;
+
+    const newItem = {
+      id: tableData[activeTab].length + 1,
+      name: data.customerName,
+      quantity: data.quantity ?? 1,
+      price: transactionMode === "expense" ? -data.amount : data.amount,
+    };
+
+    setTableData((prev) => ({
+      ...prev,
+      [activeTab]: [...prev[activeTab], newItem],
+    }));
+
+    setShowInvoiceForm(false);
+    setSelectedTransactionType(null);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative">
+    <div className="min-h-screen bg-background relative transition-colors duration-300">
       <SplineBackground activeTab={activeTab} />
 
       {/* Modals */}
@@ -91,9 +140,33 @@ export default function Page() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showTransactionModal && (
+          <TransactionTypeModal
+            onClose={() => setShowTransactionModal(false)}
+            onSelect={handleTransactionTypeSelect}
+            mode={transactionMode}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showInvoiceForm && selectedTransactionType && (
+          <InvoiceForm
+            type={selectedTransactionType}
+            mode={transactionMode}
+            onClose={() => {
+              setShowInvoiceForm(false);
+              setSelectedTransactionType(null);
+            }}
+            onSubmit={handleInvoiceSubmit}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="relative z-10">
         <Navbar />
-        <main className="pt-32 p-4">
+        <main className="py-32 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Stats Grid */}
             <div
@@ -111,7 +184,7 @@ export default function Page() {
               dir="rtl"
             >
               {currentShiftType && (
-                <span className="text-slate-400">
+                <span className="text-muted-foreground">
                   الوردية الحالية: {currentShiftType}
                 </span>
               )}
@@ -132,7 +205,7 @@ export default function Page() {
               )}
             </div>
 
-            {/* Tabs and Content - Only visible when shift is open */}
+            {/* Tabs and Content */}
             {isShiftOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -141,15 +214,15 @@ export default function Page() {
                 className="mt-8"
                 dir="rtl"
               >
-                <div className="flex space-x-4 border-b border-slate-700/50">
+                <div className="flex space-x-4 border-b border-border">
                   {["بسطة", "جامعة", "عام"].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${
                         activeTab === tab
-                          ? "text-sky-400 border-b-2 border-sky-400"
-                          : "text-slate-400 hover:text-slate-300"
+                          ? "text-primary border-b-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {tab}
@@ -159,6 +232,7 @@ export default function Page() {
 
                 <TabContent
                   type={activeTab}
+                  tableData={tableData[activeTab]}
                   onAddIncome={() => handleAddIncome(activeTab)}
                   onAddExpense={() => handleAddExpense(activeTab)}
                 />
