@@ -2,22 +2,31 @@
 import { motion } from "framer-motion";
 import {
   BookOpenCheck,
+  LogOut,
   Menu,
   Moon,
   Package,
   Receipt,
   Sun,
+  UserCog,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "../providers/ThemeProvider";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { logout } from "@/redux/reducers/userSlice";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const dispatch = useDispatch<AppDispatch>();
+
+  const handleLogout = () => dispatch(logout());
 
   const navItems = [
     { name: "دفتر اليومية", icon: BookOpenCheck, href: "/" },
+    { name: "الصفحة الادارية", icon: UserCog, href: "/manager" },
     { name: "المواد", icon: Package, href: "/materials" },
     { name: "الفواتير", icon: Receipt, href: "/invoices" },
   ];
@@ -85,24 +94,34 @@ const Navbar = () => {
                 ))}
               </motion.div>
 
-              {/* Theme Toggle */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-secondary text-secondary-foreground hover:text-primary transition-colors duration-300 mr-4"
-              >
-                <motion.div
-                  initial={false}
-                  animate={{ rotate: theme === "dark" ? 0 : 180 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 10 }}
+              <div className="flex items-center justify-center gap-4">
+                {/* Theme Toggle */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleTheme}
+                  className="p-2 rounded-lg bg-secondary text-secondary-foreground hover:text-primary transition-colors duration-300 mr-4"
                 >
-                  {theme === "dark" ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                </motion.div>
-              </motion.button>
+                  <motion.div
+                    initial={false}
+                    animate={{ rotate: theme === "dark" ? 0 : 180 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="h-5 w-5" />
+                    ) : (
+                      <Moon className="h-5 w-5" />
+                    )}
+                  </motion.div>
+                </motion.button>
+                {/* Logout Button */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 p-2 rounded-lg bg-secondary text-secondary-foreground hover:text-primary transition-colors duration-300"
+                >
+                  <LogOut className="h-5 w-5" />
+                </motion.button>
+              </div>
             </div>
 
             {/* Mobile Menu and Theme Toggle */}

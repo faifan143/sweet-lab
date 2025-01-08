@@ -1,145 +1,101 @@
-// First, let's create the InvoiceDetails modal component
 "use client";
+import { formatSYP } from "@/hooks/invoices/useInvoiceStats";
+import { Invoice } from "@/types/invoice.type";
+import { FundType } from "@/types/types";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, X, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import React from "react";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Clock,
+  DollarSign,
+  FileText,
+} from "lucide-react";
+import React, { useState } from "react";
 import ActionButton from "./ActionButtons";
-
-interface InvoiceDetailsModalProps {
-  item: TableItem;
-  onClose: () => void;
-}
-
-const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
-  item,
-  onClose,
-}) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-2xl mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">تفاصيل الفاتورة</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className="space-y-6" dir="rtl">
-          {/* Invoice Header */}
-          <div className="bg-slate-700/30 p-4 rounded-lg">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-slate-400">رقم الفاتورة</p>
-                <p className="text-slate-200 font-semibold">#{item.id}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-400">التاريخ</p>
-                <p className="text-slate-200">2024/03/25</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Invoice Details */}
-          <div className="bg-slate-700/30 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-slate-200 mb-4">
-              تفاصيل المنتج
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-slate-400">اسم المنتج</p>
-                <p className="text-slate-200">{item.name}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-400">الكمية</p>
-                <p className="text-slate-200">{item.quantity}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-400">سعر الوحدة</p>
-                <p className="text-slate-200">${item.price}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-400">المجموع</p>
-                <p className="text-emerald-400 font-semibold">
-                  ${item.price * item.quantity}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className="bg-slate-700/30 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-slate-200 mb-4">
-              معلومات إضافية
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-slate-400">ملاحظات</p>
-                <p className="text-slate-200">ملاحظات إضافية حول الفاتورة...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-// Now let's update the TabContent component
-export interface TableItem {
-  id: number;
-  name: string;
-  quantity: number;
-  price: number;
-}
+import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
 
 interface TabContentProps {
-  type: string;
-  tableData: TableItem[];
+  type: FundType;
+  tableData: Invoice[];
+  isLoading?: boolean;
   onAddIncome: () => void;
   onAddExpense: () => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
-  type,
   tableData,
+  isLoading,
   onAddIncome,
   onAddExpense,
 }) => {
-  const [selectedItem, setSelectedItem] = React.useState<TableItem | null>(
-    null
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [dateFilter, setDateFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">(
+    "all"
   );
 
+  if (isLoading) {
+    return (
+      <div className="p-4 text-center text-slate-400">جاري التحميل...</div>
+    );
+  }
+
+  const filteredData = tableData.filter((invoice) => {
+    // Date filter
+    if (dateFilter) {
+      const invoiceDate = new Date(invoice.createdAt)
+        .toISOString()
+        .split("T")[0];
+      if (invoiceDate !== dateFilter) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      if (statusFilter === "paid" && !invoice.paidStatus) return false;
+      if (statusFilter === "unpaid" && invoice.paidStatus) return false;
+    }
+
+    return true;
+  });
+
   return (
-    <div>
-      {/* Context-specific action buttons */}
-      <div className="flex justify-end gap-4 mb-6 mt-6">
-        <ActionButton
-          icon={<ArrowUpCircle className="h-5 w-5" />}
-          label={`اضافة دخل ${type}`}
-          onClick={onAddIncome}
-          variant="income"
-        />
-        <ActionButton
-          icon={<ArrowDownCircle className="h-5 w-5" />}
-          label={`اضافة خرج ${type}`}
-          onClick={onAddExpense}
-          variant="expense"
-        />
+    <div className="space-y-6">
+      {/* Filters and Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mt-5">
+        <div className="flex items-center gap-4 ">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-1.5 text-slate-200"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as "all" | "paid" | "unpaid")
+            }
+            className="bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-1.5 text-slate-200"
+          >
+            <option value="all">جميع الحالات</option>
+            <option value="paid">نقدي</option>
+            <option value="unpaid">آجل</option>
+          </select>
+        </div>
+
+        <div className="flex gap-4">
+          <ActionButton
+            icon={<ArrowUpCircle className="h-5 w-5" />}
+            label="اضافة دخل"
+            onClick={onAddIncome}
+            variant="income"
+          />
+          <ActionButton
+            icon={<ArrowDownCircle className="h-5 w-5" />}
+            label="اضافة مصروف"
+            onClick={onAddExpense}
+            variant="expense"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -152,26 +108,48 @@ const TabContent: React.FC<TabContentProps> = ({
         <table className="w-full text-right">
           <thead className="bg-slate-800/50">
             <tr>
-              <th className="p-3 text-slate-300">المعرف</th>
-              <th className="p-3 text-slate-300">الاسم</th>
-              <th className="p-3 text-slate-300">الكمية</th>
-              <th className="p-3 text-slate-300">السعر</th>
+              <th className="p-3 text-slate-300">رقم الفاتورة</th>
+              <th className="p-3 text-slate-300">التاريخ</th>
+              <th className="p-3 text-slate-300">النوع</th>
+              <th className="p-3 text-slate-300">العميل</th>
+              <th className="p-3 text-slate-300">المبلغ</th>
+              <th className="p-3 text-slate-300">الحالة</th>
               <th className="p-3 text-slate-300">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {tableData.map((item) => (
+            {filteredData.map((invoice) => (
               <tr
-                key={item.id}
+                key={invoice.id}
                 className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
               >
-                <td className="p-3 text-slate-300">{item.id}</td>
-                <td className="p-3 text-slate-300">{item.name}</td>
-                <td className="p-3 text-slate-300">{item.quantity}</td>
-                <td className="p-3 text-slate-300">${item.price}</td>
+                <td className="p-3 text-slate-300">{invoice.invoiceNumber}</td>
+                <td className="p-3 text-slate-300">
+                  {new Date(invoice.createdAt).toLocaleDateString("ar-SA")}
+                </td>
+                <td className="p-3 text-slate-300">
+                  {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
+                </td>
+                <td className="p-3 text-slate-300">
+                  {invoice.customerName || "-"}
+                </td>
+                <td className="p-3 text-slate-300">
+                  {formatSYP(invoice.totalAmount - invoice.discount)}
+                </td>
+                <td className="p-3">
+                  <span
+                    className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                      invoice.paidStatus
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "bg-yellow-500/10 text-yellow-400"
+                    }`}
+                  >
+                    {invoice.paidStatus ? "نقدي" : "آجل"}
+                  </span>
+                </td>
                 <td className="p-3">
                   <button
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => setSelectedInvoice(invoice)}
                     className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2 text-sm"
                   >
                     <FileText className="h-4 w-4" />
@@ -180,19 +158,102 @@ const TabContent: React.FC<TabContentProps> = ({
                 </td>
               </tr>
             ))}
+            {filteredData.length === 0 && (
+              <tr>
+                <td colSpan={7} className="p-4 text-center text-slate-400">
+                  لا توجد فواتير متطابقة مع معايير البحث
+                </td>
+              </tr>
+            )}
           </tbody>
+          {filteredData.length > 0 && (
+            <tfoot className="bg-slate-800/50">
+              <tr>
+                <td colSpan={4} className="p-3 text-slate-300 font-semibold">
+                  المجموع
+                </td>
+                <td className="p-3 text-emerald-400 font-semibold">
+                  {formatSYP(
+                    filteredData.reduce(
+                      (sum, inv) => sum + (inv.totalAmount - inv.discount),
+                      0
+                    )
+                  )}
+                </td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </motion.div>
 
       {/* Invoice Details Modal */}
       <AnimatePresence>
-        {selectedItem && (
+        {selectedInvoice && (
           <InvoiceDetailsModal
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
+            invoice={selectedInvoice}
+            onClose={() => setSelectedInvoice(null)}
           />
         )}
       </AnimatePresence>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">إجمالي المبيعات</p>
+              <p className="text-emerald-400 text-lg font-semibold">
+                {formatSYP(
+                  filteredData
+                    .filter((inv) => inv.invoiceType === "income")
+                    .reduce(
+                      (sum, inv) => sum + (inv.totalAmount - inv.discount),
+                      0
+                    )
+                )}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-emerald-400/20" />
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">إجمالي المصروفات</p>
+              <p className="text-red-400 text-lg font-semibold">
+                {formatSYP(
+                  filteredData
+                    .filter((inv) => inv.invoiceType === "expense")
+                    .reduce(
+                      (sum, inv) => sum + (inv.totalAmount - inv.discount),
+                      0
+                    )
+                )}
+              </p>
+            </div>
+            <ArrowDownCircle className="h-8 w-8 text-red-400/20" />
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-400 text-sm">معدل التحصيل</p>
+              <p className="text-blue-400 text-lg font-semibold">
+                {(
+                  (filteredData.filter((inv) => inv.paidStatus).length /
+                    Math.max(filteredData.length, 1)) *
+                  100
+                ).toFixed(1)}
+                %
+              </p>
+            </div>
+            <Clock className="h-8 w-8 text-blue-400/20" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

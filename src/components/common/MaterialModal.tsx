@@ -1,74 +1,94 @@
-import { Category, Material } from "@/app/materials/page";
+import { useCreateItemGroup } from "@/hooks/items/useItemGroups";
+import { useCreateItem, useUpdateItem } from "@/hooks/items/useItems";
+import { Item, ItemGroup, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 interface MaterialModalProps {
   onClose: () => void;
-  onSubmit: (data: Material) => void;
-  material: Material | null;
-  categories: Category[];
-  onAddCategory: (category: Category) => void;
+  item: Item | null;
+  itemGroups: ItemGroup[];
 }
 
 const MaterialModal: React.FC<MaterialModalProps> = ({
   onClose,
-  onSubmit,
-  material,
-  categories,
-  onAddCategory,
+  item,
+  itemGroups,
 }) => {
-  const isEditing = !!material;
-  const [formData, setFormData] = useState<Material>(
-    material || {
-      id: 0,
+  const isEditing = !!item;
+  const [formData, setFormData] = useState<Partial<Item>>(
+    item || {
       name: "",
-      categoryId: 0,
-      price: 0,
-      quantity: 0,
-      minQuantity: 0,
+      type: "production" as ItemType,
       unit: "",
+      price: 0,
+      description: "",
+      groupId: 0,
     }
   );
-  const [newCategory, setNewCategory] = useState<string>("");
-  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+
+  // Mutations
+  const createItem = useCreateItem();
+  const updateItem = useUpdateItem();
+
+  // Inside MaterialModal component, add new state
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [newGroupData, setNewGroupData] = useState({
+    name: "",
+    type: "production" as ItemType,
+    description: "",
+  });
+
+  // Add the create group mutation
+  const createItemGroup = useCreateItemGroup();
+
+  // Add handler for group creation
+  const handleGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createItemGroup.mutateAsync(newGroupData);
+      setShowGroupForm(false);
+      setNewGroupData({
+        name: "",
+        type: "production",
+        description: "",
+      });
+    } catch (error) {
+      console.error("Error creating group:", error);
+      alert("حدث خطأ أثناء إنشاء المجموعة");
+    }
+  };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === "categoryId" ||
-        name === "price" ||
-        name === "quantity" ||
-        name === "minQuantity"
-          ? Number(value)
-          : value,
+      [name]: name === "price" || name === "groupId" ? Number(value) : value,
     }));
   };
 
-  const handleAddCategory = () => {
-    if (newCategory.trim() === "") return;
-
-    const newCategoryObject: Category = {
-      id: categories.length + 1, // Generate a unique ID
-      name: newCategory,
-    };
-
-    onAddCategory(newCategoryObject);
-    setNewCategory("");
-    setIsAddingCategory(false);
-    setFormData((prev) => ({
-      ...prev,
-      categoryId: newCategoryObject.id,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    try {
+      if (isEditing && item) {
+        await updateItem.mutateAsync({
+          id: item.id,
+          data: formData,
+        });
+      } else {
+        await createItem.mutateAsync(formData as Omit<Item, "id">);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error saving item:", error);
+      alert("حدث خطأ أثناء حفظ العنصر");
+    }
   };
 
   return (
@@ -83,105 +103,189 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
+        className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[85vh] flex flex-col "
+        // className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-slate-100">
-            {isEditing ? "تعديل مادة" : "إضافة مادة جديدة"}
+            {isEditing ? "تعديل عنصر" : "إضافة عنصر جديد"}
           </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
-            <X size={24} />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <form className="space-y-4" dir="rtl" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4 overflow-y-auto pr-2 -mr-2 no-scrollbar"
+          dir="rtl"
+          onSubmit={handleSubmit}
+        >
+          {" "}
           {/* Name Input */}
           <div>
-            <label className="block text-slate-200 mb-2">اسم المادة</label>
+            <label className="block text-slate-200 mb-2">الاسم</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-              placeholder="أدخل اسم المادة"
+              required
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+              placeholder="أدخل اسم العنصر"
             />
           </div>
-
-          {/* Category Select */}
+          {/* Type Select */}
           <div>
-            <label className="block text-slate-200 mb-2">التصنيف</label>
-            <div className="flex items-center gap-2">
-              <select
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleChange}
-                className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-              >
-                <option value="">اختر التصنيف</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+            <label className="block text-slate-200 mb-2">النوع</label>
+            <select
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              required
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+            >
+              <option value="production">منتج</option>
+              <option value="raw">مادة خام</option>
+            </select>
+          </div>
+          {/* Group Select */}
+          {/* Group Select with Add Option */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-slate-200">التصنيف</label>
               <button
                 type="button"
-                onClick={() => setIsAddingCategory((prev) => !prev)}
-                className="bg-blue-500/40 text-white px-3 py-2 rounded-lg hover:bg-blue-600/40"
+                onClick={() => setShowGroupForm(!showGroupForm)}
+                className="p-1 hover:bg-slate-700/50 rounded-full transition-colors"
               >
-                +
+                <Plus
+                  className={`h-5 w-5 text-emerald-400 transform transition-transform ${
+                    showGroupForm ? "rotate-45" : ""
+                  }`}
+                />
               </button>
             </div>
-            {isAddingCategory && (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  placeholder="إضافة تصنيف جديد"
-                  className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCategory}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-                >
-                  أضف
-                </button>
-              </div>
+
+            {/* Group Creation Form */}
+            {showGroupForm && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-slate-700/30 p-3 rounded-lg space-y-3 mb-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-200 text-sm mb-1">
+                        اسم المجموعة
+                      </label>
+                      <input
+                        type="text"
+                        value={newGroupData.name}
+                        onChange={(e) =>
+                          setNewGroupData((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500/50"
+                        placeholder="أدخل اسم المجموعة"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-200 text-sm mb-1">
+                        النوع
+                      </label>
+                      <select
+                        value={newGroupData.type}
+                        onChange={(e) =>
+                          setNewGroupData((prev) => ({
+                            ...prev,
+                            type: e.target.value as ItemType,
+                          }))
+                        }
+                        className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500/50"
+                      >
+                        <option value="production">منتج</option>
+                        <option value="raw">مادة خام</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-200 text-sm mb-1">
+                      الوصف
+                    </label>
+                    <textarea
+                      value={newGroupData.description}
+                      onChange={(e) =>
+                        setNewGroupData((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      rows={2}
+                      className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-emerald-500/50 resize-none"
+                      placeholder="وصف المجموعة..."
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleGroupSubmit}
+                      disabled={createItemGroup.isPending}
+                      className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {createItemGroup.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : null}
+                      إضافة مجموعة
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </div>
 
-          {/* Remaining Inputs */}
-          {/* Price Input */}
-          <div>
-            <label className="block text-slate-200 mb-2">السعر</label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
+            {/* Group Select */}
+            <select
+              name="groupId"
+              value={formData.groupId}
               onChange={handleChange}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-              placeholder="أدخل السعر"
-            />
+              required
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+            >
+              <option value="">اختر التصنيف</option>
+              {itemGroups
+                .filter((group) => group.type === formData.type)
+                .map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+            </select>
           </div>
-
-          {/* Quantity and Unit Row */}
+          {/* Price and Unit Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-200 mb-2">الكمية</label>
+              <label className="block text-slate-200 mb-2">السعر</label>
               <input
                 type="number"
-                name="quantity"
-                value={formData.quantity}
+                name="price"
+                value={formData.price}
                 onChange={handleChange}
-                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-                placeholder="الكمية"
+                required
+                min="0"
+                step="0.01"
+                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                placeholder="السعر"
               />
             </div>
             <div>
@@ -191,37 +295,36 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
                 name="unit"
                 value={formData.unit}
                 onChange={handleChange}
-                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
+                required
+                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
                 placeholder="مثال: كغ، قطعة"
               />
             </div>
           </div>
-
-          {/* Min Quantity Input */}
+          {/* Description */}
           <div>
-            <label className="block text-slate-200 mb-2">
-              الحد الأدنى للكمية
-            </label>
-            <input
-              type="number"
-              name="minQuantity"
-              value={formData.minQuantity}
+            <label className="block text-slate-200 mb-2">الوصف</label>
+            <textarea
+              name="description"
+              value={formData.description}
               onChange={handleChange}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-sky-500/50"
-              placeholder="أدخل الحد الأدنى"
+              rows={3}
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50 resize-none"
+              placeholder="أدخل وصف العنصر..."
             />
           </div>
-
-          {/* Action Buttons */}
+          {/* Submit Button */}
           <div className="flex gap-4 pt-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               type="submit"
-              className="flex-1 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+              disabled={createItem.isPending || updateItem.isPending}
+              className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isEditing ? "حفظ التغييرات" : "إضافة المادة"}
-            </motion.button>
+              {createItem.isPending || updateItem.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : null}
+              {isEditing ? "حفظ التغييرات" : "إضافة العنصر"}
+            </button>
           </div>
         </form>
       </motion.div>

@@ -3,8 +3,16 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, User, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { loginUser } from "@/redux/reducers/userSlice";
+import useSnackbar from "@/hooks/useSnackbar";
+import CustomizedSnackbars from "@/components/common/CustomizedSnackbars";
 
 const LoginScreen = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { setSnackbarConfig, snackbarConfig } = useSnackbar();
+
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",
@@ -14,10 +22,23 @@ const LoginScreen = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log("Form submitted:", formData);
-      router.replace("/");
+      await dispatch(loginUser(formData)).then((data) => {
+        if (data.meta.requestStatus == "fulfilled") {
+          setSnackbarConfig({
+            open: true,
+            severity: "success",
+            message: "تم تسجيل الدخول بنجاح",
+          });
+          router.replace("/");
+        }
+      });
     } catch (error) {
       console.error("Login error:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: error + "",
+      });
     }
   };
 
@@ -138,6 +159,13 @@ const LoginScreen = () => {
           </motion.button>
         </form>
       </motion.div>
+
+      <CustomizedSnackbars
+        open={snackbarConfig.open}
+        message={snackbarConfig.message}
+        severity={snackbarConfig.severity}
+        onClose={() => setSnackbarConfig((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   );
 };

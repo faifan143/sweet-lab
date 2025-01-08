@@ -1,17 +1,35 @@
-import React from "react";
+import { formatAmount } from "@/hooks/invoices/useInvoiceStats";
 import { motion } from "framer-motion";
 import { X, AlertTriangle } from "lucide-react";
+
+interface Fund {
+  fundType: string;
+  invoiceCount: number;
+  incomeTotal: number;
+  expenseTotal: number;
+  netTotal: number;
+}
+
+export interface ShiftSummaryData {
+  shiftId: number;
+  employeeName: string;
+  openTime: string;
+  fundSummaries: Fund[];
+  totalNet: number;
+}
 
 interface CloseShiftModalProps {
   onClose: () => void;
   onConfirm: () => void;
   shiftType: "صباحي" | "مسائي";
+  shiftSummary?: ShiftSummaryData;
 }
 
 const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   onClose,
   onConfirm,
   shiftType,
+  shiftSummary,
 }) => {
   return (
     <motion.div
@@ -54,21 +72,69 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             </div>
           </div>
 
-          {/* Current Shift Info */}
-          <div className="p-4 rounded-lg bg-slate-700/50 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-slate-400">نوع الوردية:</span>
-              <span className="text-slate-200">{shiftType}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">وقت الفتح:</span>
-              <span className="text-slate-200">09:00 AM</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-400">المدة:</span>
-              <span className="text-slate-200">8 ساعات</span>
-            </div>
-          </div>
+          {/* Shift Summary */}
+          {shiftSummary && (
+            <>
+              {/* Current Shift Info */}
+              <div className="p-4 rounded-lg bg-slate-700/50 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">الموظف:</span>
+                  <span className="text-slate-200">
+                    {shiftSummary.employeeName}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">وقت الفتح:</span>
+                  <span className="text-slate-200">
+                    {new Date(shiftSummary.openTime).toLocaleString("ar-SA")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Funds Summary */}
+              <div className="space-y-2">
+                {shiftSummary.fundSummaries.map((fund) => (
+                  <div
+                    key={fund.fundType}
+                    className="p-4 rounded-lg bg-slate-700/30"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-slate-200 font-medium">
+                        {fund.fundType === "booth"
+                          ? "البسطة"
+                          : fund.fundType === "university"
+                          ? "الجامعة"
+                          : "الصندوق العام"}
+                      </span>
+                      <span className="text-slate-400">
+                        ({fund.invoiceCount} فواتير)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-y-1 text-sm">
+                      <div className="text-emerald-400">
+                        المدخول: {fund.incomeTotal}
+                      </div>
+                      <div className="text-red-400">
+                        المصروف: {fund.expenseTotal}
+                      </div>
+                      <div className="col-span-2 text-slate-200">
+                        الصافي: {fund.netTotal}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {/* Total Net */}
+                <div className="p-4 rounded-lg bg-slate-700/50">
+                  <div className="flex justify-between items-center font-medium">
+                    <span className="text-slate-200">إجمالي الصناديق:</span>
+                    <span className="text-emerald-400">
+                      {formatAmount(shiftSummary.totalNet)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">

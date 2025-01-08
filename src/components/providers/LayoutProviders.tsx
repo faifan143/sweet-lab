@@ -5,6 +5,8 @@ import { ReactNode } from "react";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { ThemeProvider } from "./ThemeProvider";
+import AuthGuard from "./AuthGuard";
+import LoadingProvider from "@/hooks/LoadingProvider";
 
 const LayoutProviders = ({
   children,
@@ -14,10 +16,25 @@ const LayoutProviders = ({
   return (
     <>
       <ThemeProvider>
-        <QueryClientProvider client={new QueryClient()}>
+        <QueryClientProvider
+          client={
+            new QueryClient({
+              defaultOptions: {
+                queries: {
+                  staleTime: 1000 * 60 * 5,
+                  gcTime: 1000 * 60 * 30,
+                  retry: 1,
+                  refetchOnWindowFocus: false,
+                },
+              },
+            })
+          }
+        >
           <Provider store={store}>
             <PersistGate loading={null} persistor={persistor}>
-              {children}
+              <LoadingProvider>
+                <AuthGuard>{children}</AuthGuard>
+              </LoadingProvider>
             </PersistGate>
           </Provider>
         </QueryClientProvider>

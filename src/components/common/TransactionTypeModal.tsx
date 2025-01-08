@@ -1,14 +1,14 @@
 "use client";
+import { InvoiceCategory } from "@/types/invoice.type";
 import { motion } from "framer-motion";
 import { Receipt, CreditCard, Wallet, X } from "lucide-react";
 import React from "react";
 
-export type TransactionType = "منتجات" | "مباشر" | "دين" | null;
 export type TransactionMode = "income" | "expense";
 
 export interface TransactionTypeModalProps {
   onClose: () => void;
-  onSelect: (type: TransactionType) => void;
+  onSelect: (type: InvoiceCategory) => void;
   mode: TransactionMode;
 }
 
@@ -19,7 +19,8 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
 }) => {
   const types = [
     {
-      id: "منتجات",
+      id: "products",
+      value: "منتجات",
       icon: Receipt,
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10 hover:bg-emerald-500/20",
@@ -27,7 +28,9 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         mode === "income" ? "فاتورة بيع منتجات" : "فاتورة شراء منتجات",
     },
     {
-      id: "مباشر",
+      id: "direct",
+      value: "مباشر",
+
       icon: CreditCard,
       color: "text-blue-400",
       bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
@@ -35,7 +38,9 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         mode === "income" ? "دخل مباشر بدون فاتورة" : "مصروف مباشر بدون فاتورة",
     },
     {
-      id: "دين",
+      id: "debt",
+      value: "دين",
+
       icon: Wallet,
       color: "text-purple-400",
       bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
@@ -74,7 +79,7 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
           {types.map((type) => (
             <button
               key={type.id}
-              onClick={() => onSelect(type.id as TransactionType)}
+              onClick={() => onSelect(type.id as InvoiceCategory)}
               className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
             >
               <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
@@ -82,7 +87,7 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
               </div>
               <div className="flex-1">
                 <h3 className={`font-semibold ${type.color} text-lg`}>
-                  {type.id}
+                  {type.value}
                 </h3>
                 <p className="text-slate-400 text-sm">{type.description}</p>
               </div>

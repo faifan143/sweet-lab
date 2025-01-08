@@ -1,7 +1,6 @@
+import { ShiftType } from "@/types/types";
 import { motion } from "framer-motion";
 import { X, Sun, Moon } from "lucide-react";
-
-export type ShiftType = "صباحي" | "مسائي" | null;
 
 interface ShiftModalProps {
   onClose: () => void;
@@ -37,7 +36,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ onClose, onSelect }) => {
 
         <div className="grid grid-cols-2 gap-4" dir="rtl">
           <button
-            onClick={() => onSelect("صباحي")}
+            onClick={() => onSelect(ShiftType.morning)}
             className="flex flex-col items-center gap-3 p-4 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors group"
           >
             <Sun className="w-8 h-8 text-yellow-400 group-hover:text-yellow-300" />
@@ -45,7 +44,7 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ onClose, onSelect }) => {
           </button>
 
           <button
-            onClick={() => onSelect("مسائي")}
+            onClick={() => onSelect(ShiftType.evening)}
             className="flex flex-col items-center gap-3 p-4 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors group"
           >
             <Moon className="w-8 h-8 text-blue-400 group-hover:text-blue-300" />
