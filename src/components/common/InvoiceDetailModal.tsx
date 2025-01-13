@@ -1,6 +1,6 @@
-import React from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Invoice } from "@/types/invoice.type";
+import { formatCurrency, formatDate } from "@/utils/formatters";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface InvoiceDetailModalProps {
   invoice: Invoice;
@@ -13,24 +13,6 @@ const InvoiceDetailModal = ({
   isOpen,
   onClose,
 }: InvoiceDetailModalProps) => {
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("ar-SA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ar-SA", {
-      style: "currency",
-      currency: "SAR",
-    }).format(amount);
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -75,8 +57,8 @@ const InvoiceDetailModal = ({
                     معلومات العميل
                   </h3>
                   <div className="space-y-1 text-slate-300">
-                    <p>الاسم: {invoice.customerName}</p>
-                    <p>الهاتف: {invoice.customerPhone}</p>
+                    <p>الاسم: {invoice.customer.name}</p>
+                    <p>الهاتف: {invoice.customer.phone}</p>
                   </div>
                 </div>
                 <div className="space-y-2">

@@ -14,7 +14,7 @@ export const InvoiceTabs = ({
 }: InvoiceTabsProps) => {
   return (
     <div
-      className="border-b border-slate-700/50 mb-6 overflow-x-auto no-scrollbar"
+      className="border-b border-slate-700/50 mb-6 w-full overflow-x-auto no-scrollbar "
       dir="rtl"
     >
       <div className="flex min-w-full sm:min-w-0 px-2">

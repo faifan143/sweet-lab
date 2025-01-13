@@ -7,8 +7,14 @@ export interface Invoice {
   invoiceNumber: string;
   invoiceType: "expense" | "income";
   invoiceCategory: InvoiceCategory;
-  customerName: string;
-  customerPhone: string;
+  customer: {
+    id: number;
+    name: string;
+    phone: string;
+    notes: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
   totalAmount: number;
   discount: number;
   paidStatus: boolean;
@@ -95,8 +101,7 @@ export interface CreateInvoiceItemDTO {
 export interface IncomeProductsDTO extends BaseInvoiceDTO {
   invoiceType: "income";
   invoiceCategory: "products";
-  customerName: string;
-  customerPhone?: string;
+  customerId: number;
   paidStatus: boolean;
   totalAmount: number;
   discount: number;
@@ -107,8 +112,7 @@ export interface IncomeProductsDTO extends BaseInvoiceDTO {
 export interface ExpenseProductsDTO extends BaseInvoiceDTO {
   invoiceType: "expense";
   invoiceCategory: "products";
-  customerName: string;
-  customerPhone?: string;
+  customerId: number;
   paidStatus: boolean;
   totalAmount: number;
   items: CreateInvoiceItemDTO[];
@@ -118,8 +122,7 @@ export interface ExpenseProductsDTO extends BaseInvoiceDTO {
 export interface DirectDebtDTO extends BaseInvoiceDTO {
   invoiceType: InvoiceType;
   invoiceCategory: "direct" | "debt";
-  customerName: string;
-  customerPhone?: string;
+  customerId?: number;
   totalAmount: number;
   paidStatus: boolean;
 }

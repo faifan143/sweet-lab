@@ -11,6 +11,7 @@ import { apiClient } from "@/utils/axios";
 export class InvoiceService {
   static async fetchInvoices(): Promise<Invoice[]> {
     const response = await apiClient.get<Invoice[]>("/invoices");
+
     return response;
   }
   static async fetchCurrentInvoices(): Promise<ShiftData> {

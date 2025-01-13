@@ -1,6 +1,7 @@
 "use client";
 import { formatSYP } from "@/hooks/invoices/useInvoiceStats";
 import { Invoice } from "@/types/invoice.type";
+import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import { Phone, User, X } from "lucide-react";
 import React from "react";
@@ -14,10 +15,6 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
   invoice,
   onClose,
 }) => {
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("ar-SA");
-  };
-
   const getPaymentStatusBadge = (paidStatus: boolean) => {
     return paidStatus ? "text-emerald-400" : "text-yellow-400";
   };
@@ -83,27 +80,27 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
           </div>
 
           {/* Customer Information */}
-          {(invoice.customerName || invoice.customerPhone) && (
+          {(invoice.customer.name || invoice.customer.phone) && (
             <div className="bg-slate-700/30 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-slate-200 mb-4">
                 معلومات العميل
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                {invoice.customerName && (
+                {invoice.customer.name && (
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-slate-400" />
                     <div>
                       <p className="text-slate-400 text-sm">الاسم</p>
-                      <p className="text-slate-200">{invoice.customerName}</p>
+                      <p className="text-slate-200">{invoice.customer.name}</p>
                     </div>
                   </div>
                 )}
-                {invoice.customerPhone && (
+                {invoice.customer.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="h-5 w-5 text-slate-400" />
                     <div>
                       <p className="text-slate-400 text-sm">رقم الهاتف</p>
-                      <p className="text-slate-200">{invoice.customerPhone}</p>
+                      <p className="text-slate-200">{invoice.customer.phone}</p>
                     </div>
                   </div>
                 )}

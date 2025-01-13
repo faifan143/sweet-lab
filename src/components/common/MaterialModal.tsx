@@ -4,6 +4,7 @@ import { Item, ItemGroup, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
 import { Loader2, Plus, X } from "lucide-react";
 import { useState } from "react";
+import { useMokkBar } from "../providers/MokkBarContext";
 
 interface MaterialModalProps {
   onClose: () => void;
@@ -31,6 +32,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
   // Mutations
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
+  const { setSnackbarConfig } = useMokkBar();
 
   // Inside MaterialModal component, add new state
   const [showGroupForm, setShowGroupForm] = useState(false);
@@ -56,7 +58,11 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
       });
     } catch (error) {
       console.error("Error creating group:", error);
-      alert("حدث خطأ أثناء إنشاء المجموعة");
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء إنشاء المجموعة",
+      });
     }
   };
 
@@ -87,7 +93,11 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
       onClose();
     } catch (error) {
       console.error("Error saving item:", error);
-      alert("حدث خطأ أثناء حفظ العنصر");
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء حفظ المجموعة",
+      });
     }
   };
 

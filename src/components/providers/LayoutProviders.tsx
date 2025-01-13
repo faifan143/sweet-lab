@@ -7,6 +7,7 @@ import { PersistGate } from "redux-persist/integration/react";
 import { ThemeProvider } from "./ThemeProvider";
 import AuthGuard from "./AuthGuard";
 import LoadingProvider from "@/hooks/LoadingProvider";
+import { MokkBarProvider } from "./MokkBarContext";
 
 const LayoutProviders = ({
   children,
@@ -33,7 +34,9 @@ const LayoutProviders = ({
           <Provider store={store}>
             <PersistGate loading={null} persistor={persistor}>
               <LoadingProvider>
-                <AuthGuard>{children}</AuthGuard>
+                <AuthGuard>
+                  <MokkBarProvider>{children}</MokkBarProvider>
+                </AuthGuard>
               </LoadingProvider>
             </PersistGate>
           </Provider>

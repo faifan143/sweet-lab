@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/hooks/invoices/useInvoice.ts
 import { InvoiceService } from "@/services/invoice.service";
 import { Invoice } from "@/types/invoice.type";
@@ -31,46 +32,62 @@ export const useInvoices = () => {
   });
 };
 
-export const useCurrentInvoices = () => {
-  return useQuery<ShiftData, Error>({
+export const useCurrentInvoices = (isShiftOpen: boolean) => {
+  return useQuery<ShiftData | null, Error>({
     queryKey: ["currentInvoices"],
     queryFn: InvoiceService.fetchCurrentInvoices,
+    enabled: isShiftOpen,
   });
 };
 
 // Mutation hook for income products invoices
-export const useCreateIncomeProducts = () => {
+export const useCreateIncomeProducts = (options?: {
+  onSuccess: () => void;
+  onError: (error: any) => void;
+}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: InvoiceService.createIncomeProducts,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      options?.onSuccess();
     },
+    onError: options?.onError,
   });
 };
 
 // Mutation hook for expense products invoices
-export const useCreateExpenseProducts = () => {
+export const useCreateExpenseProducts = (options?: {
+  onSuccess: () => void;
+  onError: (error: any) => void;
+}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: InvoiceService.createExpenseProducts,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      options?.onSuccess();
     },
+    onError: options?.onError,
   });
 };
 
 // Mutation hook for direct/debt invoices
-export const useCreateDirectDebt = () => {
+export const useCreateDirectDebt = (options?: {
+  onSuccess: () => void;
+  onError: (error: any) => void;
+}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: InvoiceService.createDirectDebt,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      options?.onSuccess();
     },
+    onError: options?.onError,
   });
 };
 
@@ -92,7 +109,6 @@ export const useMarkInvoiceAsPaid = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: ({ id, data }: { id: string | number; data: any }) =>
       InvoiceService.markInvoiceAsPaid(id, data),
     onMutate: async ({ id }) => {

@@ -7,7 +7,10 @@ interface StatusSummaryProps {
 
 export const StatusSummary = ({ invoices = [] }: StatusSummaryProps) => {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2 sm:pb-0" dir="rtl">
+    <div
+      className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full sm:w-auto"
+      dir="rtl"
+    >
       <div className="bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700/50 min-w-[120px]">
         <p className="text-slate-400 text-sm">المدفوعة</p>
         <p className="text-emerald-400 text-lg font-semibold">

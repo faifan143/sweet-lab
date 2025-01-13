@@ -1,14 +1,15 @@
 "use client";
-import ConfirmationModal from "@/components/common/ConfirmationModal";
-import MaterialModal from "@/components/common/MaterialModal";
+import { useState } from "react";
 import Navbar from "@/components/common/Navbar";
 import SplineBackground from "@/components/common/SplineBackground";
+import MaterialModal from "@/components/common/MaterialModal";
+import ConfirmationModal from "@/components/common/ConfirmationModal";
+import MaterialTable from "@/components/common/MaterialTable";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useDeleteItem, useItems } from "@/hooks/items/useItems";
 import { Item, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
-import { Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Plus, Search } from "lucide-react";
 
 const MaterialsPage = () => {
   // States
@@ -17,12 +18,6 @@ const MaterialsPage = () => {
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-
-  // Queries
-  const { data: items, isLoading: isLoadingItems } = useItems();
-  const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
-  const deleteItem = useDeleteItem();
-
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     itemId: number | null;
@@ -30,6 +25,11 @@ const MaterialsPage = () => {
     isOpen: false,
     itemId: null,
   });
+
+  // Queries
+  const { data: items, isLoading: isLoadingItems } = useItems();
+  const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
+  const deleteItem = useDeleteItem();
 
   // Filter items
   const filteredItems = items?.filter((item) => {
@@ -50,91 +50,6 @@ const MaterialsPage = () => {
       </div>
     );
   }
-
-  const MobileTable = () => {
-    return (
-      <>
-        {/* Mobile Cards - Shown only on Mobile */}
-        <div className="md:hidden space-y-4 p-4">
-          {filteredItems?.map((item) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-slate-700/30 rounded-lg p-4 space-y-3"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-slate-200 font-medium">{item.name}</h3>
-                  <span className="text-sm text-slate-400">
-                    {item.group.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
-                    onClick={() => {
-                      setEditingItem(item);
-                      setModalVisible(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="p-1.5 text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                    onClick={() => {
-                      setDeleteConfirmation({
-                        isOpen: true,
-                        itemId: item.id,
-                      });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-slate-400 block mb-1">النوع</span>
-                  <span className="text-slate-200">
-                    {item.type === "production" ? "منتج" : "مادة خام"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-1">السعر</span>
-                  <span className="text-emerald-400">{item.price} ل.س</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block mb-1">الوحدة</span>
-                  <span className="text-slate-200">{item.unit}</span>
-                </div>
-              </div>
-
-              {/* Description */}
-              {item.description && (
-                <div className="pt-2 border-t border-slate-600/50">
-                  <span className="text-sm text-slate-400 block mb-1">
-                    الوصف
-                  </span>
-                  <p className="text-sm text-slate-300">{item.description}</p>
-                </div>
-              )}
-            </motion.div>
-          ))}
-
-          {/* No Results Message */}
-          {(!filteredItems || filteredItems.length === 0) && (
-            <div className="text-center py-6 text-slate-400">
-              لا توجد عناصر متطابقة مع معايير البحث
-            </div>
-          )}
-        </div>
-      </>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative">
@@ -161,6 +76,7 @@ const MaterialsPage = () => {
                 إضافة جديد
               </motion.button>
             </div>
+
             {/* Filters */}
             <div className="mb-6 space-y-4" dir="rtl">
               {/* Search and Type Filter */}
@@ -190,7 +106,7 @@ const MaterialsPage = () => {
                 </select>
               </div>
 
-              {/* Groups Filter - Scrollable on mobile */}
+              {/* Groups Filter */}
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                 <button
                   onClick={() => setSelectedGroup(null)}
@@ -218,82 +134,27 @@ const MaterialsPage = () => {
               </div>
             </div>
 
-            {/* Items Table/Cards */}
+            {/* Table Container */}
             <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden backdrop-blur-sm">
-              {/* Desktop Table - Hidden on Mobile */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full" dir="rtl">
-                  <thead>
-                    <tr className="border-b border-slate-700/50">
-                      <th className="text-right text-slate-300 p-4">الاسم</th>
-                      <th className="text-right text-slate-300 p-4">النوع</th>
-                      <th className="text-right text-slate-300 p-4">التصنيف</th>
-                      <th className="text-right text-slate-300 p-4">السعر</th>
-                      <th className="text-right text-slate-300 p-4">الوحدة</th>
-                      <th className="text-right text-slate-300 p-4">الوصف</th>
-                      <th className="text-right text-slate-300 p-4">
-                        الإجراءات
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems?.map((item) => (
-                      <motion.tr
-                        key={item.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
-                      >
-                        <td className="p-4 text-slate-200">{item.name}</td>
-                        <td className="p-4 text-slate-200">
-                          {item.type === "production" ? "منتج" : "مادة خام"}
-                        </td>
-                        <td className="p-4 text-slate-200">
-                          {item.group.name}
-                        </td>
-                        <td className="p-4 text-emerald-400">
-                          {item.price} ل.س
-                        </td>
-                        <td className="p-4 text-slate-200">{item.unit}</td>
-                        <td className="p-4 text-slate-400 max-w-xs truncate">
-                          {item.description}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              className="p-1 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
-                              onClick={() => {
-                                setEditingItem(item);
-                                setModalVisible(true);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              className="p-1 text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                              onClick={() => {
-                                setDeleteConfirmation({
-                                  isOpen: true,
-                                  itemId: item.id,
-                                });
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <MobileTable />
+              <MaterialTable
+                items={filteredItems || []}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setModalVisible(true);
+                }}
+                onDelete={(itemId) => {
+                  setDeleteConfirmation({
+                    isOpen: true,
+                    itemId,
+                  });
+                }}
+              />
             </div>
           </div>
         </main>
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       {modalVisible && (
         <MaterialModal
           onClose={() => {
@@ -305,7 +166,6 @@ const MaterialsPage = () => {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={deleteConfirmation.isOpen}
         onClose={() => setDeleteConfirmation({ isOpen: false, itemId: null })}
@@ -313,6 +173,7 @@ const MaterialsPage = () => {
           if (deleteConfirmation.itemId) {
             deleteItem.mutate(deleteConfirmation.itemId);
           }
+          setDeleteConfirmation({ isOpen: false, itemId: null });
         }}
         title="حذف العنصر"
         message="هل أنت متأكد من أنك تريد حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء."

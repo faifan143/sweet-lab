@@ -10,11 +10,14 @@ interface LoadingProviderProps {
 }
 
 const LoadingProvider: React.FC<LoadingProviderProps> = ({ children }) => {
-  const status = useSelector((state: RootState) => state.user.status);
+  const status = useSelector((state: RootState) => state.user.user.status);
+  const isLoading = useSelector(
+    (state: RootState) => state.user.wrapper.isLoading
+  );
 
   return (
     <>
-      {status == "loading" && (
+      {(status == "loading" || isLoading) && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/5 z-50">
           <PageSpinner />
         </div>

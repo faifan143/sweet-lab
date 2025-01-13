@@ -4,6 +4,7 @@ import InvoiceCharts from "@/components/common/InvoiceChart";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
 import { useFunds, useTransferToMain } from "@/hooks/funds/useFunds";
 import {
   formatAmount,
@@ -12,6 +13,7 @@ import {
 import { useUsers } from "@/hooks/users/useUsers";
 import { Role } from "@/types/types";
 import { apiClient } from "@/utils/axios";
+import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import {
   ArrowRightLeft,
@@ -95,6 +97,7 @@ const Section = ({
 
 const Page = () => {
   // States
+  const { setSnackbarConfig } = useMokkBar();
   const [transferAmount, setTransferAmount] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -135,7 +138,11 @@ const Page = () => {
   // Handlers
   const handleAddUser = async () => {
     if (!username) {
-      alert("Please enter a username.");
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "الرجاء ادخال اسم المستخدم",
+      });
       return;
     }
 
@@ -147,11 +154,21 @@ const Page = () => {
         password: password,
         roles: selectedRoles,
       });
-      alert("User added successfully!");
+
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم إضافة المستخدم بنجاح",
+      });
       setUsername("");
     } catch (error: any) {
       console.error(error);
-      alert(`Error: ${error.message}`);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message || "حدث خطأ أثناء إضافة المستخدم",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +182,11 @@ const Page = () => {
       fundsData?.find((f) => f.fundType === "general")?.currentBalance || 0;
 
     if (amount > generalFund) {
-      alert("رصيد غير كافي في الصندوق العام");
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "رصيد غير كافي في الصندوق العام",
+      });
       return;
     }
 
@@ -185,9 +206,19 @@ const Page = () => {
       ]);
 
       setTransferAmount("");
+
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم التحويل بنجاح",
+      });
     } catch (error) {
       console.error("Error transferring funds:", error);
-      alert("حدث خطأ أثناء التحويل");
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء التحويل",
+      });
     }
   };
 
@@ -210,8 +241,9 @@ const Page = () => {
     {
       icon: Receipt,
       label: "الصندوق العام",
-      value: fundsData?.find((fund) => fund.fundType == "general")
-        ?.currentBalance,
+      value: fundsData
+        ?.find((fund) => fund.fundType == "general")
+        ?.currentBalance.toFixed(2),
       color: "text-slate-200",
     },
     {
@@ -349,9 +381,7 @@ const Page = () => {
                                       {user.username}
                                     </p>
                                     <p className="text-sm text-slate-400">
-                                      {new Date(
-                                        user.createdAt
-                                      ).toLocaleDateString("ar-SA")}
+                                      {formatDate(user.createdAt)}
                                     </p>
                                   </div>
                                 </div>
@@ -387,9 +417,7 @@ const Page = () => {
                                     آخر تحديث:
                                   </span>
                                   <span className="text-slate-300">
-                                    {new Date(
-                                      user.updatedAt
-                                    ).toLocaleDateString("ar-SA")}
+                                    {formatDate(user.updatedAt)}
                                   </span>
                                 </div>
                               </div>
@@ -420,8 +448,9 @@ const Page = () => {
                         </div>
                         <p className="text-xl sm:text-2xl font-semibold text-slate-200">
                           {fundsData
-                            ? fundsData.find((f) => f.fundType === "general")
-                                ?.currentBalance || 0
+                            ? fundsData
+                                .find((f) => f.fundType === "general")
+                                ?.currentBalance.toFixed(2) || 0
                             : "0"}
                         </p>
                       </div>
@@ -474,9 +503,9 @@ const Page = () => {
                                 {transaction.description}
                               </p>
                               <p className="text-sm text-slate-400">
-                                {new Date(transaction.date).toLocaleDateString(
-                                  "ar-SA"
-                                )}
+                                {new Date(
+                                  transaction.date
+                                ).toLocaleDateString()}
                               </p>
                             </div>
                             <p
@@ -530,7 +559,7 @@ const Page = () => {
                               {invoiceStats?.unpaidInvoices || 0}
                             </p>
                             <p className="text-sm text-slate-400">
-                              بقيمة {invoiceStats?.unpaidAmount || 0}
+                              بقيمة {invoiceStats?.unpaidAmount.toFixed(2) || 0}
                             </p>
                           </div>
                         </div>

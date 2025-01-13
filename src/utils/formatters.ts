@@ -1,7 +1,7 @@
 // src/utils/formatters.ts
 export const formatDate = (dateString: string | null) => {
   if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("ar-SA", {
+  return new Date(dateString).toLocaleDateString("en", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -11,9 +11,9 @@ export const formatDate = (dateString: string | null) => {
 };
 
 export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("ar-SA", {
+  return new Intl.NumberFormat("ar-SY", {
     style: "currency",
-    currency: "SAR",
+    currency: "SYP",
   }).format(amount);
 };
 

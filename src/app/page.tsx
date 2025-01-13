@@ -1,47 +1,62 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { Play, StopCircle } from "lucide-react";
+
+// Components
 import ActionButton from "@/components/common/ActionButtons";
 import CloseShiftModal from "@/components/common/CloseShiftModal";
-import CustomizedSnackbars from "@/components/common/CustomizedSnackbars";
 import InvoiceForm from "@/components/common/InvoiceForm";
 import Navbar from "@/components/common/Navbar";
 import ShiftModal from "@/components/common/ShiftModal";
 import SplineBackground from "@/components/common/SplineBackground";
-import TabContent from "@/components/common/TableContent";
+import TabContent from "@/components/common/TabContent";
 import TransactionTypeModal from "@/components/common/TransactionTypeModal";
+
+// Hooks
+import { useMokkBar } from "@/components/providers/MokkBarContext";
 import { useCurrentInvoices } from "@/hooks/invoices/useInvoice";
 import {
+  QueryShiftType,
   useCloseShift,
   useOpenShift,
   useShifts,
   useShiftSummary,
 } from "@/hooks/shifts/useShifts";
-import useSnackbar from "@/hooks/useSnackbar";
+
+// Types
 import { InvoiceCategory } from "@/types/invoice.type";
 import { FundType, InvoiceType, ShiftType } from "@/types/types";
+
+// Utils
 import { getFundId } from "@/utils/fund_id";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { Play, StopCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+// Constants
+const TABS = [
+  { id: FundType.booth, label: "بسطة" },
+  { id: FundType.university, label: "جامعة" },
+  { id: FundType.general, label: "عام" },
+];
 
 export default function Page() {
-  const shifts = useShifts();
-  const { data: currentInvoices, isLoading: isCurrentInvoicesLoading } =
-    useCurrentInvoices();
-  const lastShiftId =
-    shifts.data &&
-    shifts.data.reduce((medium, item) => {
-      medium = item.id > medium ? item.id : medium;
-      return medium;
-    }, 0);
-  const lastShift =
-    shifts.data && shifts.data.find((item) => item.id == lastShiftId);
-
-  // State
-  const [activeTab, setActiveTab] = useState<FundType>(FundType.booth);
+  // Context and Queries
+  const { setSnackbarConfig } = useMokkBar();
+  const queryClient = useQueryClient();
+  const { data: shifts, isLoading: isShiftsLoading } = useShifts();
   const [currentShift, setCurrentShift] = useState<{
     shiftType: ShiftType.evening | ShiftType.morning;
   } | null>(null);
+
+  const {
+    data: currentInvoices,
+    isLoading: isCurrentInvoicesLoading,
+    refetch: refetchCUrrentInvoices,
+  } = useCurrentInvoices(!!currentShift);
+  // State Management
+  const [activeTab, setActiveTab] = useState<FundType>(FundType.booth);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -52,39 +67,21 @@ export default function Page() {
   const [selectedInvoiceCategory, setSelectedInvoiceCategory] =
     useState<InvoiceCategory | null>(null);
 
-  useEffect(() => {
-    console.log("invoicce category : ", selectedInvoiceCategory);
-  }, [selectedInvoiceCategory]);
+  // Derived State
+  const lastShiftId = shifts?.reduce(
+    (maxId, item) => Math.max(maxId, item.id),
+    0
+  );
+  const lastShift = shifts?.find((item) => item.id === lastShiftId);
+  console.log("last shift : ", lastShift);
 
-  const { setSnackbarConfig, snackbarConfig } = useSnackbar();
-
-  const openShift = useOpenShift({
-    onSuccess: () => {
-      setShowShiftModal(false);
-      setSnackbarConfig({
-        open: true,
-        severity: "success",
-        message: "تم فتح وردية",
-      });
-    },
+  // Mutations and Queries
+  const { mutateAsync: openShift, isPending: isOpeningShift } = useOpenShift({
+    onSuccess: () => handleOpenShiftSuccess(),
+    onError: (error) => handleOpenShiftError(error),
   });
-  const closeShift = useCloseShift();
 
-  useEffect(() => {
-    if (shifts.isSuccess && lastShift) {
-      setCurrentShift(
-        lastShift.status === "closed"
-          ? null
-          : {
-              shiftType:
-                lastShift.shiftType === "morning"
-                  ? ShiftType.morning
-                  : ShiftType.evening,
-            }
-      );
-    }
-  }, [lastShift, shifts.isSuccess]);
-
+  const { refetch: closingShift } = useCloseShift();
   const {
     data: shiftSummary,
     isSuccess: shiftSummarySuccess,
@@ -92,23 +89,35 @@ export default function Page() {
   } = useShiftSummary();
 
   useEffect(() => {
-    if (shiftSummary) {
-      console.log(shiftSummary);
+    if (isShiftsLoading && lastShift) {
+      updateCurrentShift(lastShift);
     }
-  }, [shiftSummary]);
+  }, [lastShift, isShiftsLoading]);
 
-  const handleShiftOpen = () => {
-    setShowShiftModal(true);
+  // Event Handlers
+  const handleOpenShiftSuccess = () => {
+    setShowShiftModal(false);
+    refetchCUrrentInvoices();
+    queryClient.refetchQueries({ queryKey: ["invoices"] });
+    queryClient.refetchQueries({ queryKey: ["currentInvoices"] });
+    setSnackbarConfig({
+      open: true,
+      severity: "success",
+      message: "تم فتح وردية",
+    });
   };
 
-  const handleShiftClose = () => {
-    setShowCloseShiftModal(true);
-    triggerShiftSummary();
+  const handleOpenShiftError = (error: any) => {
+    setSnackbarConfig({
+      open: true,
+      severity: "error",
+      message: error?.response?.data?.message || "فشل في فتح الوردية",
+    });
   };
 
   const handleShiftTypeSelect = async (type: ShiftType) => {
     try {
-      await openShift.mutateAsync({
+      await openShift({
         shiftType: type === "صباحي" ? "morning" : "evening",
       });
       setCurrentShift({
@@ -127,26 +136,32 @@ export default function Page() {
   const handleConfirmShiftClose = async () => {
     if (!currentShift) return;
     try {
-      const result = await closeShift.refetch();
-      if (!result.data) {
-        throw new Error("No data received from server");
-      }
-      setCurrentShift(null);
-      setShowCloseShiftModal(false);
-      setActiveTab(FundType.booth);
-      setSnackbarConfig({
-        open: true,
-        severity: "success",
-        message: "تم اغلاق وردية",
-      });
+      const result = await closingShift();
+      if (!result.data) throw new Error("No data received from server");
+      handleShiftCloseSuccess();
     } catch (error) {
-      console.error("Error closing shift:", error);
-      setSnackbarConfig({
-        open: true,
-        severity: "error",
-        message: "فشل في اغلاق الوردية",
-      });
+      handleShiftCloseError(error);
     }
+  };
+
+  const handleShiftCloseSuccess = () => {
+    setCurrentShift(null);
+    setShowCloseShiftModal(false);
+    setActiveTab(FundType.booth);
+    setSnackbarConfig({
+      open: true,
+      severity: "success",
+      message: "تم اغلاق وردية",
+    });
+  };
+
+  const handleShiftCloseError = (error: any) => {
+    console.error("Error closing shift:", error);
+    setSnackbarConfig({
+      open: true,
+      severity: "error",
+      message: error?.response?.data?.message || "فشل في اغلاق الوردية",
+    });
   };
 
   const handleAddTransaction = (type: FundType, mode: InvoiceType) => {
@@ -154,51 +169,95 @@ export default function Page() {
     setShowTransactionModal(true);
   };
 
-  const handleInvoiceCategorySelect = (category: InvoiceCategory) => {
-    setSelectedInvoiceCategory(category);
-    setShowTransactionModal(false);
-    setShowInvoiceForm(true);
+  // Helper Functions
+  const updateCurrentShift = (shift: QueryShiftType) => {
+    setCurrentShift(
+      shift.status === "closed"
+        ? null
+        : {
+            shiftType:
+              shift.shiftType === "morning"
+                ? ShiftType.morning
+                : ShiftType.evening,
+          }
+    );
   };
-
-  useEffect(() => {
-    console.log("current invoices : ", currentInvoices);
-  }, [currentInvoices]);
 
   const getFilteredInvoices = () => {
     if (!currentInvoices) return [];
     const section =
       currentInvoices[
-        activeTab == FundType.booth
+        activeTab === FundType.booth
           ? "booth"
-          : activeTab == FundType.general
+          : activeTab === FundType.general
           ? "general"
           : "university"
       ];
     return section?.invoices || [];
   };
 
-  // Update the useEffect for logging
-  useEffect(() => {
-    if (currentInvoices) {
-      console.log("Current invoices:", currentInvoices);
-    }
-  }, [currentInvoices]);
+  // Render Methods
+  const renderShiftControls = () => (
+    <div
+      className="flex flex-wrap gap-4 mb-8 justify-end items-center"
+      dir="rtl"
+    >
+      {currentShift && (
+        <span className="text-muted-foreground">
+          الوردية الحالية:{" "}
+          {currentShift.shiftType === ShiftType.morning ? "صباحية" : "مسائية"}
+        </span>
+      )}
+      {!currentShift ? (
+        <ActionButton
+          icon={<Play className="h-5 w-5" />}
+          label="فتح وردية"
+          onClick={() => setShowShiftModal(true)}
+          variant="success"
+        />
+      ) : (
+        <ActionButton
+          icon={<StopCircle className="h-5 w-5" />}
+          label="اغلاق وردية"
+          onClick={() => {
+            setShowCloseShiftModal(true);
+            triggerShiftSummary();
+          }}
+          variant="danger"
+        />
+      )}
+    </div>
+  );
+
+  const renderTabs = () => (
+    <div className="flex space-x-4 border-b border-border">
+      {TABS.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${
+            activeTab === tab.id
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
       <SplineBackground activeTab={activeTab} />
-
-      {/* Modals */}
       <AnimatePresence>
         {showShiftModal && (
           <ShiftModal
+            isSelecting={isOpeningShift}
             onClose={() => setShowShiftModal(false)}
             onSelect={handleShiftTypeSelect}
           />
         )}
-      </AnimatePresence>
-
-      <AnimatePresence>
         {showCloseShiftModal && currentShift && shiftSummarySuccess && (
           <CloseShiftModal
             onClose={() => setShowCloseShiftModal(false)}
@@ -206,22 +265,21 @@ export default function Page() {
             shiftType={
               currentShift.shiftType === ShiftType.morning ? "صباحي" : "مسائي"
             }
-            shiftSummary={shiftSummary}
+            shiftSummary={shiftSummary || {}}
           />
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
         {showTransactionModal && (
           <TransactionTypeModal
             onClose={() => setShowTransactionModal(false)}
-            onSelect={handleInvoiceCategorySelect}
+            onSelect={(category) => {
+              setSelectedInvoiceCategory(category);
+              setShowTransactionModal(false);
+              setShowInvoiceForm(true);
+            }}
             mode={transactionMode}
           />
         )}
-      </AnimatePresence>
-
-      <AnimatePresence>
         {showInvoiceForm && selectedInvoiceCategory && (
           <InvoiceForm
             type={selectedInvoiceCategory}
@@ -234,77 +292,11 @@ export default function Page() {
           />
         )}
       </AnimatePresence>
-
       <div className="relative z-10">
         <Navbar />
         <main className="py-32 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Stats Grid */}
-            {/* <div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-              dir="rtl"
-            >
-              {statsConfig.map((stat, index) => (
-                <StatBox key={index} {...stat} />
-              ))}
-            </div> */}
-
-            {isCurrentInvoicesLoading ? (
-              <div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-                dir="rtl"
-              >
-                {[1, 2, 3, 4].map((index) => (
-                  <div
-                    key={index}
-                    className="bg-slate-700/30 rounded-lg p-4 animate-pulse"
-                  >
-                    <div className="h-4 bg-slate-600/50 rounded w-24 mb-2"></div>
-                    <div className="h-6 bg-slate-600/50 rounded w-16"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-                dir="rtl"
-              >
-                {/* {statsConfig.map((stat, index) => (
-                  <StatBox key={index} {...stat} />
-                ))} */}
-              </div>
-            )}
-            {/* Shift Control Buttons */}
-            <div
-              className="flex flex-wrap gap-4 mb-8 justify-end items-center"
-              dir="rtl"
-            >
-              {currentShift && (
-                <span className="text-muted-foreground">
-                  الوردية الحالية:{" "}
-                  {currentShift.shiftType === ShiftType.morning
-                    ? "صباحية"
-                    : "مسائية"}
-                </span>
-              )}
-              {!currentShift ? (
-                <ActionButton
-                  icon={<Play className="h-5 w-5" />}
-                  label="فتح وردية"
-                  onClick={handleShiftOpen}
-                  variant="success"
-                />
-              ) : (
-                <ActionButton
-                  icon={<StopCircle className="h-5 w-5" />}
-                  label="اغلاق وردية"
-                  onClick={handleShiftClose}
-                  variant="danger"
-                />
-              )}
-            </div>
-
-            {/* Tabs and Content */}
+            {renderShiftControls()}
             {currentShift && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -313,26 +305,7 @@ export default function Page() {
                 className="mt-8"
                 dir="rtl"
               >
-                <div className="flex space-x-4 border-b border-border">
-                  {[
-                    { id: FundType.booth, label: "بسطة" },
-                    { id: FundType.university, label: "جامعة" },
-                    { id: FundType.general, label: "عام" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${
-                        activeTab === tab.id
-                          ? "text-primary border-b-2 border-primary"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
+                {renderTabs()}
                 {currentInvoices && (
                   <TabContent
                     type={activeTab}
@@ -352,12 +325,6 @@ export default function Page() {
           </div>
         </main>
       </div>
-      <CustomizedSnackbars
-        open={snackbarConfig.open}
-        message={snackbarConfig.message}
-        severity={snackbarConfig.severity}
-        onClose={() => setSnackbarConfig((prev) => ({ ...prev, open: false }))}
-      />
     </div>
   );
 }

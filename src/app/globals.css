@@ -25,7 +25,7 @@ body::-webkit-scrollbar {
 }
 
 @layer base {
-  :root {
+  /* :root {
     --background: theme("colors.white");
     --foreground: theme("colors.gray.900");
 
@@ -54,8 +54,38 @@ body::-webkit-scrollbar {
     --border: theme("colors.gray.200");
     --input: theme("colors.gray.200");
     --ring: theme("colors.gray.950");
-  }
+  } */
 
+  :root {
+    --background: theme("colors.slate.950");
+    --foreground: theme("colors.slate.50");
+
+    --card: theme("colors.slate.800/50");
+    --card-foreground: theme("colors.slate.50");
+
+    --navbar-bg: theme("colors.slate.900/90");
+    --navbar-border: theme("colors.slate.700/30");
+
+    --primary: theme("colors.sky.400");
+    --primary-foreground: theme("colors.gray.50");
+
+    --secondary: theme("colors.slate.800");
+    --secondary-foreground: theme("colors.slate.50");
+
+    --muted: theme("colors.slate.800");
+    --muted-foreground: theme("colors.slate.400");
+
+    --accent: theme("colors.slate.800");
+    --accent-foreground: theme("colors.slate.50");
+
+    --success: theme("colors.emerald.400");
+    --warning: theme("colors.yellow.400");
+    --danger: theme("colors.red.400");
+
+    --border: theme("colors.slate.700");
+    --input: theme("colors.slate.700");
+    --ring: theme("colors.slate.300");
+  }
   .dark {
     --background: theme("colors.slate.950");
     --foreground: theme("colors.slate.50");
@@ -86,4 +116,15 @@ body::-webkit-scrollbar {
     --input: theme("colors.slate.700");
     --ring: theme("colors.slate.300");
   }
+}
+
+select option {
+  background-color: rgb(30, 41, 59);
+  color: rgb(226, 232, 240);
+  padding: 8px;
+}
+
+select:focus {
+  outline: none;
+  border-color: rgb(51, 65, 85);
 }

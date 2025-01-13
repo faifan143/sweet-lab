@@ -43,6 +43,9 @@ export default {
         input: "var(--input)",
         ring: "var(--ring)",
       },
+      screens: {
+        custom: { max: "890px" },
+      },
     },
   },
   plugins: [],

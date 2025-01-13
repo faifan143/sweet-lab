@@ -12,6 +12,7 @@ export const useAuth = () => {
     if (!user || !accessToken) {
       router.push("/login");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, accessToken]);
 
   return { user, accessToken };

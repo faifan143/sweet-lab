@@ -14,7 +14,7 @@ interface InvoiceStats {
   totalAmount: number;
 }
 
-export  const formatAmount = (value: number) => {
+export const formatAmount = (value: number) => {
   return value.toFixed(2);
 };
 export const formatSYP = (amount: number) => {
@@ -22,11 +22,11 @@ export const formatSYP = (amount: number) => {
     style: "currency",
     currency: "SYP",
     maximumFractionDigits: 0,
-  }).format(amount * 13150);
+  }).format(amount);
 };
 
 export const formatShortSYP = (amount: number) => {
-  const value = amount * 13150;
+  const value = amount;
   if (value >= 1000000) {
     return new Intl.NumberFormat("ar-SY", {
       notation: "compact",

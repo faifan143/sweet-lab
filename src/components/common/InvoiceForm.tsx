@@ -1,4 +1,5 @@
 "use client";
+import { CustomerType, useCustomersList } from "@/hooks/customers/useCustomers";
 import {
   useCreateDirectDebt,
   useCreateExpenseProducts,
@@ -22,13 +23,12 @@ import {
   DollarSign,
   FileText,
   Loader2,
-  Phone,
   Plus,
   Trash2,
-  User,
   X,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useMokkBar } from "../providers/MokkBarContext";
 
 type InvoiceType = Invoice["invoiceType"];
 type PaymentType = "cash" | "credit";
@@ -41,6 +41,7 @@ interface InvoiceFormProps {
 }
 
 interface FormData {
+  customerId?: number;
   customerName?: string;
   customerPhone?: string;
   paymentType: PaymentType;
@@ -67,17 +68,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   fundId,
   onClose,
 }) => {
-  // Queries and Mutations
+  const { setSnackbarConfig } = useMokkBar();
+  const { data: customers } = useCustomersList();
   const { data: items } = useItems();
   const { data: itemGroups } = useItemGroups();
 
-  const createIncomeProducts = useCreateIncomeProducts();
-  const createExpenseProducts = useCreateExpenseProducts();
-  const createDirectDebt = useCreateDirectDebt();
+  const isPurchaseInvoice = mode === "expense";
 
-  const isPurchaseInvoice = mode == "expense";
-
-  // Form state
+  // State
   const [formData, setFormData] = useState<FormData>({
     paymentType: "cash",
     totalAmount: 0,
@@ -85,17 +83,118 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     paidStatus: true,
   });
 
-  // Items state (only for products)
   const [formItems, setFormItems] = useState<FormItem[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedItem, setSelectedItem] = useState<number>(0);
   const [selectedItemPrice, setSelectedItemPrice] = useState<number>(0);
   const [selectedItemUnit, setSelectedItemUnit] = useState<string>("");
-
   const [quantity, setQuantity] = useState<number>(1);
   const [trayCount, setTrayCount] = useState<number>(0);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerType | null>(
+    null
+  );
 
-  // Helper functions
+  // Mutations with success/error handling
+  const createIncomeProducts = useCreateIncomeProducts({
+    onSuccess: () => {
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم إضافة الفاتورة بنجاح",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message || "حدث خطأ أثناء إضافة الفاتورة",
+      });
+    },
+  });
+
+  const createExpenseProducts = useCreateExpenseProducts({
+    onSuccess: () => {
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم إضافة فاتورة الشراء بنجاح",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message || "حدث خطأ أثناء إضافة فاتورة الشراء",
+      });
+    },
+  });
+
+  const createDirectDebt = useCreateDirectDebt({
+    onSuccess: () => {
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message:
+          type === "debt" ? "تم تسجيل الدين بنجاح" : "تم إضافة المعاملة بنجاح",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: error?.response?.data?.message || "حدث خطأ أثناء العملية",
+      });
+    },
+  });
+
+  // Handlers
+  const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected_customer = customers?.find(
+      (c) => c.id === Number(e.target.value)
+    );
+    if (selected_customer) {
+      setSelectedCustomer(selected_customer);
+      setFormData((prev) => ({
+        ...prev,
+        customerId: selected_customer.id,
+        customerName: selected_customer.name,
+        customerPhone: selected_customer.phone,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        customerId: undefined,
+        customerName: "",
+        customerPhone: "",
+      }));
+    }
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "totalAmount" || name === "discount" ? Number(value) : value,
+    }));
+  };
+
+  const handlePaymentTypeChange = (type: PaymentType) => {
+    setFormData((prev) => ({
+      ...prev,
+      paymentType: type,
+      paidStatus: type === "cash",
+    }));
+  };
 
   const handleItemSelect = (itemId: number) => {
     setSelectedItem(itemId);
@@ -115,19 +214,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       case "debt":
         return mode === "income" ? "تحصيل دين" : "تسجيل دين جديد";
     }
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "totalAmount" || name === "discount" ? Number(value) : value,
-    }));
   };
 
   const addItem = () => {
@@ -163,10 +249,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }));
   };
 
-  useEffect(() => {
-    console.log("form items : ", formItems);
-  }, [formItems]);
-
   const removeItem = (itemId: number) => {
     const item = formItems.find((i) => i.id === itemId);
     if (!item) return;
@@ -178,19 +260,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }));
   };
 
-  const handlePaymentTypeChange = (type: PaymentType) => {
-    setFormData((prev) => ({
-      ...prev,
-      paymentType: type,
-      paidStatus: type === "cash",
-    }));
-  };
-
   const handleSubmit = async () => {
     try {
       const baseInvoiceData = {
-        customerName: formData.customerName || "",
-        customerPhone: formData.customerPhone,
+        customerId: formData.customerId,
         notes: formData.notes,
         fundId,
       };
@@ -248,6 +321,63 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     createExpenseProducts.isPending ||
     createDirectDebt.isPending;
 
+  const CustomerSection = () => {
+    // Filter customers if type is debt
+    const filteredCustomers =
+      type == "debt" && mode == "income"
+        ? customers?.filter((customer) => customer.totalDebt > 0)
+        : customers;
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-slate-200">
+          {mode === "income" ? "العميل" : "المورد"}
+          {(type == "direct" || type == "debt") && " ( اختياري ) "}
+        </label>
+        <div className="flex justify-center gap-5 ">
+          <div className="relative flex-1">
+            <select
+              value={formData.customerId || ""}
+              onChange={handleCustomerSelect}
+              className="w-full appearance-none bg-slate-800/50 text-slate-200 rounded-lg border border-slate-700/50 py-3 px-4 pr-10 focus:outline-none focus:border-slate-600 text-right"
+            >
+              <option value="" className="bg-slate-800">
+                اختر من القائمة
+              </option>
+              {filteredCustomers?.map((customer) => (
+                <option
+                  key={customer.id}
+                  value={customer.id}
+                  className="bg-slate-800 py-2 text-right"
+                >
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-400">
+              <svg
+                className="h-4 w-4 fill-current"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          </div>
+          {selectedCustomer && selectedCustomer.totalDebt > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 text-yellow-400 rounded-lg hover:bg-yellow-500/20 transition-colors disabled:opacity-50 w-fit">
+              الدين الذي عليه {selectedCustomer.totalDebt} ليرة
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Show simplified form for direct and debt income
   if (type === "direct" || type === "debt") {
     return (
@@ -278,35 +408,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
           <div className="space-y-6" dir="rtl">
             {/* Customer Information */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-slate-200">اسم العميل</label>
-                <div className="relative">
-                  <User className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    name="customerName"
-                    value={formData.customerName || ""}
-                    onChange={handleChange}
-                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-slate-200">رقم الهاتف</label>
-                <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <input
-                    type="tel"
-                    name="customerPhone"
-                    value={formData.customerPhone || ""}
-                    onChange={handleChange}
-                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                  />
-                </div>
-              </div>
-            </div>
+            <CustomerSection />
 
             {/* Amount */}
             <div className="space-y-2">
@@ -397,37 +499,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
         <div className="space-y-6" dir="rtl">
           {/* Customer Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-slate-200">
-                {mode === "income" ? "اسم العميل" : "اسم المورد"}
-              </label>
-              <div className="relative">
-                <User className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  name="customerName"
-                  value={formData.customerName || ""}
-                  onChange={handleChange}
-                  className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-slate-200">رقم الهاتف</label>
-              <div className="relative">
-                <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="tel"
-                  name="customerPhone"
-                  value={formData.customerPhone || ""}
-                  onChange={handleChange}
-                  className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                />
-              </div>
-            </div>
-          </div>
+          <CustomerSection />
 
           {/* Payment Type */}
           <div className="space-y-2">
@@ -494,8 +566,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 >
                   <option value={0}>اختر المنتج</option>
                   {items
-                    ?.filter((item) =>
-                      isPurchaseInvoice ? item.type === "raw" : true
+                    ?.filter(
+                      (item) => item.groupId == selectedGroupId
+                      // isPurchaseInvoice ? item.type === "raw" : true
                     )
                     .map((item) => (
                       <option key={item.id} value={item.id}>

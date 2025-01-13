@@ -5,10 +5,15 @@ import { X, Sun, Moon } from "lucide-react";
 interface ShiftModalProps {
   onClose: () => void;
   onSelect: (type: ShiftType) => void;
+  isSelecting: boolean;
 }
 
 // Shift Selection Modal Component
-const ShiftModal: React.FC<ShiftModalProps> = ({ onClose, onSelect }) => {
+const ShiftModal: React.FC<ShiftModalProps> = ({
+  onClose,
+  onSelect,
+  isSelecting,
+}) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -25,13 +30,15 @@ const ShiftModal: React.FC<ShiftModalProps> = ({ onClose, onSelect }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">اختر نوع الوردية</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X size={24} />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">
+            {isSelecting ? "... جارٍ فتح وردية " : "اختر نوع الوردية"}
+          </h2>
         </div>
 
         <div className="grid grid-cols-2 gap-4" dir="rtl">

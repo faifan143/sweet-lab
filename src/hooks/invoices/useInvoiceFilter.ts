@@ -28,13 +28,13 @@ export function useInvoiceFilters(invoices: Invoice[] | undefined) {
 
       // Search filter
       const searchMatch = searchTerm
-        ? invoice.customerName
+        ? invoice.customer.name
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           invoice.invoiceNumber
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          invoice.customerPhone?.includes(searchTerm)
+          invoice.customer.phone?.includes(searchTerm)
         : true;
 
       // Date filter
@@ -45,6 +45,8 @@ export function useInvoiceFilters(invoices: Invoice[] | undefined) {
       return statusMatch && searchMatch && dateMatch;
     });
   }, [invoices, activeStatus, searchTerm, dateFilter]);
+
+  console.log("Filtered Invoices  :  ", filteredInvoices);
 
   return {
     activeStatus,

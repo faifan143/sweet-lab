@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/shifts/useShifts.ts
 import { ShiftSummaryData } from "@/components/common/CloseShiftModal";
 import { apiClient } from "@/utils/axios";
@@ -8,16 +9,17 @@ interface OpenShiftDTO {
 }
 
 // hooks/shifts/useShifts.ts
-export const useOpenShift = (options?: { onSuccess?: () => void }) => {
+export const useOpenShift = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
+}) => {
   return useMutation({
     mutationFn: async (data: OpenShiftDTO) => {
       const response = await apiClient.post("/shifts", data);
       return response;
     },
     onSuccess: options?.onSuccess,
-    onError: (error) => {
-      console.error("Error opening shift:", error);
-    },
+    onError: options?.onError,
   });
 };
 export const useCloseShift = () => {
@@ -48,7 +50,7 @@ export interface Employee {
   username: string;
 }
 
-export interface Shift {
+export interface QueryShiftType {
   id: number;
   shiftType: "morning" | "evening";
   status: "open" | "closed";
@@ -59,10 +61,10 @@ export interface Shift {
 }
 
 export const useShifts = () => {
-  return useQuery<Shift[]>({
+  return useQuery<QueryShiftType[]>({
     queryKey: ["shifts"],
     queryFn: async () => {
-      const response = (await apiClient.get("/shifts")) as Shift[];
+      const response = (await apiClient.get("/shifts")) as QueryShiftType[];
       return response;
     },
     // enabled: false,

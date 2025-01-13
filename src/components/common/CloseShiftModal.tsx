@@ -1,4 +1,5 @@
 import { formatAmount } from "@/hooks/invoices/useInvoiceStats";
+import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import { X, AlertTriangle } from "lucide-react";
 
@@ -43,7 +44,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4"
+        className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 h-[90%] overflow-y-auto overflow-hidden no-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
@@ -86,7 +87,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 <div className="flex justify-between">
                   <span className="text-slate-400">وقت الفتح:</span>
                   <span className="text-slate-200">
-                    {new Date(shiftSummary.openTime).toLocaleString("ar-SA")}
+                    {formatDate(shiftSummary.openTime)}
                   </span>
                 </div>
               </div>
