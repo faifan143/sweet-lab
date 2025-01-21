@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 import { useMokkBar } from "../providers/MokkBarContext";
+import { sweetShopUnits } from "@/utils/constants";
 
 type InvoiceType = Invoice["invoiceType"];
 type PaymentType = "cash" | "credit";
@@ -397,13 +398,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         >
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-slate-100">{getTitle()}</h2>
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-slate-300 transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
+            <h2 className="text-xl font-bold text-slate-100">{getTitle()}</h2>
           </div>
 
           <div className="space-y-6" dir="rtl">
@@ -488,13 +489,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">{getTitle()}</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">{getTitle()}</h2>
         </div>
 
         <div className="space-y-6" dir="rtl">
@@ -591,15 +592,27 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                     />
                   </div>
-
+                  {/* Unit Selection */}
                   <div className="space-y-2">
                     <label className="block text-slate-200">الوحدة</label>
-                    <input
-                      type="text"
+                    <select
                       value={selectedItemUnit}
                       onChange={(e) => setSelectedItemUnit(e.target.value)}
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    />
+                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200  max-h-[10vh] overflow-hidden overflow-y-auto no-scrollbar"
+                    >
+                      <option value="" className="bg-slate-800">
+                        اختر الوحدة
+                      </option>
+                      {sweetShopUnits.map((unit) => (
+                        <option
+                          key={unit}
+                          value={unit}
+                          className="bg-slate-800 py-2"
+                        >
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
@@ -612,21 +625,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                     />
                   </div>
-
-                  {!isPurchaseInvoice && (
-                    <div className="space-y-2">
-                      <label className="block text-slate-200">
-                        عدد الصواني
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={trayCount}
-                        onChange={(e) => setTrayCount(Number(e.target.value))}
-                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                      />
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -651,7 +649,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     <th className="text-right text-slate-200 p-3">المنتج</th>
                     <th className="text-right text-slate-200 p-3">الكمية</th>
                     <th className="text-right text-slate-200 p-3">السعر</th>
-                    <th className="text-right text-slate-200 p-3">الصواني</th>
+                    <th className="text-right text-slate-200 p-3">الفوارغ</th>
                     <th className="text-right text-slate-200 p-3">المجموع</th>
                     <th className="text-right text-slate-200 p-3"></th>
                   </tr>
@@ -693,7 +691,19 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               </table>
             </div>
           )}
-
+          {/* Trays Count */}
+          {!isPurchaseInvoice && (
+            <div className="space-y-2">
+              <label className="block text-slate-200">عدد الفوارغ</label>
+              <input
+                type="number"
+                min="0"
+                value={trayCount}
+                onChange={(e) => setTrayCount(Number(e.target.value))}
+                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+              />
+            </div>
+          )}
           {/* Discount Field */}
           {!isPurchaseInvoice && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

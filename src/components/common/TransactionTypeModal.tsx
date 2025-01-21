@@ -64,15 +64,15 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">
-            {mode === "income" ? "نوع الدخل" : "نوع المصروف"}
-          </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X size={24} />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">
+            {mode === "income" ? "نوع الدخل" : "نوع المصروف"}
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 gap-4" dir="rtl">

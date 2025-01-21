@@ -127,7 +127,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                   {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
                 </td>
                 <td className="p-3 text-slate-300">
-                  {invoice.customer.name || "-"}
+                  {invoice.customer ? invoice.customer.name : "-"}
                 </td>
                 <td className="p-3 text-slate-300">
                   {formatSYP(invoice.totalAmount - invoice.discount)}

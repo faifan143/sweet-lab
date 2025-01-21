@@ -3,15 +3,16 @@ import { logout } from "@/redux/reducers/userSlice";
 import { AppDispatch } from "@/redux/store";
 import { motion } from "framer-motion";
 import {
-  BookOpenCheck,
-  CreditCard,
-  HandPlatter,
+  BoxesIcon,
+  CalendarDays,
+  Clock,
+  LayoutDashboard,
   LogOut,
   LogOutIcon,
   Menu,
   Package,
   Receipt,
-  UserCog,
+  Wallet,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -25,12 +26,41 @@ const Navbar = () => {
   const handleLogout = () => dispatch(logout());
 
   const navItems = [
-    { name: "دفتر اليومية", icon: BookOpenCheck, href: "/" },
-    { name: "الصفحة الادارية", icon: UserCog, href: "/manager" },
-    { name: "المواد", icon: Package, href: "/materials" },
-    { name: "الصواني", icon: HandPlatter, href: "/trays" },
-    { name: "الفواتير", icon: Receipt, href: "/invoices" },
-    { name: "الديون", icon: CreditCard, href: "/debts" },
+    {
+      name: "دفتر اليومية",
+      icon: CalendarDays,
+      href: "/",
+    },
+    {
+      name: "الصفحة الادارية",
+      icon: LayoutDashboard,
+      href: "/manager",
+    },
+    {
+      name: "الورديات",
+      icon: Clock,
+      href: "/shifts",
+    },
+    {
+      name: "المواد",
+      icon: Package,
+      href: "/materials",
+    },
+    {
+      name: "الفوارغ",
+      icon: BoxesIcon,
+      href: "/trays",
+    },
+    {
+      name: "الفواتير",
+      icon: Receipt,
+      href: "/invoices",
+    },
+    {
+      name: "الديون",
+      icon: Wallet,
+      href: "/debts",
+    },
   ];
 
   const containerVariants = {
@@ -57,7 +87,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed w-full top-0 z-50" dir="rtl">
+    <nav className=" w-full top-0 z-50 relative" dir="rtl">
       <div className="bg-navbar-bg backdrop-blur-md border-b border-navbar-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 custom:px-4">
           <div className="flex justify-between h-16">
@@ -120,34 +150,34 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-
         {/* Mobile Navigation */}
-        <motion.div
-          className={`hidden custom:flex ${isOpen ? "block" : "hidden"}`}
-          initial={false}
-          animate={
-            isOpen ? { opacity: 1, height: "auto" } : { opacity: 0, height: 0 }
-          }
-          transition={{ duration: 0.3 }}
-        >
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
-              <RouteWrapper key={item.name} href={item.href}>
-                <div className="flex items-center px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-all duration-300 gap-2">
-                  <item.icon className="h-4 w-4 opacity-70" />
-                  <span>{item.name}</span>
-                </div>
-              </RouteWrapper>
-            ))}
-            <div
-              onClick={handleLogout}
-              className="flex items-center px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-all duration-300 gap-2 cursor-pointer"
-            >
-              <LogOutIcon className="h-4 w-4 opacity-70" />
-              <span>تسجيل خروج</span>
+        {isOpen && (
+          <motion.div
+            className="hidden custom:block absolute top-16 left-0 right-0 bg-navbar-bg border-b border-navbar-border" // Added absolute positioning and background
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navItems.map((item) => (
+                <RouteWrapper key={item.name} href={item.href}>
+                  <div className="flex items-center px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-all duration-300 gap-2">
+                    <item.icon className="h-4 w-4 opacity-70" />
+                    <span>{item.name}</span>
+                  </div>
+                </RouteWrapper>
+              ))}
+              <div
+                onClick={handleLogout}
+                className="flex items-center px-3 py-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-all duration-300 gap-2 cursor-pointer"
+              >
+                <LogOutIcon className="h-4 w-4 opacity-70" />
+                <span>تسجيل خروج</span>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </nav>
   );

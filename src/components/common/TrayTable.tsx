@@ -85,7 +85,7 @@ const MobileTrayCard: React.FC<MobileTrayCardProps> = ({
           <p className="text-slate-300">{tray.customer.phone || "-"}</p>
         </div>
         <div>
-          <p className="text-sm text-slate-400">عدد الصواني</p>
+          <p className="text-sm text-slate-400">عدد الفوارغ</p>
           <p className="text-slate-300">{tray.totalTrays}</p>
         </div>
       </div>
@@ -113,7 +113,7 @@ const MobileTrayCard: React.FC<MobileTrayCardProps> = ({
             <span>جاري الارجاع...</span>
           </div>
         ) : (
-          "إرجاع الصواني"
+          "إرجاع الفوارغ"
         )}
       </button>
     </div>
@@ -162,7 +162,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
         ))}
         {!trays.length && (
           <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-lg">
-            لا توجد صواني معلقة
+            لا توجد فوارغ معلقة
           </div>
         )}
         {trays.length > PAGE_SIZE && (
@@ -184,7 +184,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
             <tr>
               <th className="text-right p-3 text-slate-300">العميل</th>
               <th className="text-right p-3 text-slate-300">رقم الهاتف</th>
-              <th className="text-right p-3 text-slate-300">عدد الصواني</th>
+              <th className="text-right p-3 text-slate-300">عدد الفوارغ</th>
               <th className="text-right p-3 text-slate-300">تاريخ الاستلام</th>
               <th className="text-right p-3 text-slate-300">ملاحظات</th>
               <th className="text-right p-3 text-slate-300">الإجراءات</th>
@@ -214,7 +214,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
                         <span>جاري الارجاع...</span>
                       </div>
                     ) : (
-                      "إرجاع الصواني"
+                      "إرجاع الفوارغ"
                     )}
                   </button>
                 </td>
@@ -223,7 +223,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
             {!trays.length && (
               <tr>
                 <td colSpan={6} className="text-center p-4 text-slate-400">
-                  لا توجد صواني معلقة
+                  لا توجد فوارغ معلقة
                 </td>
               </tr>
             )}

@@ -33,6 +33,9 @@ import { FundType, InvoiceType, ShiftType } from "@/types/types";
 
 // Utils
 import { getFundId } from "@/utils/fund_id";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { setLaoding } from "@/redux/reducers/wrapper.slice";
 
 // Constants
 const TABS = [
@@ -44,17 +47,17 @@ const TABS = [
 export default function Page() {
   // Context and Queries
   const { setSnackbarConfig } = useMokkBar();
+  const dispatch = useDispatch<AppDispatch>();
   const queryClient = useQueryClient();
-  const { data: shifts, isLoading: isShiftsLoading } = useShifts();
+  const {
+    data: shifts,
+    isLoading: isShiftsLoading,
+    isSuccess: isShiftsSuccess,
+  } = useShifts();
   const [currentShift, setCurrentShift] = useState<{
     shiftType: ShiftType.evening | ShiftType.morning;
   } | null>(null);
 
-  const {
-    data: currentInvoices,
-    isLoading: isCurrentInvoicesLoading,
-    refetch: refetchCUrrentInvoices,
-  } = useCurrentInvoices(!!currentShift);
   // State Management
   const [activeTab, setActiveTab] = useState<FundType>(FundType.booth);
   const [showShiftModal, setShowShiftModal] = useState(false);
@@ -73,7 +76,12 @@ export default function Page() {
     0
   );
   const lastShift = shifts?.find((item) => item.id === lastShiftId);
-  console.log("last shift : ", lastShift);
+  const theShiftIsOpen = !lastShift?.closeTime && isShiftsSuccess;
+  const {
+    data: currentInvoices,
+    isLoading: isCurrentInvoicesLoading,
+    refetch: refetchCUrrentInvoices,
+  } = useCurrentInvoices(theShiftIsOpen);
 
   // Mutations and Queries
   const { mutateAsync: openShift, isPending: isOpeningShift } = useOpenShift({
@@ -81,18 +89,30 @@ export default function Page() {
     onError: (error) => handleOpenShiftError(error),
   });
 
-  const { refetch: closingShift } = useCloseShift();
+  const { refetch: closingShift, isLoading: isClosingShiftLoading } =
+    useCloseShift();
   const {
     data: shiftSummary,
     isSuccess: shiftSummarySuccess,
+    isLoading: isSummaryLoading,
     refetch: triggerShiftSummary,
   } = useShiftSummary();
+
+  useEffect(() => {
+    dispatch(setLaoding(isShiftsLoading || isSummaryLoading));
+  }, [dispatch, isShiftsLoading, isSummaryLoading]);
 
   useEffect(() => {
     if (isShiftsLoading && lastShift) {
       updateCurrentShift(lastShift);
     }
   }, [lastShift, isShiftsLoading]);
+  useEffect(() => {
+    if (isShiftsSuccess && lastShift) {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+    }
+  }, [lastShift, isShiftsSuccess, queryClient]);
 
   // Event Handlers
   const handleOpenShiftSuccess = () => {
@@ -123,6 +143,7 @@ export default function Page() {
       setCurrentShift({
         shiftType: type === "صباحي" ? ShiftType.morning : ShiftType.evening,
       });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
     } catch (error) {
       console.error("Failed to open shift:", error);
       setSnackbarConfig({
@@ -134,7 +155,7 @@ export default function Page() {
   };
 
   const handleConfirmShiftClose = async () => {
-    if (!currentShift) return;
+    if (lastShift?.closeTime) return;
     try {
       const result = await closingShift();
       if (!result.data) throw new Error("No data received from server");
@@ -153,6 +174,7 @@ export default function Page() {
       severity: "success",
       message: "تم اغلاق وردية",
     });
+    queryClient.invalidateQueries({ queryKey: ["shifts"] });
   };
 
   const handleShiftCloseError = (error: any) => {
@@ -198,17 +220,9 @@ export default function Page() {
 
   // Render Methods
   const renderShiftControls = () => (
-    <div
-      className="flex flex-wrap gap-4 mb-8 justify-end items-center"
-      dir="rtl"
-    >
-      {currentShift && (
-        <span className="text-muted-foreground">
-          الوردية الحالية:{" "}
-          {currentShift.shiftType === ShiftType.morning ? "صباحية" : "مسائية"}
-        </span>
-      )}
-      {!currentShift ? (
+    <div className="flex  flex-wrap gap-4 mb-8  items-center" dir="rtl">
+      {" "}
+      {!theShiftIsOpen ? (
         <ActionButton
           icon={<Play className="h-5 w-5" />}
           label="فتح وردية"
@@ -225,6 +239,14 @@ export default function Page() {
           }}
           variant="danger"
         />
+      )}
+      {theShiftIsOpen && (
+        <span className="text-muted-foreground">
+          الوردية الحالية:{" "}
+          {currentShift && currentShift.shiftType === ShiftType.morning
+            ? "صباحية"
+            : "مسائية"}
+        </span>
       )}
     </div>
   );
@@ -258,14 +280,17 @@ export default function Page() {
             onSelect={handleShiftTypeSelect}
           />
         )}
-        {showCloseShiftModal && currentShift && shiftSummarySuccess && (
+        {showCloseShiftModal && theShiftIsOpen && shiftSummarySuccess && (
           <CloseShiftModal
             onClose={() => setShowCloseShiftModal(false)}
             onConfirm={handleConfirmShiftClose}
             shiftType={
-              currentShift.shiftType === ShiftType.morning ? "صباحي" : "مسائي"
+              currentShift && currentShift.shiftType === ShiftType.morning
+                ? "صباحي"
+                : "مسائي"
             }
             shiftSummary={shiftSummary || {}}
+            isShiftClosing={isClosingShiftLoading}
           />
         )}
 
@@ -297,7 +322,7 @@ export default function Page() {
         <main className="py-32 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {renderShiftControls()}
-            {currentShift && (
+            {theShiftIsOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

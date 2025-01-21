@@ -1,9 +1,9 @@
 // src/utils/formatters.ts
 export const formatDate = (dateString: string | null) => {
   if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("en", {
+  return new Date(dateString).toLocaleDateString("ar-EG", {
     year: "numeric",
-    month: "long",
+    month: "numeric",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",

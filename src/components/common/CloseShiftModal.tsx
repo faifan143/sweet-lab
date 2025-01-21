@@ -1,7 +1,9 @@
+"use client";
 import { formatAmount } from "@/hooks/invoices/useInvoiceStats";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import { X, AlertTriangle } from "lucide-react";
+import { useState } from "react";
 
 interface Fund {
   fundType: string;
@@ -24,6 +26,7 @@ interface CloseShiftModalProps {
   onConfirm: () => void;
   shiftType: "صباحي" | "مسائي";
   shiftSummary?: ShiftSummaryData;
+  isShiftClosing: boolean;
 }
 
 const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
@@ -31,7 +34,10 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   onConfirm,
   shiftType,
   shiftSummary,
+  isShiftClosing,
 }) => {
+  const [isIncrease, setIsIncrease] = useState(true);
+  const [difference, setDifference] = useState<number>(0);
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -48,15 +54,15 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">
-            تأكيد إغلاق الوردية
-          </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X size={24} />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">
+            تأكيد إغلاق الوردية
+          </h2>
         </div>
 
         <div className="space-y-6" dir="rtl">
@@ -136,6 +142,47 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               </div>
             </>
           )}
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <label className="block text-slate-200 mb-2">
+                  قيمة الفوارق
+                </label>
+                <input
+                  type="number"
+                  defaultValue={difference}
+                  onChange={(e) => setDifference(parseInt(e.target.value))}
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 appearance-none"
+                  placeholder="أدخل قيمة الفوارق"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-slate-200">نوع الفرق</label>
+                <div className="flex items-center gap-2 bg-slate-700/30 p-1 rounded-lg">
+                  <button
+                    className={`px-3 py-1.5 rounded transition-colors ${
+                      isIncrease
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "text-slate-400 hover:text-slate-300"
+                    }`}
+                    onClick={() => setIsIncrease(true)}
+                  >
+                    زيادة
+                  </button>
+                  <button
+                    className={`px-3 py-1.5 rounded transition-colors ${
+                      !isIncrease
+                        ? "bg-red-500/20 text-red-400"
+                        : "text-slate-400 hover:text-slate-300"
+                    }`}
+                    onClick={() => setIsIncrease(false)}
+                  >
+                    نقصان
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
@@ -145,7 +192,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               onClick={onConfirm}
               className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20"
             >
-              تأكيد الإغلاق
+              {isShiftClosing ? "جارٍ إغلاق الوردية" : " تأكيد الإغلاق"}
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}

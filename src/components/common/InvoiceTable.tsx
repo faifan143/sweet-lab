@@ -119,64 +119,72 @@ export const InvoiceTable = ({
   const renderMobileView = () => (
     <>
       <div className="space-y-4">
-        {paginatedInvoices.map((invoice) => (
-          <div
-            key={invoice.id}
-            className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-sm text-slate-400">رقم الفاتورة</div>
-                <div className="text-foreground">#{invoice.invoiceNumber}</div>
-              </div>
-              <StatusBadge invoice={invoice} />
-            </div>
+        {paginatedInvoices.map((invoice) => {
+          console.log("single filtered invoice :  ", invoice.customer);
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-sm text-slate-400">العميل</div>
-                <div className="text-foreground">{invoice.customer.name}</div>
-              </div>
-              <div>
-                <div className="text-sm text-slate-400">الهاتف</div>
-                <div className="text-foreground">
-                  {invoice.customer.phone || "-"}
+          return (
+            <div
+              key={invoice.id}
+              className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-sm text-slate-400">رقم الفاتورة</div>
+                  <div className="text-foreground">
+                    #{invoice.invoiceNumber}
+                  </div>
                 </div>
+                <StatusBadge invoice={invoice} />
               </div>
-              <div>
-                <div className="text-sm text-slate-400">المبلغ</div>
-                <div className="text-foreground">
-                  {formatCurrency(invoice.totalAmount)}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-slate-400">النوع</div>
-                <div className="text-foreground">
-                  {invoice.invoiceType === "expense" ? "صرف" : "دخل"}
-                </div>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              {!invoice.paidStatus && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-sm text-slate-400">العميل</div>
+                  <div className="text-foreground">
+                    {invoice.customer ? invoice.customer.name : "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">الهاتف</div>
+                  <div className="text-foreground">
+                    {invoice.customer ? invoice.customer.phone : "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">المبلغ</div>
+                  <div className="text-foreground">
+                    {formatCurrency(invoice.totalAmount)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">النوع</div>
+                  <div className="text-foreground">
+                    {invoice.invoiceType === "expense" ? "صرف" : "دخل"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {!invoice.paidStatus && (
+                  <button
+                    onClick={() => onStatusChange(invoice, "paid")}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    <span>تحويل لمدفوع</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => onStatusChange(invoice, "paid")}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
+                  onClick={() => onViewDetail(invoice)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
                 >
-                  <DollarSign className="h-4 w-4" />
-                  <span>تحويل لمدفوع</span>
+                  <Eye className="h-4 w-4" />
+                  <span>عرض التفاصيل</span>
                 </button>
-              )}
-              <button
-                onClick={() => onViewDetail(invoice)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
-              >
-                <Eye className="h-4 w-4" />
-                <span>عرض التفاصيل</span>
-              </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {invoices.length === 0 && (
           <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-lg">
             لا توجد فواتير متطابقة مع معايير البحث
@@ -200,28 +208,28 @@ export const InvoiceTable = ({
           <table className="w-full" dir="rtl">
             <thead>
               <tr className="border-b border-slate-700/50">
-                <th className="text-right text-muted-foreground font-medium p-4 w-24">
+                <th className="text-center text-muted-foreground font-medium p-4 w-24">
                   رقم الفاتورة
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4">
+                <th className="text-center text-muted-foreground font-medium p-4">
                   التاريخ
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4">
+                <th className="text-center text-muted-foreground font-medium p-4">
                   العميل
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4 w-28">
+                <th className="text-center text-muted-foreground font-medium p-4 w-28">
                   الهاتف
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4 w-28">
+                <th className="text-center text-muted-foreground font-medium p-4 w-28">
                   النوع
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4 w-28">
+                <th className="text-center text-muted-foreground font-medium p-4 w-28">
                   المبلغ
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4 w-32">
+                <th className="text-center text-muted-foreground font-medium p-4 w-32">
                   الحالة
                 </th>
-                <th className="text-right text-muted-foreground font-medium p-4 w-52">
+                <th className="text-center text-muted-foreground font-medium p-4 w-52">
                   الإجراءات
                 </th>
               </tr>
@@ -232,37 +240,46 @@ export const InvoiceTable = ({
                   key={invoice.id}
                   className="hover:bg-slate-700/25 transition-colors"
                 >
-                  <td className="p-4 text-foreground">
+                  <td className="p-4 text-foreground text-center">
                     #{invoice.invoiceNumber}
                   </td>
-                  <td className="p-4 text-foreground">
+                  <td className="p-4 text-foreground text-center">
                     {formatDate(invoice.createdAt)}
                   </td>
-                  <td className="p-4 text-foreground">
-                    {invoice.customer.name}
+                  <td className="p-4 text-foreground text-center">
+                    {invoice.customer ? invoice.customer.name : "-"}
                   </td>
-                  <td className="p-4 text-foreground">
-                    {invoice.customer.phone || "-"}
+                  <td className="p-4 text-foreground text-center">
+                    {invoice.customer ? invoice.customer.phone : "-"}
                   </td>
-                  <td className="p-4 text-foreground">
+                  <td className="p-4 text-foreground text-center">
                     {invoice.invoiceType === "expense" ? "صرف" : "دخل"}
                   </td>
-                  <td className="p-4 text-foreground">
+                  <td className="p-4 text-foreground text-center">
                     {formatCurrency(invoice.totalAmount)}
                   </td>
                   <td className="p-4">
                     <StatusBadge invoice={invoice} />
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col  items-center gap-2">
                       {!invoice.paidStatus && (
-                        <button
-                          onClick={() => onStatusChange(invoice, "paid")}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors"
-                        >
-                          <DollarSign className="h-4 w-4" />
-                          <span>تحويل لمدفوع</span>
-                        </button>
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <button
+                            onClick={() => onStatusChange(invoice, "paid")}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-400 bg-opacity-10 text-success hover:bg-slate-700 transition-colors "
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            <span>تحويل لمدفوع</span>
+                          </button>
+                          <button
+                            onClick={() => onStatusChange(invoice, "debt")}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-400 bg-opacity-10 text-warning hover:bg-slate-700 transition-colors "
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            <span>تحويل إلى دين</span>
+                          </button>
+                        </div>
                       )}
                       <button
                         onClick={() => onViewDetail(invoice)}

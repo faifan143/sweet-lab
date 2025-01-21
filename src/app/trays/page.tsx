@@ -28,14 +28,14 @@ const TraysPage = () => {
       setSnackbarConfig({
         open: true,
         severity: "success",
-        message: "تم إرجاع الصواني بنجاح",
+        message: "تم إرجاع الفوارغ بنجاح",
       });
       setSelectedTray(null);
     } catch {
       setSnackbarConfig({
         open: true,
         severity: "error",
-        message: "حدث خطأ أثناء إرجاع الصواني",
+        message: "حدث خطأ أثناء إرجاع الفوارغ",
       });
     }
   };
@@ -50,7 +50,7 @@ const TraysPage = () => {
 
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
-      <SplineBackground activeTab="الصواني" />
+      <SplineBackground activeTab="الفوارغ" />
       <div className="relative z-10">
         <Navbar />
         <main className="py-32 p-4">
@@ -59,7 +59,7 @@ const TraysPage = () => {
               <div className="flex items-center gap-3" dir="rtl">
                 <Box className="h-6 w-6 text-slate-400" />
                 <h1 className="text-2xl font-bold text-slate-200">
-                  الصواني المعلقة
+                  الفوارغ المعلقة
                 </h1>
               </div>
             </div>

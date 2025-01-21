@@ -57,8 +57,12 @@ const InvoiceDetailModal = ({
                     معلومات العميل
                   </h3>
                   <div className="space-y-1 text-slate-300">
-                    <p>الاسم: {invoice.customer.name}</p>
-                    <p>الهاتف: {invoice.customer.phone}</p>
+                    <p>
+                      الاسم: {invoice.customer ? invoice.customer.name : "-"}
+                    </p>
+                    <p>
+                      الهاتف: {invoice.customer ? invoice.customer.phone : "-"}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -95,7 +99,7 @@ const InvoiceDetailModal = ({
                         </th>
                         <th className="text-right p-2 text-slate-400">السعر</th>
                         <th className="text-right p-2 text-slate-400">
-                          الصواني
+                          الفوارغ
                         </th>
                         <th className="text-right p-2 text-slate-400">
                           المجموع

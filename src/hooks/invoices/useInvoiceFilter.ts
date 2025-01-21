@@ -28,13 +28,13 @@ export function useInvoiceFilters(invoices: Invoice[] | undefined) {
 
       // Search filter
       const searchMatch = searchTerm
-        ? invoice.customer.name
+        ? invoice.customer?.name
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           invoice.invoiceNumber
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          invoice.customer.phone?.includes(searchTerm)
+          invoice.customer?.phone?.includes(searchTerm)
         : true;
 
       // Date filter

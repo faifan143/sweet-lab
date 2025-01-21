@@ -16,6 +16,8 @@ import { useState } from "react";
 
 const InvoiceManagementPage = () => {
   const { data: invoices, isLoading, isError, error } = useInvoices();
+  console.log("page invoices : ", invoices);
+
   const {
     activeStatus,
     setActiveStatus,

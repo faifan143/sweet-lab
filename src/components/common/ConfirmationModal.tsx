@@ -40,18 +40,18 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       >
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-start gap-3">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
             <AlertTriangle className="h-6 w-6 text-red-400 mt-1" />
             <div>
               <h2 className="text-lg font-bold text-slate-100">{title}</h2>
               <p className="text-slate-300 mt-1">{message}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Loader2, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useMokkBar } from "../providers/MokkBarContext";
+import { sweetShopUnits } from "@/utils/constants";
 
 interface MaterialModalProps {
   onClose: () => void;
@@ -28,6 +29,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
       groupId: 0,
     }
   );
+  const [selectedItemUnit, setSelectedItemUnit] = useState<string>("");
 
   // Mutations
   const createItem = useCreateItem();
@@ -85,7 +87,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
       if (isEditing && item) {
         await updateItem.mutateAsync({
           id: item.id,
-          data: formData,
+          data: { ...formData, unit: selectedItemUnit },
         });
       } else {
         await createItem.mutateAsync(formData as Omit<Item, "id">);
@@ -118,15 +120,15 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">
-            {isEditing ? "تعديل عنصر" : "إضافة عنصر جديد"}
-          </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">
+            {isEditing ? "تعديل عنصر" : "إضافة عنصر جديد"}
+          </h2>
         </div>
 
         <form
@@ -298,17 +300,23 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
                 placeholder="السعر"
               />
             </div>
-            <div>
-              <label className="block text-slate-200 mb-2">الوحدة</label>
-              <input
-                type="text"
-                name="unit"
-                value={formData.unit}
-                onChange={handleChange}
-                required
-                className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                placeholder="مثال: كغ، قطعة"
-              />
+            {/* Unit Selection */}
+            <div className="space-y-2">
+              <label className="block text-slate-200">الوحدة</label>
+              <select
+                value={selectedItemUnit}
+                onChange={(e) => setSelectedItemUnit(e.target.value)}
+                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200  max-h-[10vh] overflow-hidden overflow-y-auto no-scrollbar"
+              >
+                <option value="" className="bg-slate-800">
+                  اختر الوحدة
+                </option>
+                {sweetShopUnits.map((unit) => (
+                  <option key={unit} value={unit} className="bg-slate-800 py-2">
+                    {unit}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           {/* Description */}

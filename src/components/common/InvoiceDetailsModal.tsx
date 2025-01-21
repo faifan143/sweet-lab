@@ -35,13 +35,13 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-slate-100">تفاصيل الفاتورة</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
+          <h2 className="text-xl font-bold text-slate-100">تفاصيل الفاتورة</h2>
         </div>
 
         <div className="space-y-6" dir="rtl">
@@ -80,33 +80,38 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
           </div>
 
           {/* Customer Information */}
-          {(invoice.customer.name || invoice.customer.phone) && (
-            <div className="bg-slate-700/30 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-slate-200 mb-4">
-                معلومات العميل
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {invoice.customer.name && (
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-slate-400 text-sm">الاسم</p>
-                      <p className="text-slate-200">{invoice.customer.name}</p>
+          {invoice.customer &&
+            (invoice.customer.name || invoice.customer.phone) && (
+              <div className="bg-slate-700/30 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">
+                  معلومات العميل
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {invoice.customer.name && (
+                    <div className="flex items-center gap-3">
+                      <User className="h-5 w-5 text-slate-400" />
+                      <div>
+                        <p className="text-slate-400 text-sm">الاسم</p>
+                        <p className="text-slate-200">
+                          {invoice.customer.name}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {invoice.customer.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-slate-400 text-sm">رقم الهاتف</p>
-                      <p className="text-slate-200">{invoice.customer.phone}</p>
+                  )}
+                  {invoice.customer && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-5 w-5 text-slate-400" />
+                      <div>
+                        <p className="text-slate-400 text-sm">رقم الهاتف</p>
+                        <p className="text-slate-200">
+                          {invoice.customer.phone}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Items Table */}
           {invoice.items && invoice.items.length > 0 && (
@@ -121,7 +126,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                       <th className="text-right text-slate-400 p-2">المنتج</th>
                       <th className="text-right text-slate-400 p-2">الكمية</th>
                       <th className="text-right text-slate-400 p-2">السعر</th>
-                      <th className="text-right text-slate-400 p-2">الصواني</th>
+                      <th className="text-right text-slate-400 p-2">الفوارغ</th>
                       <th className="text-right text-slate-400 p-2">المجموع</th>
                     </tr>
                   </thead>

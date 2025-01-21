@@ -1,6 +1,6 @@
 "use client";
 
-const PageSpinner = ({ title }: { title?: string }) => {
+const PageSpinner = ({}: { title?: string }) => {
   return (
     <div className="fixed inset-0 bg-black/20 backdrop-blur-[1px] flex justify-center items-center z-50">
       <div className="flex flex-col items-center gap-3 bg-black/10 px-8 py-6 rounded-2xl backdrop-blur-xl">
@@ -20,9 +20,9 @@ const PageSpinner = ({ title }: { title?: string }) => {
         </div>
 
         {/* Text */}
-        <span className="text-white/90 text-sm font-medium tracking-wide">
+        {/* <span className="text-white/90 text-sm font-medium tracking-wide">
           {title ?? "جاري التحميل"}
-        </span>
+        </span> */}
 
         {/* Animation keyframes */}
         <style jsx>{`

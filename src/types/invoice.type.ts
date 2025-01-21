@@ -7,7 +7,7 @@ export interface Invoice {
   invoiceNumber: string;
   invoiceType: "expense" | "income";
   invoiceCategory: InvoiceCategory;
-  customer: {
+  customer?: {
     id: number;
     name: string;
     phone: string;

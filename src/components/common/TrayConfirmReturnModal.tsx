@@ -49,7 +49,7 @@ const TrayConfirmReturnModal: React.FC<TrayConfirmReturnModalProps> = ({
               fontWeight: "bold",
             }}
           >
-            تأكيد إرجاع الصواني
+            تأكيد إرجاع الفوارغ
           </DialogTitle>
 
           <DialogContent>
@@ -61,7 +61,7 @@ const TrayConfirmReturnModal: React.FC<TrayConfirmReturnModalProps> = ({
               }}
               dir="rtl"
             >
-              هل أنت متأكد من إرجاع {trayCount} صواني من العميل {customerName}؟
+              هل أنت متأكد من إرجاع {trayCount} فوارغ من العميل {customerName}؟
             </DialogContentText>
           </DialogContent>
 

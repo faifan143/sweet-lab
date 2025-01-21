@@ -26,7 +26,8 @@ const RouteWrapper: React.FC<RouteWrapperProps> = ({
 
   const handleRoute = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (href !== pathname) dispatchAction(setLaoding(true));
+    if (href !== pathname && pathname != "/login")
+      dispatchAction(setLaoding(true));
     if (onClick) onClick();
     router.push(href);
   };
