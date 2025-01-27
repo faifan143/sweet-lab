@@ -31,17 +31,17 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto no-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-slate-100">تفاصيل الفاتورة</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-300 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
-          <h2 className="text-xl font-bold text-slate-100">تفاصيل الفاتورة</h2>
         </div>
 
         <div className="space-y-6" dir="rtl">
@@ -126,7 +126,6 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                       <th className="text-right text-slate-400 p-2">المنتج</th>
                       <th className="text-right text-slate-400 p-2">الكمية</th>
                       <th className="text-right text-slate-400 p-2">السعر</th>
-                      <th className="text-right text-slate-400 p-2">الفوارغ</th>
                       <th className="text-right text-slate-400 p-2">المجموع</th>
                     </tr>
                   </thead>
@@ -145,9 +144,8 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                         <td className="p-2 text-slate-300">
                           {formatSYP(item.unitPrice)}
                         </td>
-                        <td className="p-2 text-slate-300">{item.trayCount}</td>
                         <td className="p-2 text-slate-300">
-                          {formatSYP(item.subTotal)}
+                          {formatSYP(item.quantity * item.unitPrice)}
                         </td>
                       </tr>
                     ))}
@@ -156,7 +154,14 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
               </div>
             </div>
           )}
-
+          {invoice.invoiceCategory == "products" && (
+            <div className="bg-slate-700/30 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-slate-200 mb-4">
+                عدد الفوارغ
+              </h3>
+              <p className="text-slate-200">{invoice.trayCount}</p>
+            </div>
+          )}
           {/* Payment Information */}
           <div className="bg-slate-700/30 p-4 rounded-lg">
             <h3 className="text-lg font-semibold text-slate-200 mb-4">

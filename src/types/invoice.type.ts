@@ -28,13 +28,13 @@ export interface Invoice {
   employee: Employee;
   fund: Fund;
   shift: Shift;
+  trayCount: number;
 }
 
 export interface InvoiceItem {
   id: number;
   quantity: number;
   unitPrice: number;
-  trayCount: number;
   invoiceId: number;
   itemId: number;
   item: Item;

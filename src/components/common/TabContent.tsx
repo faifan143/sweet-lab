@@ -1,3 +1,4 @@
+// TabContent.tsx
 import { Invoice } from "@/types/invoice.type";
 import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -5,6 +6,7 @@ import { HomeInvoiceTable } from "./HomeInvoiceTable";
 import { HomeInvoiceTableFilters } from "./HomeInvoiceTableFilters";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
 import { InvoiceStats } from "./InvoiceStats";
+import { InvoiceTypeToggle } from "./InvoiceTypeToggle";
 import { FundType } from "@/types/types";
 
 interface TabContentProps {
@@ -26,6 +28,7 @@ const TabContent: React.FC<TabContentProps> = ({
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">(
     "all"
   );
+  const [activeType, setActiveType] = useState<"income" | "expense">("income");
 
   if (isLoading) {
     return (
@@ -34,6 +37,10 @@ const TabContent: React.FC<TabContentProps> = ({
   }
 
   const filteredData = tableData.filter((invoice) => {
+    // First filter by invoice type
+    if (invoice.invoiceType !== activeType) return false;
+
+    // Then apply date filter
     if (dateFilter) {
       const invoiceDate = new Date(invoice.createdAt)
         .toISOString()
@@ -41,6 +48,7 @@ const TabContent: React.FC<TabContentProps> = ({
       if (invoiceDate !== dateFilter) return false;
     }
 
+    // Finally apply status filter
     if (statusFilter !== "all") {
       if (statusFilter === "paid" && !invoice.paidStatus) return false;
       if (statusFilter === "unpaid" && invoice.paidStatus) return false;
@@ -51,14 +59,19 @@ const TabContent: React.FC<TabContentProps> = ({
 
   return (
     <div className="space-y-6">
-      <HomeInvoiceTableFilters
-        dateFilter={dateFilter}
-        statusFilter={statusFilter}
-        onDateFilterChange={setDateFilter}
-        onStatusFilterChange={setStatusFilter}
-        onAddIncome={onAddIncome}
-        onAddExpense={onAddExpense}
-      />
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-center overflow-hidden overflow-x-auto no-scrollbar mt-5">
+        <div className="sm:ml-auto">
+          <InvoiceTypeToggle activeType={activeType} onToggle={setActiveType} />
+        </div>
+        <HomeInvoiceTableFilters
+          dateFilter={dateFilter}
+          statusFilter={statusFilter}
+          onDateFilterChange={setDateFilter}
+          onStatusFilterChange={setStatusFilter}
+          onAddIncome={onAddIncome}
+          onAddExpense={onAddExpense}
+        />
+      </div>
 
       <HomeInvoiceTable
         data={filteredData}
