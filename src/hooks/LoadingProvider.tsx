@@ -1,23 +1,31 @@
 "use client";
 
 import PageSpinner from "@/components/common/PageSpinner";
-import { RootState } from "@/redux/store";
-import React, { ReactNode } from "react";
-import { useSelector } from "react-redux";
+import { setLaoding } from "@/redux/reducers/wrapper.slice";
+import { AppDispatch, RootState } from "@/redux/store";
+import React, { ReactNode, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 interface LoadingProviderProps {
   children: ReactNode;
 }
 
 const LoadingProvider: React.FC<LoadingProviderProps> = ({ children }) => {
-  const status = useSelector((state: RootState) => state.user.user.status);
+  const user = useSelector((state: RootState) => state.user.user);
   const isLoading = useSelector(
     (state: RootState) => state.user.wrapper.isLoading
   );
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    if (!user.accessToken || !user.user) {
+      dispatch(setLaoding(false));
+    }
+  }, [dispatch, isLoading, user.accessToken, user.user]);
 
   return (
     <>
-      {(status == "loading" || isLoading) && (
+      {(user.status == "loading" || isLoading) && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/5 z-50">
           <PageSpinner />
         </div>

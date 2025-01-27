@@ -120,14 +120,14 @@ export const HomeInvoiceTableFilters: React.FC<
         `}
       >
         <ActionButton
-          icon={<ArrowUpCircle className="h-5 w-5" />}
+          icon={<ArrowDownCircle className="h-5 w-5" />}
           label="اضافة دخل"
           onClick={onAddIncome}
           variant="income"
           className={isMobile ? "flex-1" : ""}
         />
         <ActionButton
-          icon={<ArrowDownCircle className="h-5 w-5" />}
+          icon={<ArrowUpCircle className="h-5 w-5" />}
           label="اضافة مصروف"
           onClick={onAddExpense}
           variant="expense"

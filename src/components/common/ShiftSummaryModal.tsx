@@ -28,7 +28,7 @@ const ShiftSummaryModal = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-2xl mx-4"
+        className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden overflow-y-auto no-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
@@ -87,12 +87,32 @@ const ShiftSummaryModal = ({
             ))}
           </div>
 
-          {/* Total */}
-          <div className="p-4 rounded-lg bg-white/5">
-            <div className="flex justify-between items-center font-medium">
-              <span className="text-white">الإجمالي:</span>
-              <span className="text-emerald-400">{summary.totalNet}</span>
+          {/* Total and Difference */}
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-white/5">
+              <div className="flex justify-between items-center font-medium">
+                <span className="text-white">الإجمالي:</span>
+                <span className="text-emerald-400">{summary.totalNet}</span>
+              </div>
             </div>
+
+            {summary.differenceStatus && (
+              <div className="p-4 rounded-lg bg-white/5">
+                <div className="flex justify-between items-center font-medium">
+                  <span className="text-white">فارق الوردية:</span>
+                  <span
+                    className={
+                      summary.differenceStatus === "surplus"
+                        ? "text-emerald-400"
+                        : "text-red-400"
+                    }
+                  >
+                    {summary.differenceValue}{" "}
+                    {summary.differenceStatus === "surplus" ? "زيادة" : "نقصان"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

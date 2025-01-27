@@ -19,11 +19,19 @@ export interface ShiftSummaryData {
   openTime: string;
   fundSummaries: Fund[];
   totalNet: number;
+  differenceStatus: "surplus" | "deficit";
+  differenceValue: number;
 }
 
 interface CloseShiftModalProps {
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: ({
+    amount,
+    status,
+  }: {
+    status: "surplus" | "deficit";
+    amount: number;
+  }) => void;
   shiftType: "صباحي" | "مسائي";
   shiftSummary?: ShiftSummaryData;
   isShiftClosing: boolean;
@@ -36,7 +44,9 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   shiftSummary,
   isShiftClosing,
 }) => {
-  const [isIncrease, setIsIncrease] = useState(true);
+  const [diffStatus, setDiffStatus] = useState<"surplus" | "deficit">(
+    "surplus"
+  );
   const [difference, setDifference] = useState<number>(0);
   return (
     <motion.div
@@ -161,21 +171,21 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 <div className="flex items-center gap-2 bg-slate-700/30 p-1 rounded-lg">
                   <button
                     className={`px-3 py-1.5 rounded transition-colors ${
-                      isIncrease
+                      diffStatus == "surplus"
                         ? "bg-emerald-500/20 text-emerald-400"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
-                    onClick={() => setIsIncrease(true)}
+                    onClick={() => setDiffStatus("surplus")}
                   >
                     زيادة
                   </button>
                   <button
                     className={`px-3 py-1.5 rounded transition-colors ${
-                      !isIncrease
+                      diffStatus == "deficit"
                         ? "bg-red-500/20 text-red-400"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
-                    onClick={() => setIsIncrease(false)}
+                    onClick={() => setDiffStatus("deficit")}
                   >
                     نقصان
                   </button>
@@ -189,7 +199,9 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={onConfirm}
+              onClick={() =>
+                onConfirm({ amount: difference, status: diffStatus })
+              }
               className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20"
             >
               {isShiftClosing ? "جارٍ إغلاق الوردية" : " تأكيد الإغلاق"}

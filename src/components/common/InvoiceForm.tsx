@@ -277,13 +277,12 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           invoiceCategory: "products" as const,
           paidStatus: formData.paymentType === "cash",
           totalAmount: formData.totalAmount,
+          trayCount: !isPurchaseInvoice ? trayCount : 0,
           items: formItems.map((item) => ({
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            unit: item.unit,
-            trayCount: !isPurchaseInvoice ? item.trayCount : undefined,
             itemId: item.itemId,
-            subTotal: item.subTotal,
+            // unit: item.unit,
           })),
         };
 

@@ -3,6 +3,7 @@ import { useMediaQuery } from "@mui/material";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { TrayTracking } from "@/types/items.type";
 import { formatDate } from "@/utils/formatters";
+import PageSpinner from "./PageSpinner";
 
 interface TrayTableProps {
   trays?: TrayTracking[];
@@ -144,7 +145,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
   if (isLoading) {
     return (
       <div className="w-full h-64 flex justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <PageSpinner />
       </div>
     );
   }

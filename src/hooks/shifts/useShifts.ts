@@ -7,7 +7,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 interface OpenShiftDTO {
   shiftType: "morning" | "evening";
 }
-
+interface CloseShiftDTO {
+  status: "surplus" | "deficit";
+  amount: number;
+}
 // hooks/shifts/useShifts.ts
 export const useOpenShift = (options?: {
   onSuccess?: () => void;
@@ -22,14 +25,19 @@ export const useOpenShift = (options?: {
     onError: options?.onError,
   });
 };
-export const useCloseShift = () => {
-  return useQuery({
-    queryKey: ["closeShift"],
-    queryFn: async () => {
-      const response = await apiClient.get("/shifts/close");
+export const useCloseShift = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
+}) => {
+  return useMutation({
+    mutationFn: async (data: CloseShiftDTO) => {
+      const response = await apiClient.get(
+        `/shifts/close?differenceStatus=${data.status}&differenceValue=${data.amount}`
+      );
       return response;
     },
-    enabled: false,
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   });
 };
 export const useShiftSummary = () => {
@@ -42,6 +50,20 @@ export const useShiftSummary = () => {
       return response;
     },
     enabled: false,
+  });
+};
+
+export const useFetchShiftSummary = (options?: {
+  onSuccess?: (data: ShiftSummaryData) => void;
+  onError?: (error: any) => void;
+}) => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiClient.get(`/shifts/${id}/summary`);
+      return response as ShiftSummaryData;
+    },
+    onSuccess: options?.onSuccess,
+    onError: options?.onError,
   });
 };
 
@@ -58,6 +80,8 @@ export interface QueryShiftType {
   closeTime: string;
   employeeId: number;
   employee: Employee;
+  differenceStatus: "surplus" | "deficit" | null;
+  differenceValue: number | null;
 }
 
 export const useShifts = () => {

@@ -36,6 +36,7 @@ import { getFundId } from "@/utils/fund_id";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { setLaoding } from "@/redux/reducers/wrapper.slice";
+import PageSpinner from "@/components/common/PageSpinner";
 
 // Constants
 const TABS = [
@@ -88,9 +89,27 @@ export default function Page() {
     onSuccess: () => handleOpenShiftSuccess(),
     onError: (error) => handleOpenShiftError(error),
   });
-
-  const { refetch: closingShift, isLoading: isClosingShiftLoading } =
-    useCloseShift();
+  const { mutateAsync: closeShift, isPending: isClosingShift } = useCloseShift({
+    onSuccess: () => {
+      setCurrentShift(null);
+      setShowCloseShiftModal(false);
+      setActiveTab(FundType.booth);
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم اغلاق وردية",
+      });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+    },
+    onError: (error) => {
+      console.error("Error closing shift:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: error?.response?.data?.message || "فشل في اغلاق الوردية",
+      });
+    },
+  });
   const {
     data: shiftSummary,
     isSuccess: shiftSummarySuccess,
@@ -154,36 +173,19 @@ export default function Page() {
     }
   };
 
-  const handleConfirmShiftClose = async () => {
+  const handleConfirmShiftClose = async ({
+    amount,
+    status,
+  }: {
+    status: "surplus" | "deficit";
+    amount: number;
+  }) => {
     if (lastShift?.closeTime) return;
     try {
-      const result = await closingShift();
-      if (!result.data) throw new Error("No data received from server");
-      handleShiftCloseSuccess();
+      await closeShift({ status, amount });
     } catch (error) {
-      handleShiftCloseError(error);
+      console.error("Failed to close shift:", error);
     }
-  };
-
-  const handleShiftCloseSuccess = () => {
-    setCurrentShift(null);
-    setShowCloseShiftModal(false);
-    setActiveTab(FundType.booth);
-    setSnackbarConfig({
-      open: true,
-      severity: "success",
-      message: "تم اغلاق وردية",
-    });
-    queryClient.invalidateQueries({ queryKey: ["shifts"] });
-  };
-
-  const handleShiftCloseError = (error: any) => {
-    console.error("Error closing shift:", error);
-    setSnackbarConfig({
-      open: true,
-      severity: "error",
-      message: error?.response?.data?.message || "فشل في اغلاق الوردية",
-    });
   };
 
   const handleAddTransaction = (type: FundType, mode: InvoiceType) => {
@@ -272,6 +274,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
       <SplineBackground activeTab={activeTab} />
+      {(isShiftsLoading || isCurrentInvoicesLoading) && <PageSpinner />}
       <AnimatePresence>
         {showShiftModal && (
           <ShiftModal
@@ -283,14 +286,16 @@ export default function Page() {
         {showCloseShiftModal && theShiftIsOpen && shiftSummarySuccess && (
           <CloseShiftModal
             onClose={() => setShowCloseShiftModal(false)}
-            onConfirm={handleConfirmShiftClose}
+            onConfirm={({ amount, status }) =>
+              handleConfirmShiftClose({ amount, status })
+            }
             shiftType={
               currentShift && currentShift.shiftType === ShiftType.morning
                 ? "صباحي"
                 : "مسائي"
             }
             shiftSummary={shiftSummary || {}}
-            isShiftClosing={isClosingShiftLoading}
+            isShiftClosing={isClosingShift}
           />
         )}
 

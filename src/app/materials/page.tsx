@@ -1,15 +1,16 @@
 "use client";
-import { useState } from "react";
-import Navbar from "@/components/common/Navbar";
-import SplineBackground from "@/components/common/SplineBackground";
-import MaterialModal from "@/components/common/MaterialModal";
 import ConfirmationModal from "@/components/common/ConfirmationModal";
+import MaterialModal from "@/components/common/MaterialModal";
 import MaterialTable from "@/components/common/MaterialTable";
+import Navbar from "@/components/common/Navbar";
+import PageSpinner from "@/components/common/PageSpinner";
+import SplineBackground from "@/components/common/SplineBackground";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useDeleteItem, useItems } from "@/hooks/items/useItems";
 import { Item, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
-import { Loader2, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { useState } from "react";
 
 const MaterialsPage = () => {
   // States
@@ -46,7 +47,7 @@ const MaterialsPage = () => {
   if (isLoadingItems || isLoadingGroups) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
+        <PageSpinner />
       </div>
     );
   }

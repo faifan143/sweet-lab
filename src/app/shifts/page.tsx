@@ -1,9 +1,10 @@
 "use client";
+import { ShiftSummaryData } from "@/components/common/CloseShiftModal";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import ShiftSummaryModal from "@/components/common/ShiftSummaryModal";
 import SplineBackground from "@/components/common/SplineBackground";
-import { useShifts, useShiftSummary } from "@/hooks/shifts/useShifts";
+import { useFetchShiftSummary, useShifts } from "@/hooks/shifts/useShifts";
 import { formatDate } from "@/utils/formatters";
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, Clock, User2 } from "lucide-react";
@@ -20,10 +21,21 @@ const Shifts = () => {
     "all"
   );
   const [selectedShift, setSelectedShift] = useState<number | null>(null);
+  const [shiftSummary, setShiftSummary] = useState<ShiftSummaryData | null>(
+    null
+  );
 
   const itemsPerPage = 10;
   const { data: shifts, isLoading } = useShifts();
-  const { data: shiftSummary, refetch: fetchShiftSummary } = useShiftSummary();
+  const { mutate: fetchSummary, isPending: isSummaryLoading } =
+    useFetchShiftSummary({
+      onSuccess: (data) => setShiftSummary(data),
+    });
+
+  const handleShiftClick = (shiftId: number) => {
+    setSelectedShift(shiftId);
+    fetchSummary(shiftId);
+  };
 
   // Filter and search logic
   const filteredShifts =
@@ -50,22 +62,20 @@ const Shifts = () => {
     currentPage * itemsPerPage
   );
 
-  // Handler for shift click
-  const handleShiftClick = async (shiftId: number) => {
-    setSelectedShift(shiftId);
-    await fetchShiftSummary();
-  };
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
-      {isLoading && <PageSpinner />}
+      {(isLoading || isSummaryLoading) && <PageSpinner />}
 
       <SplineBackground activeTab="shifts" />
       <AnimatePresence>
         {selectedShift && (
           <ShiftSummaryModal
             shiftId={selectedShift}
-            summary={shiftSummary}
-            onClose={() => setSelectedShift(null)}
+            summary={shiftSummary || undefined}
+            onClose={() => {
+              setSelectedShift(null);
+              setShiftSummary(null);
+            }}
           />
         )}
       </AnimatePresence>
@@ -155,7 +165,6 @@ const Shifts = () => {
                     className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 cursor-pointer"
                     onClick={() => handleShiftClick(shift.id)}
                   >
-                    {/* Shift Header */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
                         <div
@@ -178,15 +187,27 @@ const Shifts = () => {
                         >
                           {shift.status === "open" ? "مفتوحة" : "مغلقة"}
                         </div>
+                        {shift.differenceStatus && (
+                          <div
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              shift.differenceStatus === "surplus"
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {shift.differenceValue}{" "}
+                            {shift.differenceStatus === "surplus"
+                              ? "زيادة"
+                              : "نقصان"}
+                          </div>
+                        )}
                       </div>
                       <div className="text-sm text-gray-400">
                         رقم الوردية: #{shift.id}
                       </div>
                     </div>
 
-                    {/* Shift Details */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Employee Info */}
                       <div className="flex items-center gap-3">
                         <User2 className="w-5 h-5 text-blue-500" />
                         <div>
@@ -197,7 +218,6 @@ const Shifts = () => {
                         </div>
                       </div>
 
-                      {/* Open Time */}
                       <div className="flex items-center gap-3">
                         <Calendar className="w-5 h-5 text-blue-500" />
                         <div>
@@ -208,7 +228,6 @@ const Shifts = () => {
                         </div>
                       </div>
 
-                      {/* Close Time */}
                       <div className="flex items-center gap-3">
                         <Clock className="w-5 h-5 text-blue-500" />
                         <div>

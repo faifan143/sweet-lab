@@ -35,7 +35,6 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   trayCount: number;
-  subTotal: number;
   invoiceId: number;
   itemId: number;
   item: Item;
@@ -45,7 +44,7 @@ export interface Item {
   id: number;
   name: string;
   type: "raw" | "production";
-  unit: string;
+  unit?: string;
   price: number;
   description: string;
   groupId: number;
@@ -76,7 +75,6 @@ export interface CreateInvoiceItemDTO {
   unitPrice: number;
   trayCount?: number;
   itemId: number;
-  subTotal: number;
 }
 
 export type InvoiceType = "income" | "expense";
@@ -93,7 +91,6 @@ export interface CreateInvoiceItemDTO {
   itemId: number;
   quantity: number;
   unitPrice: number;
-  subTotal: number;
   trayCount?: number;
 }
 
