@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 
 // Types
-type DebtStatus = "active" | "paid";
+type DebtStatus = "active" | "paid" | "breakage";
 
 interface DebtSummaryProps {
   debts: Debt[];
@@ -84,6 +84,7 @@ const DebtTabs: React.FC<{
   onTabChange: (tab: DebtStatus) => void;
   activeCount: number;
   paidCount: number;
+  breakageCount?: number; // Add count for breakage records
 }> = ({ activeTab, onTabChange, activeCount, paidCount }) => {
   return (
     <div className="border-b border-slate-700/50 mb-6" dir="rtl">
@@ -102,6 +103,7 @@ const DebtTabs: React.FC<{
             {activeCount}
           </span>
         </button>
+
         <button
           onClick={() => onTabChange("paid")}
           className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors ${

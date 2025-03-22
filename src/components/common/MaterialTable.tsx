@@ -3,9 +3,11 @@ import { useMediaQuery } from "@mui/material";
 import { motion } from "framer-motion";
 import { Item } from "@/types/items.type";
 import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 
 interface MaterialTableProps {
   items: Item[];
+  getDefaultUnitPrice?: (item: Item) => number;
   onEdit: (item: Item) => void;
   onDelete: (itemId: number) => void;
 }
@@ -66,11 +68,40 @@ const PaginationControls = ({
   );
 };
 
+// Helper function to get default unit price if not provided
+const getItemPrice = (
+  item: Item,
+  getDefaultUnitPrice?: (item: Item) => number
+): number => {
+  if (getDefaultUnitPrice) {
+    return getDefaultUnitPrice(item);
+  }
+
+  // Default implementation if no function is provided
+  if (item.units && item.units.length > 0) {
+    const defaultUnit = item.units.find((u) => u.unit === item.defaultUnit);
+    return defaultUnit ? defaultUnit.price : item.units[0].price;
+  }
+  return 0;
+};
+
+// Helper function to get default unit
+const getDefaultUnit = (item: Item): string => {
+  return (
+    item.defaultUnit ||
+    (item.units && item.units.length > 0 ? item.units[0].unit : "")
+  );
+};
+
 const MobileCard: React.FC<{
   item: Item;
+  getDefaultUnitPrice?: (item: Item) => number;
   onEdit: (item: Item) => void;
   onDelete: (itemId: number) => void;
-}> = ({ item, onEdit, onDelete }) => {
+}> = ({ item, getDefaultUnitPrice, onEdit, onDelete }) => {
+  const price = getItemPrice(item, getDefaultUnitPrice);
+  const defaultUnit = getDefaultUnit(item);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -81,7 +112,9 @@ const MobileCard: React.FC<{
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-slate-200 font-medium">{item.name}</h3>
-          <span className="text-sm text-slate-400">{item.group.name}</span>
+          <span className="text-sm text-slate-400">
+            {item.group?.name || "-"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -108,11 +141,17 @@ const MobileCard: React.FC<{
         </div>
         <div>
           <span className="text-slate-400 block mb-1">السعر</span>
-          <span className="text-emerald-400">{item.price} ل.س</span>
+          <span className="text-emerald-400">{price} ل.س</span>
         </div>
         <div>
-          <span className="text-slate-400 block mb-1">الوحدة</span>
-          <span className="text-slate-200">{item.unit}</span>
+          <span className="text-slate-400 block mb-1">الوحدة الافتراضية</span>
+          <span className="text-slate-200">{defaultUnit}</span>
+        </div>
+        <div>
+          <span className="text-slate-400 block mb-1">الوحدات</span>
+          <span className="text-slate-200">
+            {item.units?.length || 0} وحدات
+          </span>
         </div>
       </div>
 
@@ -128,13 +167,14 @@ const MobileCard: React.FC<{
 
 export const MaterialTable: React.FC<MaterialTableProps> = ({
   items,
+  getDefaultUnitPrice,
   onEdit,
   onDelete,
 }) => {
   const isMobile = useMediaQuery("(max-width:768px)");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
-
+  const { hasAnyRole } = useRoles();
   // Reset to first page when items change
   useEffect(() => {
     setCurrentPage(1);
@@ -154,6 +194,7 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
             <MobileCard
               key={item.id}
               item={item}
+              getDefaultUnitPrice={getDefaultUnitPrice}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -188,52 +229,69 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
               <th className="text-right text-slate-300 p-4">الاسم</th>
               <th className="text-right text-slate-300 p-4">النوع</th>
               <th className="text-right text-slate-300 p-4">التصنيف</th>
+              <th className="text-right text-slate-300 p-4">
+                الوحدة الافتراضية
+              </th>
               <th className="text-right text-slate-300 p-4">السعر</th>
-              <th className="text-right text-slate-300 p-4">الوحدة</th>
+              <th className="text-right text-slate-300 p-4">الوحدات المتاحة</th>
               <th className="text-right text-slate-300 p-4">الوصف</th>
               <th className="text-right text-slate-300 p-4">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedItems.map((item) => (
-              <motion.tr
-                key={item.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                layout
-                className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
-              >
-                <td className="p-4 text-slate-200">{item.name}</td>
-                <td className="p-4 text-slate-200">
-                  {item.type === "production" ? "منتج" : "مادة خام"}
-                </td>
-                <td className="p-4 text-slate-200">{item.group.name}</td>
-                <td className="p-4 text-emerald-400">{item.price} ل.س</td>
-                <td className="p-4 text-slate-200">{item.unit}</td>
-                <td className="p-4 text-slate-400 max-w-xs truncate">
-                  {item.description}
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      className="p-1 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
-                      onClick={() => onEdit(item)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="p-1 text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </motion.tr>
-            ))}
+            {paginatedItems.map((item) => {
+              const price = getItemPrice(item, getDefaultUnitPrice);
+              const defaultUnit = getDefaultUnit(item);
+              const availableUnits =
+                item.units?.map((u) => u.unit).join(", ") || "-";
+
+              return (
+                <motion.tr
+                  key={item.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  layout
+                  className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
+                >
+                  <td className="p-4 text-slate-200">{item.name}</td>
+                  <td className="p-4 text-slate-200">
+                    {item.type === "production" ? "منتج" : "مادة خام"}
+                  </td>
+                  <td className="p-4 text-slate-200">
+                    {item.group?.name || "-"}
+                  </td>
+                  <td className="p-4 text-slate-200">{defaultUnit}</td>
+                  <td className="p-4 text-emerald-400">{price} ل.س</td>
+                  <td className="p-4 text-slate-200">{availableUnits}</td>
+                  <td className="p-4 text-slate-400 max-w-xs truncate">
+                    {item.description}
+                  </td>
+                  <td className="p-4">
+                    {hasAnyRole([Role.ADMIN]) ? (
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="p-1 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
+                          onClick={() => onEdit(item)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="p-1 text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                          onClick={() => onDelete(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-red-300">لا يوجد اجراءات متاحة</div>
+                    )}
+                  </td>
+                </motion.tr>
+              );
+            })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center p-6 text-slate-400">
+                <td colSpan={8} className="text-center p-6 text-slate-400">
                   لا توجد عناصر متطابقة مع معايير البحث
                 </td>
               </tr>

@@ -1,7 +1,15 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  output: "standalone",
+  experimental: {
+    // This is optional but recommended for better performance
+    serverActions: true,
+  },
+  // Set the server to listen on port 3006
+  env: {
+    PORT: "3006",
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

@@ -1,13 +1,26 @@
 "use client";
 import { ShiftSummaryData } from "@/components/common/CloseShiftModal";
+import InvoicesModal from "@/components/common/InvoicesModal";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import ShiftSummaryModal from "@/components/common/ShiftSummaryModal";
 import SplineBackground from "@/components/common/SplineBackground";
-import { useFetchShiftSummary, useShifts } from "@/hooks/shifts/useShifts";
+import {
+  useFetchShiftSummary,
+  useShiftInvoices,
+  useShifts,
+} from "@/hooks/shifts/useShifts";
 import { formatDate } from "@/utils/formatters";
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, Clock, User2 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  FileText,
+  GraduationCap,
+  Receipt,
+  Store,
+  User2,
+} from "lucide-react";
 import { useState } from "react";
 
 const Shifts = () => {
@@ -31,6 +44,22 @@ const Shifts = () => {
     useFetchShiftSummary({
       onSuccess: (data) => setShiftSummary(data),
     });
+
+  const [selectedInvoicesShift, setSelectedInvoicesShift] = useState<
+    string | null
+  >(null);
+
+  const [invoicesModalType, setInvoicesModalType] = useState<
+    "boothInvoices" | "universityInvoices" | "generalInvoices" | null
+  >(null);
+
+  const {
+    data: invoicesData,
+    refetch: fetchInvoices,
+    isLoading: isInvoicesLoading,
+  } = useShiftInvoices(selectedInvoicesShift || "");
+
+  // console.log(invoicesData);
 
   const handleShiftClick = (shiftId: number) => {
     setSelectedShift(shiftId);
@@ -61,11 +90,26 @@ const Shifts = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const handleBoothInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId.toString());
+    setInvoicesModalType("boothInvoices");
+    fetchInvoices();
+  };
 
+  const handleUniversityInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId.toString());
+    setInvoicesModalType("universityInvoices");
+    fetchInvoices();
+  };
+
+  const handleGeneralInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId.toString());
+    setInvoicesModalType("generalInvoices");
+    fetchInvoices();
+  };
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
-      {(isLoading || isSummaryLoading) && <PageSpinner />}
-
+      {(isLoading || isSummaryLoading || isInvoicesLoading) && <PageSpinner />}
       <SplineBackground activeTab="shifts" />
       <AnimatePresence>
         {selectedShift && (
@@ -75,6 +119,16 @@ const Shifts = () => {
             onClose={() => {
               setSelectedShift(null);
               setShiftSummary(null);
+            }}
+          />
+        )}
+        {selectedInvoicesShift && invoicesModalType && (
+          <InvoicesModal
+            type={invoicesModalType}
+            data={invoicesData}
+            onClose={() => {
+              setSelectedInvoicesShift(null);
+              setInvoicesModalType(null);
             }}
           />
         )}
@@ -162,8 +216,7 @@ const Shifts = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 cursor-pointer"
-                    onClick={() => handleShiftClick(shift.id)}
+                    className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 "
                   >
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
@@ -240,6 +293,43 @@ const Shifts = () => {
                               : "الوردية مفتوحة"}
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* New Actions Section */}
+                    <div className="border-t border-white/10 pt-4 mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <button
+                          onClick={() => handleShiftClick(shift.id)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          ملخص الوردية
+                        </button>
+
+                        <button
+                          onClick={() => handleBoothInvoices(shift.id)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        >
+                          <Store className="w-4 h-4" />
+                          فواتير البسطة
+                        </button>
+
+                        <button
+                          onClick={() => handleUniversityInvoices(shift.id)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          فواتير الجامعة
+                        </button>
+
+                        <button
+                          onClick={() => handleGeneralInvoices(shift.id)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors"
+                        >
+                          <Receipt className="w-4 h-4" />
+                          الفواتير العامة
+                        </button>
                       </div>
                     </div>
                   </motion.div>

@@ -1,13 +1,17 @@
 "use client";
-import { useMarkInvoiceAsPaid } from "@/hooks/invoices/useInvoice";
+import {
+  useMarkInvoiceAsDebt,
+  useMarkInvoiceAsPaid,
+} from "@/hooks/invoices/useInvoice";
 import { Invoice } from "@/types/invoice.type";
 import { motion } from "framer-motion";
 import { DollarSign, X } from "lucide-react";
+import { InvoiceStatus } from "./InvoiceTabs";
 
 interface StatusTransitionModalProps {
   invoice: Invoice;
   onClose: () => void;
-  targetStatus: "paid" | "unpaid" | "debt";
+  targetStatus: InvoiceStatus;
 }
 
 const StatusTransitionModal: React.FC<StatusTransitionModalProps> = ({
@@ -16,20 +20,37 @@ const StatusTransitionModal: React.FC<StatusTransitionModalProps> = ({
   targetStatus,
 }) => {
   const { mutateAsync: markInvoiceAsPaid, isPending } = useMarkInvoiceAsPaid();
+  const { mutateAsync: markInvoiceAsDebt, isPending: isDebtingPending } =
+    useMarkInvoiceAsDebt();
 
   const handleConfirm = () => {
-    markInvoiceAsPaid(
-      { id: invoice.id, data: {} },
-      {
-        onSuccess: () => {
-          console.log("Invoice successfully marked as paid.");
-          onClose();
-        },
-        onError: (error) => {
-          console.error("Error marking invoice as paid:", error);
-        },
-      }
-    );
+    if (targetStatus == "paid") {
+      markInvoiceAsPaid(
+        { id: invoice.id, data: {} },
+        {
+          onSuccess: () => {
+            console.log("Invoice successfully marked as paid.");
+            onClose();
+          },
+          onError: (error) => {
+            console.error("Error marking invoice as paid:", error);
+          },
+        }
+      );
+    } else if (targetStatus == "debt") {
+      markInvoiceAsDebt(
+        { id: invoice.id, data: {} },
+        {
+          onSuccess: () => {
+            console.log("Invoice successfully marked as debt.");
+            onClose();
+          },
+          onError: (error) => {
+            console.error("Error marking invoice as debt:", error);
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -101,7 +122,7 @@ const StatusTransitionModal: React.FC<StatusTransitionModalProps> = ({
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-success/10 text-success hover:bg-success/20 rounded-lg transition-colors"
             >
               <DollarSign className="h-5 w-5" />
-              {isPending ? "جاري التاكيد" : "تأكيد"}
+              {isPending || isDebtingPending ? "جاري التاكيد" : "تأكيد"}
             </button>
             <button
               onClick={onClose}

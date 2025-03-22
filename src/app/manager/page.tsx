@@ -5,13 +5,17 @@ import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
 import { useMokkBar } from "@/components/providers/MokkBarContext";
-import { useFunds, useTransferToMain } from "@/hooks/funds/useFunds";
+import {
+  useFunds,
+  useTransferToMain,
+  useTransferToNextShift,
+} from "@/hooks/funds/useFunds";
 import {
   formatAmount,
   useInvoiceStats,
 } from "@/hooks/invoices/useInvoiceStats";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 import { useUsers } from "@/hooks/users/useUsers";
-import { Role } from "@/types/types";
 import { apiClient } from "@/utils/axios";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
@@ -30,7 +34,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 // Typesconst
 const rolesOptions = [
@@ -99,6 +103,9 @@ const Page = () => {
   // States
   const { setSnackbarConfig } = useMokkBar();
   const [transferAmount, setTransferAmount] = useState("");
+  const [transferToNextShiftAmount, setTransferToNextShiftAmount] =
+    useState("");
+  const [transferToNextShiftNote, setTransferToNextShiftNote] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<Role[]>([]);
@@ -120,17 +127,10 @@ const Page = () => {
     },
   ]);
   const transgerToMain = useTransferToMain();
-  const {
-    data: fundsData,
-    isSuccess: fundsSuccess,
-    isLoading: isLoadingFunds,
-  } = useFunds();
+  const transferToNextShift = useTransferToNextShift();
+  const { data: fundsData, isLoading: isLoadingFunds } = useFunds();
 
-  useEffect(() => {
-    if (fundsSuccess) {
-      console.log("funds : ", fundsData);
-    }
-  }, [fundsData, fundsSuccess]);
+  const { hasAnyRole } = useRoles();
   const { data: users, isLoading: isLoadingUsers } = useUsers();
   const { data: invoiceStats, isLoading: isLoadingInvoices } =
     useInvoiceStats();
@@ -222,6 +222,58 @@ const Page = () => {
     }
   };
 
+  const handleTransferToNextShift = async () => {
+    const amount = Number(transferToNextShiftAmount);
+    if (!amount || amount <= 0) return;
+
+    const generalFund =
+      fundsData?.find((f) => f.fundType === "general")?.currentBalance || 0;
+
+    if (amount > generalFund) {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "رصيد غير كافي في الصندوق العام",
+      });
+      return;
+    }
+
+    try {
+      await transferToNextShift.mutateAsync({
+        amount,
+        notes: transferToNextShiftNote,
+      });
+
+      // Add to transactions history
+      setTransactions((prev) => [
+        {
+          id: prev.length + 1,
+          date: new Date(),
+          amount,
+          type: "transfer",
+          description: "تحويل إلى الوردية التالية",
+        },
+        ...prev,
+      ]);
+
+      setTransferToNextShiftAmount("");
+      setTransferToNextShiftNote("");
+
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم التحويل بنجاح",
+      });
+    } catch (error) {
+      console.error("Error transfering funds:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء التحويل",
+      });
+    }
+  };
+
   // Stats data
   const statsData = [
     {
@@ -244,6 +296,14 @@ const Page = () => {
       value: fundsData
         ?.find((fund) => fund.fundType == "general")
         ?.currentBalance.toFixed(2),
+      color: "text-slate-200",
+    },
+    {
+      icon: DollarSign,
+      label: "الخزينة",
+      value: fundsData
+        ? fundsData.find((f) => f.fundType === "main")?.currentBalance || 0
+        : "0",
       color: "text-slate-200",
     },
     {
@@ -296,67 +356,69 @@ const Page = () => {
                 <Section id="users" title="إدارة المستخدمين" icon={UserPlus}>
                   <div className="space-y-4">
                     {/* Add User Form */}
-                    <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        {/* Username Input */}
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder="اسم المستخدم"
-                          className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                        />
+                    {hasAnyRole([Role.ADMIN]) && (
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          {/* Username Input */}
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="اسم المستخدم"
+                            className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                          />
 
-                        {/* Password Input */}
-                        <input
-                          type="password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="كلمة المرور"
-                          className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                        />
+                          {/* Password Input */}
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="كلمة المرور"
+                            className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        {/* Roles Selection */}
+                        <div className="flex flex-wrap gap-2">
+                          {rolesOptions.map((role) => (
+                            <button
+                              key={role.value}
+                              onClick={() => {
+                                setSelectedRoles((prev) =>
+                                  prev.includes(role.value as Role)
+                                    ? prev.filter((r) => r !== role.value)
+                                    : [...prev, role.value as Role]
+                                );
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                selectedRoles.includes(role.value as Role)
+                                  ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50"
+                                  : "bg-slate-700/50 text-slate-300 border-2 border-transparent hover:border-slate-600/50"
+                              }`}
+                            >
+                              {role.label}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Add Button */}
+                        <button
+                          onClick={handleAddUser}
+                          disabled={
+                            isLoading ||
+                            !username ||
+                            !password ||
+                            selectedRoles.length === 0
+                          }
+                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <PlusCircle className="h-5 w-5" />
+                          )}
+                          <span>إضافة مستخدم جديد</span>
+                        </button>
                       </div>
-                      {/* Roles Selection */}
-                      <div className="flex flex-wrap gap-2">
-                        {rolesOptions.map((role) => (
-                          <button
-                            key={role.value}
-                            onClick={() => {
-                              setSelectedRoles((prev) =>
-                                prev.includes(role.value as Role)
-                                  ? prev.filter((r) => r !== role.value)
-                                  : [...prev, role.value as Role]
-                              );
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                              selectedRoles.includes(role.value as Role)
-                                ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50"
-                                : "bg-slate-700/50 text-slate-300 border-2 border-transparent hover:border-slate-600/50"
-                            }`}
-                          >
-                            {role.label}
-                          </button>
-                        ))}
-                      </div>
-                      {/* Add Button */}
-                      <button
-                        onClick={handleAddUser}
-                        disabled={
-                          isLoading ||
-                          !username ||
-                          !password ||
-                          selectedRoles.length === 0
-                        }
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <PlusCircle className="h-5 w-5" />
-                        )}
-                        <span>إضافة مستخدم جديد</span>
-                      </button>
-                    </div>
+                    )}
 
                     {/* Users List */}
                     <div className="mt-4 space-y-2 max-h-[400px] overflow-y-auto no-scrollbar">
@@ -468,25 +530,112 @@ const Page = () => {
                         </p>
                       </div>
                     </div>
+                    {/* Transfer Forms */}
+                    {hasAnyRole([Role.ADMIN]) && (
+                      <div className="space-y-4">
+                        {/* Transfer to Main Form */}
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <input
+                            type="number"
+                            value={transferAmount}
+                            onChange={(e) => setTransferAmount(e.target.value)}
+                            placeholder="المبلغ المراد تحويله للخزينة"
+                            className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                          />
+                          <button
+                            onClick={handleTransferFunds}
+                            disabled={transgerToMain.isPending}
+                            className="flex items-center justify-center gap-2 px-6 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                          >
+                            {transgerToMain.isPending ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <ArrowRightLeft className="h-5 w-5" />
+                            )}
+                            <span>تحويل للخزينة</span>
+                          </button>
+                        </div>
 
-                    {/* Transfer Form */}
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <input
-                        type="number"
-                        value={transferAmount}
-                        onChange={(e) => setTransferAmount(e.target.value)}
-                        placeholder="المبلغ المراد تحويله"
-                        className="flex-1 bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-emerald-500/50"
-                      />
-                      <button
-                        onClick={handleTransferFunds}
-                        className="flex items-center justify-center gap-2 px-6 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                      >
-                        <ArrowRightLeft className="h-5 w-5" />
-                        <span>تحويل</span>
-                      </button>
-                    </div>
+                        {/* Transfer to Next Shift Form */}
+                        {/* Transfer to Next Shift Form */}
+                        <div className="space-y-4 bg-slate-700/20 rounded-lg p-4 border border-slate-600/30">
+                          <div className="flex flex-col space-y-3">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <div className="flex-1">
+                                <label className="block text-sm text-slate-400 mb-2">
+                                  المبلغ المراد تحويله
+                                </label>
+                                <input
+                                  type="number"
+                                  value={transferToNextShiftAmount}
+                                  onChange={(e) =>
+                                    setTransferToNextShiftAmount(e.target.value)
+                                  }
+                                  placeholder="أدخل المبلغ"
+                                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 
+            focus:outline-none focus:border-blue-500/50 
+            placeholder-slate-500 
+            transition-colors duration-300"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <label className="block text-sm text-slate-400 mb-2">
+                                  ملاحظات التحويل
+                                </label>
+                                <input
+                                  type="text"
+                                  value={transferToNextShiftNote}
+                                  onChange={(e) =>
+                                    setTransferToNextShiftNote(e.target.value)
+                                  }
+                                  placeholder="أضف ملاحظة (اختياري)"
+                                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-2 text-slate-200 
+            focus:outline-none focus:border-blue-500/50 
+            placeholder-slate-500 
+            transition-colors duration-300"
+                                />
+                              </div>
+                            </div>
 
+                            {/* Transfer Button with Additional Context */}
+                            <div className="flex items-center justify-between">
+                              <button
+                                onClick={handleTransferToNextShift}
+                                disabled={
+                                  transferToNextShift.isPending ||
+                                  !transferToNextShiftAmount ||
+                                  Number(transferToNextShiftAmount) <= 0
+                                }
+                                className="flex items-center justify-center gap-2 px-6 py-2 
+          bg-blue-500/10 text-blue-400 
+          rounded-lg hover:bg-blue-500/20 
+          transition-colors duration-300
+          disabled:opacity-50 disabled:cursor-not-allowed 
+          focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                              >
+                                {transferToNextShift.isPending ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <Clock className="h-5 w-5" />
+                                )}
+                                <span>تحويل للوردية القادمة</span>
+                              </button>
+
+                              {/* Remaining Balance Indicator */}
+                              <div className="text-sm text-slate-400">
+                                الرصيد المتاح:
+                                <span className="text-emerald-400 mr-1">
+                                  {fundsData
+                                    ?.find((f) => f.fundType === "general")
+                                    ?.currentBalance.toFixed(2) || "0"}{" "}
+                                  $
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* Transaction History */}
                     <div>
                       <h3 className="text-md font-semibold text-slate-200 mb-4">

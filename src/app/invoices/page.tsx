@@ -2,7 +2,7 @@
 import InvoiceDetailModal from "@/components/common/InvoiceDetailModal";
 import { InvoiceFilters } from "@/components/common/InvoiceFilters";
 import { InvoiceTable } from "@/components/common/InvoiceTable";
-import { InvoiceTabs } from "@/components/common/InvoiceTabs";
+import { InvoiceStatus, InvoiceTabs } from "@/components/common/InvoiceTabs";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
@@ -15,9 +15,7 @@ import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
 
 const InvoiceManagementPage = () => {
-  const { data: invoices, isLoading, isError, error } = useInvoices();
-  console.log("page invoices : ", invoices);
-
+  // Use the filter status to fetch the appropriate invoices
   const {
     activeStatus,
     setActiveStatus,
@@ -26,7 +24,15 @@ const InvoiceManagementPage = () => {
     dateFilter,
     setDateFilter,
     filteredInvoices,
-  } = useInvoiceFilters(invoices);
+  } = useInvoiceFilters([]); // Start with empty array as we'll fetch data based on active status
+
+  // Fetch invoices based on active status
+  const {
+    data: invoices,
+    isLoading,
+    isError,
+    error,
+  } = useInvoices(activeStatus as InvoiceStatus | "all");
 
   // Modal states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -34,8 +40,14 @@ const InvoiceManagementPage = () => {
     useState<Invoice | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [targetStatus, setTargetStatus] = useState<
-    "paid" | "unpaid" | "debt" | null
+    "paid" | "unpaid" | "debt" | "breakage" | null
   >(null);
+
+  // Update the filtered invoices when new invoices are loaded
+  const displayInvoices =
+    filteredInvoices && filteredInvoices.length > 0
+      ? filteredInvoices
+      : invoices || [];
 
   if (isError) {
     return (
@@ -49,13 +61,12 @@ const InvoiceManagementPage = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative">
       <SplineBackground activeTab="عام" />
       {isLoading && <PageSpinner />}
-
       <div className="relative z-10">
         <Navbar />
         <main className="pt-32 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <StatusSummary invoices={invoices} />
+              <StatusSummary />
               <InvoiceFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -65,10 +76,15 @@ const InvoiceManagementPage = () => {
             </div>
             <InvoiceTabs
               activeStatus={activeStatus}
-              onStatusChange={setActiveStatus}
+              onStatusChange={(status) => {
+                setActiveStatus(status as InvoiceStatus);
+                // When changing status, reset other filters for a cleaner experience
+                setSearchTerm("");
+                setDateFilter({ startDate: null, endDate: null });
+              }}
             />
             <InvoiceTable
-              invoices={filteredInvoices}
+              invoices={displayInvoices}
               onViewDetail={(invoice) => {
                 setSelectedInvoiceForDetail(invoice);
                 setIsDetailModalOpen(true);
@@ -81,7 +97,6 @@ const InvoiceManagementPage = () => {
           </div>
         </main>
       </div>
-
       {/* Modals */}
       <AnimatePresence>
         {selectedInvoice && targetStatus && (
@@ -95,7 +110,6 @@ const InvoiceManagementPage = () => {
           />
         )}
       </AnimatePresence>
-
       {selectedInvoiceForDetail && (
         <InvoiceDetailModal
           invoice={selectedInvoiceForDetail}

@@ -1,9 +1,10 @@
 import { Invoice } from "@/types/invoice.type";
+import { WareHouseInvoice } from "@/types/warehouse.type";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface InvoiceDetailModalProps {
-  invoice: Invoice;
+  invoice: Invoice | WareHouseInvoice;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -13,17 +14,24 @@ const InvoiceDetailModal = ({
   isOpen,
   onClose,
 }: InvoiceDetailModalProps) => {
+  // Type guard function to check if the invoice is of type Invoice
+  const isInvoiceType = (
+    invoice: Invoice | WareHouseInvoice
+  ): invoice is Invoice => {
+    return "invoiceType" in invoice;
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto ">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto ">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
           />
 
           {/* Modal */}
@@ -31,7 +39,7 @@ const InvoiceDetailModal = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative w-[95vw] max-w-3xl max-h-[90vh] bg-slate-800/95 border border-slate-700/50 rounded-lg shadow-xl overflow-y-auto backdrop-blur-sm no-scrollbar"
+            className="relative z-[101] w-[95vw] max-w-3xl max-h-[90vh] bg-slate-800/95 border border-slate-700/50 rounded-lg shadow-xl overflow-y-auto backdrop-blur-sm no-scrollbar"
             dir="rtl"
           >
             {/* Header */}
@@ -98,9 +106,7 @@ const InvoiceDetailModal = ({
                           الكمية
                         </th>
                         <th className="text-right p-2 text-slate-400">السعر</th>
-                        <th className="text-right p-2 text-slate-400">
-                          الفوارغ
-                        </th>
+
                         <th className="text-right p-2 text-slate-400">
                           المجموع
                         </th>
@@ -113,16 +119,19 @@ const InvoiceDetailModal = ({
                             {item.item.name}
                           </td>
                           <td className="p-2 text-slate-300">
-                            {item.quantity} {item.item.unit}
+                            {item.quantity}{" "}
+                            {isInvoiceType(invoice)
+                              ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                                //  @ts-ignore
+                                item.item.unit
+                              : ""}
                           </td>
                           <td className="p-2 text-slate-300">
                             {formatCurrency(item.unitPrice)}
                           </td>
+
                           <td className="p-2 text-slate-300">
-                            {item.trayCount}
-                          </td>
-                          <td className="p-2 text-slate-300">
-                            {formatCurrency(item.subTotal)}
+                            {formatCurrency(item.quantity * item.unitPrice)}
                           </td>
                         </tr>
                       ))}
@@ -136,6 +145,10 @@ const InvoiceDetailModal = ({
                 <div className="flex justify-between text-slate-300">
                   <span>المجموع الكلي:</span>
                   <span>{formatCurrency(invoice.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between text-slate-300">
+                  <span>الفوارغ:</span>
+                  <span>{invoice.trayCount}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
                   <span>الخصم:</span>
@@ -169,12 +182,7 @@ const InvoiceDetailModal = ({
                   </h3>
                   <div className="space-y-1 text-slate-300">
                     <p>الموظف: {invoice.employee.username}</p>
-                    <p>
-                      الوردية:{" "}
-                      {invoice.shift.shiftType === "morning"
-                        ? "صباحية"
-                        : "مسائية"}
-                    </p>
+
                     <p>الصندوق: {invoice.fund.fundType}</p>
                   </div>
                 </div>

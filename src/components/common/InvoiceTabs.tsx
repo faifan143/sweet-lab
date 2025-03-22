@@ -1,11 +1,11 @@
 // src/components/invoices/InvoiceTabs.tsx
-import { AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, FileX } from "lucide-react";
 
-type InvoiceStatus = "paid" | "unpaid" | "debt";
+export type InvoiceStatus = "paid" | "unpaid" | "debt" | "breakage";
 
 interface InvoiceTabsProps {
-  activeStatus: InvoiceStatus;
-  onStatusChange: (status: InvoiceStatus) => void;
+  activeStatus: InvoiceStatus | "all";
+  onStatusChange: (status: InvoiceStatus | "all") => void;
 }
 
 export const InvoiceTabs = ({
@@ -50,6 +50,17 @@ export const InvoiceTabs = ({
         >
           <Clock className="h-4 w-4" />
           <span>فواتير الدين</span>
+        </button>
+        <button
+          onClick={() => onStatusChange("breakage")}
+          className={`px-4 py-2 -mb-px text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+            activeStatus === "breakage"
+              ? "text-blue-500 border-b-2 border-blue-500"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <FileX className="h-4 w-4" />
+          <span>فواتير كسر</span>
         </button>
       </div>
     </div>

@@ -12,12 +12,12 @@ const wrapperSlice = createSlice({
   name: "wrapper",
   initialState,
   reducers: {
-    setLaoding(state, action: PayloadAction<boolean>) {
+    setLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
   },
 });
 
-export const { setLaoding } = wrapperSlice.actions;
+export const { setLoading } = wrapperSlice.actions;
 
 export default wrapperSlice.reducer;

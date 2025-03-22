@@ -1,4 +1,4 @@
-// src/types/invoice.ts
+// src/types/invoice.type.ts - Updated types
 
 export type InvoiceCategory = "products" | "direct" | "debt";
 
@@ -29,6 +29,9 @@ export interface Invoice {
   fund: Fund;
   shift: Shift;
   trayCount: number;
+  // New fields for breakage type
+  isBreak?: boolean;
+  firstPayment?: number;
 }
 
 export interface InvoiceItem {
@@ -45,7 +48,7 @@ export interface Item {
   name: string;
   type: "raw" | "production";
   unit?: string;
-  price: number;
+  price?: number;
   description: string;
   groupId: number;
 }
@@ -78,7 +81,7 @@ export interface CreateInvoiceItemDTO {
 }
 
 export type InvoiceType = "income" | "expense";
-export type PaymentType = "cash" | "credit";
+export type PaymentType = "paid" | "unpaid" | "breakage";
 
 // Common fields for all DTOs
 interface BaseInvoiceDTO {
@@ -103,6 +106,10 @@ export interface IncomeProductsDTO extends BaseInvoiceDTO {
   totalAmount: number;
   discount: number;
   items: CreateInvoiceItemDTO[];
+  trayCount?: number;
+  // New fields for breakage type
+  isBreak?: boolean;
+  firstPayment?: number;
 }
 
 // Expense Products Invoice DTO
@@ -122,4 +129,39 @@ export interface DirectDebtDTO extends BaseInvoiceDTO {
   customerId?: number;
   totalAmount: number;
   paidStatus: boolean;
+}
+
+export interface SingleFetchedInvoice {
+  id: number;
+  invoiceNumber: string;
+  invoiceType: "expense" | "income";
+  invoiceCategory: InvoiceCategory;
+  customerId: number; // Direct customerId instead of nested customer object
+  totalAmount: number;
+  discount: number;
+  paidStatus: boolean;
+  paymentDate: string | null;
+  createdAt: string;
+  notes: string | null;
+  fundId: number;
+  shiftId: number;
+  employeeId: number;
+  relatedDebtId: number | null;
+  trayCount: number;
+  // New fields for breakage type
+  isBreak?: boolean;
+  firstPayment?: number;
+  items: InvoiceItem[];
+  employee: Employee;
+  fund: Fund;
+  shift: {
+    id: number;
+    shiftType: "morning" | "evening";
+    status: "open" | "closed";
+    openTime: string;
+    closeTime: string | null;
+    differenceStatus: string | null;
+    differenceValue: number | null;
+    employeeId: number;
+  };
 }

@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useMediaQuery } from "@mui/material";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 
 interface InvoiceTableProps {
   invoices?: Invoice[];
@@ -104,6 +105,8 @@ export const InvoiceTable = ({
   const isMobile = useMediaQuery("(max-width:768px)");
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
+
+  const { hasAnyRole } = useRoles();
 
   // Reset to first page when invoices change
   useEffect(() => {
@@ -263,7 +266,7 @@ export const InvoiceTable = ({
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col  items-center gap-2">
-                      {!invoice.paidStatus && (
+                      {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
                         <div className="flex flex-col items-center justify-center gap-2">
                           <button
                             onClick={() => onStatusChange(invoice, "paid")}

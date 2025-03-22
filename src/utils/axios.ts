@@ -76,9 +76,7 @@ const createApiClient = ({
 };
 
 const api = createApiClient({
-  baseURL:
-    process.env.BASE_URL ||
-    "https://sweetlabmanagerback-production.up.railway.app",
+  baseURL: process.env.BASE_URL || "http://62.171.153.198:4300",
   authRedirectPath: "/login",
 });
 

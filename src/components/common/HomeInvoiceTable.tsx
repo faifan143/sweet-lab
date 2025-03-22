@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Invoice } from "@/types/invoice.type";
 import { formatSYP } from "@/hooks/invoices/useInvoiceStats";
 import { formatDate } from "@/utils/formatters";
+import InvoicesActionsMenu from "./InvoicesActionsMenu";
 
 interface HomeInvoiceTableProps {
   data: Invoice[];
   onViewDetails: (invoice: Invoice) => void;
+  onEditInvoice: (invoice: Invoice) => void;
+  onDeleteInvoice?: (invoice: Invoice) => void;
 }
 
 const PaginationControls = ({
@@ -36,7 +39,7 @@ const PaginationControls = ({
         <ChevronRight className="h-5 w-5" />
       </button>
 
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-center gap-1">
         {pageNumbers.map((number) => (
           <motion.button
             key={number}
@@ -68,6 +71,8 @@ const PaginationControls = ({
 export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
   data,
   onViewDetails,
+  onEditInvoice,
+  onDeleteInvoice,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -91,96 +96,116 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="overflow-x-auto bg-slate-800/50 rounded-lg border border-slate-700/50"
-      >
-        <table className="w-full text-right">
-          <thead className="bg-slate-800/50">
-            <tr>
-              <th className="p-3 text-slate-300">رقم الفاتورة</th>
-              <th className="p-3 text-slate-300">التاريخ</th>
-              <th className="p-3 text-slate-300">النوع</th>
-              <th className="p-3 text-slate-300">العميل</th>
-              <th className="p-3 text-slate-300">المبلغ</th>
-              <th className="p-3 text-slate-300">الحالة</th>
-              <th className="p-3 text-slate-300">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((invoice) => (
-              <motion.tr
-                key={invoice.id}
+      <div className=" overflow-hidden overflow-x-auto overflow-y-auto no-scrollbar">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="min-w-full bg-slate-800/50 rounded-lg border border-slate-700/50"
+        >
+          <table className="w-full text-right">
+            <thead className="bg-slate-800/50">
+              <tr>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                  رقم الفاتورة
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                  التاريخ
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm hidden md:table-cell">
+                  النوع
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm hidden lg:table-cell">
+                  العميل
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                  المبلغ
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm hidden sm:table-cell">
+                  الحالة
+                </th>
+                <th className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                  الإجراءات
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.map((invoice) => (
+                <motion.tr
+                  key={invoice.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  layout
+                  className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
+                >
+                  <td className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                    {invoice.invoiceNumber}
+                  </td>
+                  <td className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                    {formatDate(invoice.createdAt)}
+                  </td>
+                  <td className="p-2 md:p-3 text-slate-300 text-xs md:text-sm hidden md:table-cell">
+                    {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
+                  </td>
+                  <td className="p-2 md:p-3 text-slate-300 text-xs md:text-sm hidden lg:table-cell">
+                    {invoice.customer ? invoice.customer.name : "-"}
+                  </td>
+                  <td className="p-2 md:p-3 text-slate-300 text-xs md:text-sm">
+                    {formatSYP(invoice.totalAmount - invoice.discount)}
+                  </td>
+                  <td className="p-2 md:p-3 hidden sm:table-cell">
+                    <span
+                      className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                        invoice.paidStatus
+                          ? "bg-emerald-500/10 text-emerald-400"
+                          : "bg-yellow-500/10 text-yellow-400"
+                      }`}
+                    >
+                      {invoice.paidStatus ? "نقدي" : "آجل"}
+                    </span>
+                  </td>
+                  <td className="p-2 md:p-3 text-center">
+                    <InvoicesActionsMenu
+                      invoice={invoice}
+                      onViewDetails={onViewDetails}
+                      onEditInvoice={onEditInvoice}
+                      onDeleteInvoice={onDeleteInvoice}
+                    />
+                  </td>
+                </motion.tr>
+              ))}
+              {data.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-4 text-center text-slate-400">
+                    لا توجد فواتير متطابقة مع معايير البحث
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {data.length > 0 && (
+              <motion.tfoot
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                layout
-                className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
+                className="bg-slate-800/50"
               >
-                <td className="p-3 text-slate-300">{invoice.invoiceNumber}</td>
-                <td className="p-3 text-slate-300">
-                  {formatDate(invoice.createdAt)}
-                </td>
-                <td className="p-3 text-slate-300">
-                  {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
-                </td>
-                <td className="p-3 text-slate-300">
-                  {invoice.customer ? invoice.customer.name : "-"}
-                </td>
-                <td className="p-3 text-slate-300">
-                  {formatSYP(invoice.totalAmount - invoice.discount)}
-                </td>
-                <td className="p-3">
-                  <span
-                    className={`inline-flex px-2 py-1 rounded-full text-xs ${
-                      invoice.paidStatus
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "bg-yellow-500/10 text-yellow-400"
-                    }`}
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="p-2 md:p-3 text-slate-300 font-semibold"
                   >
-                    {invoice.paidStatus ? "نقدي" : "آجل"}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <button
-                    onClick={() => onViewDetails(invoice)}
-                    className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2 text-sm"
-                  >
-                    <FileText className="h-4 w-4" />
-                    عرض التفاصيل
-                  </button>
-                </td>
-              </motion.tr>
-            ))}
-            {data.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-4 text-center text-slate-400">
-                  لا توجد فواتير متطابقة مع معايير البحث
-                </td>
-              </tr>
+                    المجموع
+                  </td>
+                  <td className="p-2 md:p-3 text-emerald-400 font-semibold">
+                    {formatSYP(totalAmount)}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </motion.tfoot>
             )}
-          </tbody>
-          {data.length > 0 && (
-            <motion.tfoot
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-slate-800/50"
-            >
-              <tr>
-                <td colSpan={4} className="p-3 text-slate-300 font-semibold">
-                  المجموع
-                </td>
-                <td className="p-3 text-emerald-400 font-semibold">
-                  {formatSYP(totalAmount)}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </motion.tfoot>
-          )}
-        </table>
-      </motion.div>
+          </table>
+        </motion.div>
+      </div>
 
       {data.length > PAGE_SIZE && (
         <PaginationControls

@@ -4,6 +4,7 @@ import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { TrayTracking } from "@/types/items.type";
 import { formatDate } from "@/utils/formatters";
 import PageSpinner from "./PageSpinner";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 
 interface TrayTableProps {
   trays?: TrayTracking[];
@@ -130,6 +131,7 @@ export const TrayTable: React.FC<TrayTableProps> = ({
   const isMobile = useMediaQuery("(max-width:768px)");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
+  const { hasAnyRole } = useRoles();
 
   // Reset to first page when trays change
   useEffect(() => {
@@ -204,20 +206,24 @@ export const TrayTable: React.FC<TrayTableProps> = ({
                 </td>
                 <td className="p-3 text-slate-300">{tray.notes || "-"}</td>
                 <td className="p-3">
-                  <button
-                    onClick={() => onReturn(tray)}
-                    disabled={isPending}
-                    className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-                  >
-                    {isPending ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>جاري الارجاع...</span>
-                      </div>
-                    ) : (
-                      "إرجاع الفوارغ"
-                    )}
-                  </button>
+                  {hasAnyRole([Role.ADMIN, Role.TrayManager]) ? (
+                    <button
+                      onClick={() => onReturn(tray)}
+                      disabled={isPending}
+                      className="bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                    >
+                      {isPending ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>جاري الارجاع...</span>
+                        </div>
+                      ) : (
+                        "إرجاع الفوارغ"
+                      )}
+                    </button>
+                  ) : (
+                    <div className="text-red-300">لا توجد اجراءات متاحة</div>
+                  )}
                 </td>
               </tr>
             ))}

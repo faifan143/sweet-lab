@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/shifts/useShifts.ts
 import { ShiftSummaryData } from "@/components/common/CloseShiftModal";
+import { TransferService } from "@/services/transfer.service";
+import {
+  CheckPendingTransfersResponse,
+  ShiftsInvoices,
+} from "@/types/shifts.type";
 import { apiClient } from "@/utils/axios";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -25,6 +30,7 @@ export const useOpenShift = (options?: {
     onError: options?.onError,
   });
 };
+
 export const useCloseShift = (options?: {
   onSuccess?: () => void;
   onError?: (error: any) => void;
@@ -40,6 +46,14 @@ export const useCloseShift = (options?: {
     onError: options?.onError,
   });
 };
+
+export const useCheckPendingTransfers = () => {
+  return useQuery<CheckPendingTransfersResponse>({
+    queryKey: ["checkingPendingTransfers"],
+    queryFn: TransferService.checkPendingTransfers,
+  });
+};
+
 export const useShiftSummary = () => {
   return useQuery<ShiftSummaryData>({
     queryKey: ["shiftSummary"],
@@ -47,6 +61,19 @@ export const useShiftSummary = () => {
       const response = (await apiClient.get(
         "/shifts/current/summary"
       )) as ShiftSummaryData;
+      return response;
+    },
+    enabled: false,
+  });
+};
+
+export const useShiftInvoices = (id: string) => {
+  return useQuery<ShiftsInvoices>({
+    queryKey: ["shiftInvoices", id],
+    queryFn: async () => {
+      const response = (await apiClient.get(
+        `/shifts/${id}/invoices-by-fund`
+      )) as ShiftsInvoices;
       return response;
     },
     enabled: false,

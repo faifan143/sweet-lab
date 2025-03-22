@@ -1,52 +1,58 @@
+import { InvoiceStatus } from "@/components/common/InvoiceTabs";
 import { Invoice } from "@/types/invoice.type";
 import { useState, useMemo } from "react";
 
+// Define a DateFilter type to match what you're using in your component
+interface DateFilter {
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
 export function useInvoiceFilters(invoices: Invoice[] | undefined) {
-  const [activeStatus, setActiveStatus] = useState<"paid" | "unpaid" | "debt">(
+  const [activeStatus, setActiveStatus] = useState<InvoiceStatus | "all">(
     "paid"
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState<DateFilter>({
+    startDate: null,
+    endDate: null,
+  });
 
+  // Filter the invoices by search term and date
   const filteredInvoices = useMemo(() => {
-    return invoices?.filter((invoice) => {
-      // Status filter
-      const statusMatch = (() => {
-        if (activeStatus === "paid") {
-          return invoice.paidStatus === true;
-        } else if (activeStatus === "unpaid") {
-          return (
-            invoice.paidStatus === false && invoice.invoiceCategory !== "debt"
-          );
-        } else if (activeStatus === "debt") {
-          return (
-            invoice.invoiceCategory === "debt" && invoice.paidStatus === false
-          );
-        }
-        return true;
-      })();
+    if (!invoices) return [];
 
+    return invoices.filter((invoice) => {
       // Search filter
       const searchMatch = searchTerm
         ? invoice.customer?.name
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           invoice.invoiceNumber
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           invoice.customer?.phone?.includes(searchTerm)
         : true;
 
       // Date filter
-      const dateMatch = dateFilter
-        ? new Date(invoice.createdAt).toISOString().split("T")[0] === dateFilter
-        : true;
+      let dateMatch = true;
+      if (dateFilter.startDate || dateFilter.endDate) {
+        const invoiceDate = new Date(invoice.createdAt);
 
-      return statusMatch && searchMatch && dateMatch;
+        if (dateFilter.startDate && dateFilter.endDate) {
+          dateMatch =
+            invoiceDate >= dateFilter.startDate &&
+            invoiceDate <= dateFilter.endDate;
+        } else if (dateFilter.startDate) {
+          dateMatch = invoiceDate >= dateFilter.startDate;
+        } else if (dateFilter.endDate) {
+          dateMatch = invoiceDate <= dateFilter.endDate;
+        }
+      }
+
+      return searchMatch && dateMatch;
     });
-  }, [invoices, activeStatus, searchTerm, dateFilter]);
-
-  console.log("Filtered Invoices  :  ", filteredInvoices);
+  }, [invoices, searchTerm, dateFilter]);
 
   return {
     activeStatus,

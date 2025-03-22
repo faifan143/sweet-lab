@@ -2,6 +2,7 @@ import { useMediaQuery } from "@mui/material";
 import { motion } from "framer-motion";
 import { ArrowUpCircle, ArrowDownCircle, Calendar, Filter } from "lucide-react";
 import ActionButton from "./ActionButtons";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 
 // Types
 interface HomeInvoiceTableFiltersProps {
@@ -35,7 +36,7 @@ export const HomeInvoiceTableFilters: React.FC<
   onAddExpense,
 }) => {
   const isMobile = useMediaQuery("(max-width:640px)");
-
+  const { hasAnyRole } = useRoles();
   const filterContainerVariants = {
     hidden: { opacity: 0, y: -20 },
     visible: {
@@ -112,28 +113,30 @@ export const HomeInvoiceTableFilters: React.FC<
       </motion.div>
 
       {/* Right Side - Action Buttons */}
-      <motion.div
-        variants={filterItemVariants}
-        className={`
+      {hasAnyRole([Role.ADMIN, Role.ShiftManager]) && (
+        <motion.div
+          variants={filterItemVariants}
+          className={`
           flex items-center gap-4
           ${isMobile ? "w-full" : ""}
         `}
-      >
-        <ActionButton
-          icon={<ArrowDownCircle className="h-5 w-5" />}
-          label="اضافة دخل"
-          onClick={onAddIncome}
-          variant="income"
-          className={isMobile ? "flex-1" : ""}
-        />
-        <ActionButton
-          icon={<ArrowUpCircle className="h-5 w-5" />}
-          label="اضافة مصروف"
-          onClick={onAddExpense}
-          variant="expense"
-          className={isMobile ? "flex-1" : ""}
-        />
-      </motion.div>
+        >
+          <ActionButton
+            icon={<ArrowDownCircle className="h-5 w-5" />}
+            label="اضافة دخل"
+            onClick={onAddIncome}
+            variant="income"
+            className={isMobile ? "flex-1" : ""}
+          />
+          <ActionButton
+            icon={<ArrowUpCircle className="h-5 w-5" />}
+            label="اضافة مصروف"
+            onClick={onAddExpense}
+            variant="expense"
+            className={isMobile ? "flex-1" : ""}
+          />
+        </motion.div>
+      )}
     </motion.div>
   );
 };

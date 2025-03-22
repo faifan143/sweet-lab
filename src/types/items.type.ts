@@ -5,14 +5,21 @@ export interface BaseItem {
   id: number;
   name: string;
   type: ItemType;
-  description: string;
+  description?: string;
+}
+
+export interface ItemUnit {
+  unit: string;
+  price: number;
+  factor: number;
 }
 
 export interface Item extends BaseItem {
-  unit: string;
-  price: number;
-  groupId: number;
-  group: ItemGroup;
+  units: ItemUnit[];
+  defaultUnit: string;
+  cost?: number;
+  groupId?: number;
+  group?: ItemGroup;
 }
 
 export interface ItemGroup extends BaseItem {
@@ -29,7 +36,7 @@ export interface TrayTracking {
   notes: string;
   invoiceId: number;
   customer: {
-    id: 19;
+    id: number;
     name: string;
     phone: string;
     notes: string;

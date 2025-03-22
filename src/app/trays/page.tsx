@@ -1,6 +1,4 @@
 "use client";
-import { useState } from "react";
-import { Box } from "lucide-react";
 import Navbar from "@/components/common/Navbar";
 import SplineBackground from "@/components/common/SplineBackground";
 import TrayConfirmReturnModal from "@/components/common/TrayConfirmReturnModal";
@@ -8,6 +6,8 @@ import TrayTable from "@/components/common/TrayTable";
 import { useMokkBar } from "@/components/providers/MokkBarContext";
 import { usePendingTrayTracking, useReturnTrays } from "@/hooks/trays/useTrays";
 import { TrayTracking } from "@/types/items.type";
+import { Box } from "lucide-react";
+import { useState } from "react";
 
 const TraysPage = () => {
   const { data: pendingTrays, isLoading, isError } = usePendingTrayTracking();

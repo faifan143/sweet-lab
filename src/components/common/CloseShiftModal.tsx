@@ -1,5 +1,6 @@
 "use client";
 import { formatAmount } from "@/hooks/invoices/useInvoiceStats";
+import { useCheckPendingTransfers } from "@/hooks/shifts/useShifts";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import { X, AlertTriangle } from "lucide-react";
@@ -47,7 +48,10 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   const [diffStatus, setDiffStatus] = useState<"surplus" | "deficit">(
     "surplus"
   );
+
   const [difference, setDifference] = useState<number>(0);
+  const { data } = useCheckPendingTransfers();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -192,20 +196,27 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 </div>
               </div>
             </div>
+            <p className="text-red-500">
+              {data &&
+                data.hasPendingTransfers &&
+                "عالج التحويلات المعلقة قبل انهاء الوردية"}
+            </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() =>
-                onConfirm({ amount: difference, status: diffStatus })
-              }
-              className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20"
-            >
-              {isShiftClosing ? "جارٍ إغلاق الوردية" : " تأكيد الإغلاق"}
-            </motion.button>
+            {data && !data.hasPendingTransfers && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() =>
+                  onConfirm({ amount: difference, status: diffStatus })
+                }
+                className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20"
+              >
+                {isShiftClosing ? "جارٍ إغلاق الوردية" : " تأكيد الإغلاق"}
+              </motion.button>
+            )}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

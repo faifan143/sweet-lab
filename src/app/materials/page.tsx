@@ -7,6 +7,7 @@ import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useDeleteItem, useItems } from "@/hooks/items/useItems";
+import { Role, useRoles } from "@/hooks/users/useRoles";
 import { Item, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
@@ -27,10 +28,19 @@ const MaterialsPage = () => {
     itemId: null,
   });
 
+  const { hasAnyRole } = useRoles();
   // Queries
   const { data: items, isLoading: isLoadingItems } = useItems();
   const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
   const deleteItem = useDeleteItem();
+
+  // Helper function to get the default unit price for display
+  const getDefaultUnitPrice = (item: Item): number => {
+    if (!item.units || item.units.length === 0) return 0;
+
+    const defaultUnit = item.units.find((u) => u.unit === item.defaultUnit);
+    return defaultUnit ? defaultUnit.price : item.units[0].price;
+  };
 
   // Filter items
   const filteredItems = items?.filter((item) => {
@@ -64,18 +74,20 @@ const MaterialsPage = () => {
               <h1 className="text-2xl font-bold text-slate-100">
                 إدارة المواد والمنتجات
               </h1>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                onClick={() => {
-                  setEditingItem(null);
-                  setModalVisible(true);
-                }}
-              >
-                <Plus className="h-5 w-5" />
-                إضافة جديد
-              </motion.button>
+              {hasAnyRole([Role.ADMIN]) && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                  onClick={() => {
+                    setEditingItem(null);
+                    setModalVisible(true);
+                  }}
+                >
+                  <Plus className="h-5 w-5" />
+                  إضافة جديد
+                </motion.button>
+              )}
             </div>
 
             {/* Filters */}
@@ -139,6 +151,7 @@ const MaterialsPage = () => {
             <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden backdrop-blur-sm">
               <MaterialTable
                 items={filteredItems || []}
+                getDefaultUnitPrice={getDefaultUnitPrice}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setModalVisible(true);

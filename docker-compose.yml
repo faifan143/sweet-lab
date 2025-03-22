@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  sweet-lab:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sweet-lab
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=production
+      # Add any other environment variables your app needs
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/logs:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - sweet-lab
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

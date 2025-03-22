@@ -1,13 +1,17 @@
-// TabContent.tsx
 import { Invoice } from "@/types/invoice.type";
 import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { HomeInvoiceTable } from "./HomeInvoiceTable";
 import { HomeInvoiceTableFilters } from "./HomeInvoiceTableFilters";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
+import EditInvoiceModal from "./EditInvoiceModal";
 import { InvoiceStats } from "./InvoiceStats";
 import { InvoiceTypeToggle } from "./InvoiceTypeToggle";
 import { FundType } from "@/types/types";
+import { useDeleteInvoice } from "@/hooks/invoices/useInvoice";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
+import DeleteConfirmationModal from "./invoices/DeleteConfirmationModal";
+import TransfersSection from "./shifts/TransfersSection";
 
 interface TabContentProps {
   type: FundType;
@@ -15,6 +19,7 @@ interface TabContentProps {
   isLoading?: boolean;
   onAddIncome: () => void;
   onAddExpense: () => void;
+  currentShiftId: number;
 }
 
 const TabContent: React.FC<TabContentProps> = ({
@@ -22,13 +27,42 @@ const TabContent: React.FC<TabContentProps> = ({
   isLoading,
   onAddIncome,
   onAddExpense,
+  currentShiftId,
 }) => {
+  const { setSnackbarConfig } = useMokkBar();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "unpaid">(
     "all"
   );
   const [activeType, setActiveType] = useState<"income" | "expense">("income");
+
+  // Delete invoice mutation
+  const deleteInvoice = useDeleteInvoice({
+    onSuccess: () => {
+      setInvoiceToDelete(null);
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم حذف الفاتورة بنجاح",
+      });
+    },
+    onError: (error) => {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: error?.response?.data?.message || "فشل في حذف الفاتورة",
+      });
+    },
+  });
+
+  const handleConfirmDelete = async () => {
+    if (invoiceToDelete) {
+      await deleteInvoice.mutateAsync(invoiceToDelete.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -39,7 +73,6 @@ const TabContent: React.FC<TabContentProps> = ({
   const filteredData = tableData.filter((invoice) => {
     // First filter by invoice type
     if (invoice.invoiceType !== activeType) return false;
-
     // Then apply date filter
     if (dateFilter) {
       const invoiceDate = new Date(invoice.createdAt)
@@ -47,13 +80,11 @@ const TabContent: React.FC<TabContentProps> = ({
         .split("T")[0];
       if (invoiceDate !== dateFilter) return false;
     }
-
     // Finally apply status filter
     if (statusFilter !== "all") {
       if (statusFilter === "paid" && !invoice.paidStatus) return false;
       if (statusFilter === "unpaid" && invoice.paidStatus) return false;
     }
-
     return true;
   });
 
@@ -72,19 +103,34 @@ const TabContent: React.FC<TabContentProps> = ({
           onAddExpense={onAddExpense}
         />
       </div>
-
       <HomeInvoiceTable
         data={filteredData}
         onViewDetails={(invoice) => setSelectedInvoice(invoice)}
+        onEditInvoice={(invoice) => setInvoiceToEdit(invoice)}
+        onDeleteInvoice={(invoice) => setInvoiceToDelete(invoice)}
       />
-
       <InvoiceStats data={filteredData} />
+      <TransfersSection currentShiftId={currentShiftId} />
 
       <AnimatePresence>
         {selectedInvoice && (
           <InvoiceDetailsModal
             invoice={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
+          />
+        )}
+        {invoiceToEdit && (
+          <EditInvoiceModal
+            invoice={invoiceToEdit}
+            onClose={() => setInvoiceToEdit(null)}
+          />
+        )}
+        {invoiceToDelete && (
+          <DeleteConfirmationModal
+            invoice={invoiceToDelete}
+            isDeleting={deleteInvoice.isPending}
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setInvoiceToDelete(null)}
           />
         )}
       </AnimatePresence>

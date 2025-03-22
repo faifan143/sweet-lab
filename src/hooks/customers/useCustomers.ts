@@ -1,3 +1,4 @@
+import { AllCustomerType, CustomerSummaryData } from "@/types/customers.type";
 import { apiClient } from "@/utils/axios";
 import { useQuery } from "@tanstack/react-query";
 
@@ -8,20 +9,6 @@ export interface CustomerType {
   totalDebt: number;
 }
 
-// export const useOpenShift = (options?: {
-//   onSuccess?: () => void;
-//   onError?: (error: any) => void;
-// }) => {
-//   return useMutation({
-//     mutationFn: async (data: any) => {
-//       const response = await apiClient.post("/shifts", data);
-//       return response;
-//     },
-//     onSuccess: options?.onSuccess,
-//     onError: options?.onError,
-//   });
-// };
-
 export const useCustomersList = () => {
   return useQuery<CustomerType[]>({
     queryKey: ["customers"],
@@ -29,6 +16,32 @@ export const useCustomersList = () => {
       const response = (await apiClient.get(
         "/customers/list"
       )) as CustomerType[];
+      return response;
+    },
+  });
+};
+
+export const useFetchCustomers = () => {
+  return useQuery<AllCustomerType[]>({
+    queryKey: ["all-customers"],
+    queryFn: async () => {
+      const response = (await apiClient.get("/customers")) as AllCustomerType[];
+      return response;
+    },
+  });
+};
+
+export const useSummaryCustomer = ({
+  customrerId,
+}: {
+  customrerId: string;
+}) => {
+  return useQuery<CustomerSummaryData>({
+    queryKey: ["customer-summary", customrerId],
+    queryFn: async () => {
+      const response = (await apiClient.get(
+        `/customers/${customrerId}/account-statement`
+      )) as CustomerSummaryData;
       return response;
     },
   });
