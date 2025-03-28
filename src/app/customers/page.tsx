@@ -1,4 +1,5 @@
 "use client";
+import CustomerModal from "@/components/common/customers/CustomerModal";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
@@ -6,7 +7,7 @@ import {
   useFetchCustomers,
   useSummaryCustomer,
 } from "@/hooks/customers/useCustomers";
-import { SummaryInvoice } from "@/types/customers.type";
+import { AllCustomerType, SummaryInvoice } from "@/types/customers.type";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -14,6 +15,7 @@ import {
   Calendar,
   Clock,
   CreditCard,
+  Edit,
   FileText,
   Filter,
   LayoutGrid,
@@ -21,8 +23,10 @@ import {
   Package,
   Phone,
   PieChart,
+  Plus,
   Search,
   ShoppingBag,
+  Trash2,
   Undo2,
   X,
 } from "lucide-react";
@@ -884,10 +888,19 @@ const Customers = () => {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
+  // New state for customer operations modal
+  const [customerModalConfig, setCustomerModalConfig] = useState<{
+    isOpen: boolean;
+    mode: "create" | "update" | "delete";
+    customerData: AllCustomerType | null;
+  }>({
+    isOpen: false,
+    mode: "create",
+    customerData: null,
+  });
+
   // Fetch customers using the provided hook
   const { data: customersData = [], isLoading, error } = useFetchCustomers();
-
-  console.log("all fetched customers data are : ", customersData);
 
   const customers = useMemo(() => {
     return customersData.map((customer) => {
@@ -942,6 +955,49 @@ const Customers = () => {
     setIsCustomerModalOpen(true);
   };
 
+  // Handler for adding new customer
+  const handleAddCustomer = () => {
+    setCustomerModalConfig({
+      isOpen: true,
+      mode: "create",
+      customerData: null,
+    });
+  };
+
+  // Handler for editing customer
+  const handleEditCustomer = (
+    customer: AllCustomerType,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation(); // Prevent triggering view customer modal
+    setCustomerModalConfig({
+      isOpen: true,
+      mode: "update",
+      customerData: customer,
+    });
+  };
+
+  // Handler for deleting customer
+  const handleDeleteCustomer = (
+    customer: AllCustomerType,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation(); // Prevent triggering view customer modal
+    setCustomerModalConfig({
+      isOpen: true,
+      mode: "delete",
+      customerData: customer,
+    });
+  };
+
+  // Close the customer operations modal
+  const closeCustomerModal = () => {
+    setCustomerModalConfig((prev) => ({
+      ...prev,
+      isOpen: false,
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 relative transition-colors duration-300">
       {isLoading && <PageSpinner />}
@@ -960,6 +1016,20 @@ const Customers = () => {
               <p className="text-slate-400">
                 عرض وإدارة بيانات العملاء وحساباتهم
               </p>
+            </div>
+
+            {/* Add Customer Button */}
+            <div className="mb-6 flex justify-center">
+              <button
+                onClick={handleAddCustomer}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg 
+                        bg-blue-500 text-white hover:bg-blue-600 transition-colors
+                        shadow-lg shadow-blue-500/20"
+                dir="rtl"
+              >
+                <Plus className="h-5 w-5" />
+                إضافة عميل جديد
+              </button>
             </div>
 
             {/* Search and Filters */}
@@ -1066,6 +1136,7 @@ const Customers = () => {
                         transition={{ delay: index * 0.05 }}
                         className="bg-gradient-to-br from-slate-800/80 to-slate-700/80 backdrop-blur-sm border border-white/10 rounded-xl p-6 
                                   hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-500/30 transition-all duration-300"
+                        onClick={() => handleViewCustomer(customer.id)}
                       >
                         <div className="flex justify-between items-start mb-4">
                           <h3 className="text-lg font-medium text-white line-clamp-1">
@@ -1090,16 +1161,38 @@ const Customers = () => {
                           </div>
                         </div>
 
-                        {/* Action Button */}
-                        <button
-                          onClick={() => handleViewCustomer(customer.id)}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg 
-                                  bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors
-                                  border border-blue-500/20"
-                        >
-                          <FileText className="w-4 h-4" />
-                          عرض الحساب
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewCustomer(customer.id);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2 rounded-lg 
+                                    bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors
+                                    border border-blue-500/20"
+                          >
+                            <FileText className="w-4 h-4" />
+                            عرض
+                          </button>
+                          <button
+                            onClick={(e) => handleEditCustomer(customer, e)}
+                            className="flex-1 flex items-center justify-center gap-2 px-2 py-2 rounded-lg 
+                                    bg-slate-600/30 text-slate-300 hover:bg-slate-600/50 transition-colors
+                                    border border-slate-600/30"
+                          >
+                            <Edit className="w-4 h-4" />
+                            تعديل
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteCustomer(customer, e)}
+                            className="flex items-center justify-center gap-2 px-2 py-2 rounded-lg 
+                                    bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors
+                                    border border-red-500/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -1127,6 +1220,7 @@ const Customers = () => {
                         <tr
                           key={customer.id}
                           className="border-t border-white/10 hover:bg-slate-700/20 transition-colors"
+                          onClick={() => handleViewCustomer(customer.id)}
                         >
                           <td className="p-4 text-slate-300 font-medium">
                             {customer.name}
@@ -1146,15 +1240,40 @@ const Customers = () => {
                             )}
                           </td>
                           <td className="p-4">
-                            <button
-                              onClick={() => handleViewCustomer(customer.id)}
-                              className="flex items-center gap-2 px-3 py-1.5 rounded-lg 
-                                      bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors
-                                      border border-blue-500/20 text-sm"
+                            <div
+                              className="flex gap-2"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <FileText className="w-4 h-4" />
-                              عرض الحساب
-                            </button>
+                              <button
+                                onClick={() => handleViewCustomer(customer.id)}
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-lg 
+                                        bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors
+                                        border border-blue-500/20 text-sm"
+                              >
+                                <FileText className="w-3 h-3" />
+                                عرض
+                              </button>
+                              <button
+                                onClick={(e) => handleEditCustomer(customer, e)}
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-lg 
+                                        bg-slate-600/30 text-slate-300 hover:bg-slate-600/50 transition-colors
+                                        border border-slate-600/30 text-sm"
+                              >
+                                <Edit className="w-3 h-3" />
+                                تعديل
+                              </button>
+                              <button
+                                onClick={(e) =>
+                                  handleDeleteCustomer(customer, e)
+                                }
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-lg 
+                                        bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors
+                                        border border-red-500/20 text-sm"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                حذف
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1217,6 +1336,14 @@ const Customers = () => {
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         customerId={selectedCustomerId}
+      />
+
+      {/* Customer Operations Modal (Create/Update/Delete) */}
+      <CustomerModal
+        isOpen={customerModalConfig.isOpen}
+        onClose={closeCustomerModal}
+        mode={customerModalConfig.mode}
+        customerData={customerModalConfig.customerData}
       />
     </div>
   );

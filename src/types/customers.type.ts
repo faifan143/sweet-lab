@@ -1,7 +1,13 @@
-// Summary
+// customers.types.ts
+
+// Base interfaces for common properties
+interface BaseEntity {
+  id: number;
+  createdAt: string;
+}
 
 // Customer Information Interface
-interface CustomerInfo {
+export interface CustomerInfo {
   id: number;
   name: string;
   phone: string;
@@ -12,7 +18,7 @@ interface CustomerInfo {
 }
 
 // Financial Summary Interface
-interface FinancialSummary {
+export interface FinancialSummary {
   totalSales: number;
   totalPaid: number;
   currentDebts: number;
@@ -22,7 +28,7 @@ interface FinancialSummary {
 }
 
 // Trays Information Interface
-interface PendingTrayDetail {
+export interface PendingTrayDetail {
   id: number;
   invoiceId: number;
   traysCount: number;
@@ -31,13 +37,13 @@ interface PendingTrayDetail {
   notes: string;
 }
 
-interface TraysInfo {
+export interface TraysInfo {
   totalPendingTrays: number;
   pendingTraysDetails: PendingTrayDetail[];
 }
 
 // Debts Information Interface
-interface ActiveDebt {
+export interface ActiveDebt {
   id: number;
   totalAmount: number;
   remainingAmount: number;
@@ -48,7 +54,7 @@ interface ActiveDebt {
   paymentProgress: number;
 }
 
-interface PaidDebt {
+export interface PaidDebt {
   id: number;
   totalAmount: number;
   paidAmount: number;
@@ -58,20 +64,20 @@ interface PaidDebt {
   notes: string;
 }
 
-interface DebtsInfo {
+export interface DebtsInfo {
   activeDebts: ActiveDebt[];
   paidDebts: PaidDebt[];
 }
 
 // Invoices Information Interface
-interface InvoiceItem {
+export interface InvoiceItem {
   itemName: string;
   quantity: number;
   unitPrice: number;
   subTotal: number;
 }
 
-interface TrayInfo {
+export interface TrayInfo {
   totalTrays: number;
   status: "pending" | "returned";
   returnedAt: string | null;
@@ -92,14 +98,14 @@ export interface SummaryInvoice {
   trayInfo: TrayInfo | null;
 }
 
-interface InvoicesInfo {
+export interface InvoicesInfo {
   totalCount: number;
   incomeInvoices: SummaryInvoice[];
   expenseInvoices: SummaryInvoice[];
 }
 
 // Analysis Information Interface
-interface PopularItem {
+export interface PopularItem {
   itemId: number;
   itemName: string;
   totalQuantity: number;
@@ -107,20 +113,20 @@ interface PopularItem {
   occurrences: number;
 }
 
-interface Transaction {
+export interface Transaction {
   date: string;
   amount: number;
   invoiceNumber: string;
   daysSinceLastTransaction?: number;
 }
 
-interface PaymentBehavior {
+export interface PaymentBehavior {
   prefersPaying: boolean;
   prefersDebt: boolean;
   paymentReliabilityScore: number;
 }
 
-interface AnalysisInfo {
+export interface AnalysisInfo {
   popularItems: PopularItem[];
   monthlyAverage: number;
   firstTransaction: Transaction;
@@ -139,23 +145,15 @@ export interface CustomerSummaryData {
   analysisInfo: AnalysisInfo;
 }
 
-// Fetch All
-
-// Base interfaces for common properties
-interface BaseEntity {
-  id: number;
-  createdAt: string;
-}
-
 // Unit interfaces
-interface ItemUnit {
+export interface ItemUnit {
   unit: string;
   price: number;
   factor: number;
 }
 
 // Item interfaces
-interface Item extends BaseEntity {
+export interface Item extends BaseEntity {
   name: string;
   type: "production" | "raw"; // Assuming these are the possible types
   units: ItemUnit[];
@@ -167,7 +165,7 @@ interface Item extends BaseEntity {
 }
 
 // InvoiceItem interface
-interface InvoiceItem extends BaseEntity {
+export interface DetailedInvoiceItem extends BaseEntity {
   quantity: number;
   unitPrice: number;
   subTotal: number;
@@ -178,7 +176,7 @@ interface InvoiceItem extends BaseEntity {
 }
 
 // Invoice interface
-interface AllCustomersInvoice extends BaseEntity {
+export interface AllCustomersInvoice extends BaseEntity {
   invoiceNumber: string;
   invoiceType: "income" | "expense";
   invoiceCategory: "products" | "debt" | "direct";
@@ -194,11 +192,11 @@ interface AllCustomersInvoice extends BaseEntity {
   employeeId: number;
   relatedDebtId: number | null;
   trayCount: number;
-  items: InvoiceItem[];
+  items: DetailedInvoiceItem[];
 }
 
 // Tray interface
-interface Tray extends BaseEntity {
+export interface Tray extends BaseEntity {
   customerId: number;
   totalTrays: number;
   status: "pending" | "returned";
@@ -208,7 +206,7 @@ interface Tray extends BaseEntity {
 }
 
 // Debt interface
-interface Debt extends BaseEntity {
+export interface Debt extends BaseEntity {
   customerId: number;
   totalAmount: number;
   remainingAmount: number;
@@ -227,3 +225,58 @@ export interface AllCustomerType extends BaseEntity {
   trays: Tray[];
   debts: Debt[];
 }
+
+// Simple customer type for list views
+export interface CustomerType {
+  id: number;
+  name: string;
+  phone: string;
+  totalDebt: number;
+}
+
+// Request & Response Types for API Operations
+
+// Create Customer
+export interface CreateCustomerRequest {
+  name: string;
+  phone: string;
+  notes?: string | null;
+}
+
+export type CreateCustomerResponse = CustomerInfo;
+
+// Update Customer
+export interface UpdateCustomerRequest {
+  name?: string;
+  phone?: string;
+  notes?: string | null;
+}
+
+export type UpdateCustomerResponse = CustomerInfo;
+
+// Delete Customer
+export interface DeleteCustomerResponse {
+  success: boolean;
+  message: string;
+  deletedCustomerId: number;
+}
+
+// Get Customer Account Statement
+export interface CustomerAccountStatementRequest {
+  customerId: string;
+}
+
+export type CustomerAccountStatementResponse = CustomerSummaryData;
+
+// Get All Customers
+export type GetAllCustomersResponse = Array<AllCustomerType>;
+
+// Get Customer List
+export type GetCustomersListResponse = Array<CustomerType>;
+
+// Get Customer By ID
+export interface GetCustomerByIdRequest {
+  customerId: string;
+}
+
+export type GetCustomerByIdResponse = AllCustomerType;
