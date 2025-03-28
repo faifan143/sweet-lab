@@ -1,5 +1,5 @@
 "use client";
-import { CustomerType, useCustomersList } from "@/hooks/customers/useCustomers";
+import { useCustomersList } from "@/hooks/customers/useCustomers";
 import {
   useCreateDirectDebt,
   useCreateExpenseProducts,
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 import { useMokkBar } from "../providers/MokkBarContext";
+import { CustomerType } from "@/types/customers.type";
 
 type InvoiceType = Invoice["invoiceType"];
 type PaymentType = "paid" | "unpaid" | "breakage";
