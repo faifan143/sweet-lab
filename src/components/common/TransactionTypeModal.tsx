@@ -1,7 +1,7 @@
 "use client";
 import { InvoiceCategory } from "@/types/invoice.type";
 import { motion } from "framer-motion";
-import { Receipt, CreditCard, Wallet, X } from "lucide-react";
+import { Receipt, CreditCard, Wallet, X, CreditCardIcon } from "lucide-react";
 import React from "react";
 
 export type TransactionMode = "income" | "expense";
@@ -46,6 +46,15 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
       bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
       description: mode === "income" ? "تحصيل دين" : "تسجيل دين جديد",
     },
+    {
+      id: "advance",
+      value: "سلفة",
+
+      icon: CreditCardIcon,
+      color: "text-yellow-400",
+      bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20",
+      description: mode === "income" ? "إضافة سلفة" : "",
+    },
   ];
 
   return (
@@ -76,23 +85,26 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-4" dir="rtl">
-          {types.map((type) => (
-            <button
-              key={type.id}
-              onClick={() => onSelect(type.id as InvoiceCategory)}
-              className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
-            >
-              <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
-                <type.icon size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className={`font-semibold ${type.color} text-lg`}>
-                  {type.value}
-                </h3>
-                <p className="text-slate-400 text-sm">{type.description}</p>
-              </div>
-            </button>
-          ))}
+          {types.map((type) => {
+            if (mode == "expense" && type.id == "advance") return;
+            return (
+              <button
+                key={type.id}
+                onClick={() => onSelect(type.id as InvoiceCategory)}
+                className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
+              >
+                <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
+                  <type.icon size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className={`font-semibold ${type.color} text-lg`}>
+                    {type.value}
+                  </h3>
+                  <p className="text-slate-400 text-sm">{type.description}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </motion.div>
     </motion.div>

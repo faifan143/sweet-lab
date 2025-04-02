@@ -1,6 +1,6 @@
 // src/types/invoice.type.ts - Updated types
 
-export type InvoiceCategory = "products" | "direct" | "debt";
+export type InvoiceCategory = "products" | "direct" | "debt" | "advance";
 
 export interface Invoice {
   id: number;
@@ -125,7 +125,7 @@ export interface ExpenseProductsDTO extends BaseInvoiceDTO {
 // Direct/Debt Invoice DTO (for both income and expense)
 export interface DirectDebtDTO extends BaseInvoiceDTO {
   invoiceType: InvoiceType;
-  invoiceCategory: "direct" | "debt";
+  invoiceCategory: "direct" | "debt" | "advance";
   customerId?: number;
   totalAmount: number;
   paidStatus: boolean;

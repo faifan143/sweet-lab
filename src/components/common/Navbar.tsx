@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Castle,
   Clock,
+  CreditCardIcon,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -151,6 +152,12 @@ const Navbar = () => {
           name: "الخزينة",
           icon: Castle,
           href: "/case",
+          roles: [Role.ADMIN, Role.MANAGER, Role.TreasuryManager],
+        },
+        {
+          name: "السلف",
+          icon: CreditCardIcon,
+          href: "/advances",
           roles: [Role.ADMIN, Role.MANAGER, Role.TreasuryManager],
         },
         {

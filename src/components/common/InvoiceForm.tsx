@@ -5,6 +5,7 @@ import {
   useCreateExpenseProducts,
   useCreateIncomeProducts,
 } from "@/hooks/invoices/useInvoice";
+import { useCreateAdvance } from "@/hooks/advances/useAdvances";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useItems } from "@/hooks/items/useItems";
 import {
@@ -59,7 +60,7 @@ interface FormItem {
   quantity: number;
   unitPrice: number;
   unit: string;
-  factor: number; // Added factor field
+  factor: number;
   trayCount?: number;
   subTotal: number;
   itemId: number;
@@ -98,8 +99,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   );
   const [selectedItemPrice, setSelectedItemPrice] = useState<number>(0);
   const [selectedItemUnit, setSelectedItemUnit] = useState<string>("");
-  const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1); // New state for factor
-  const [selectedUnitIndex, setSelectedUnitIndex] = useState<number>(-1); // New state for unit index
+  const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1);
+  const [selectedUnitIndex, setSelectedUnitIndex] = useState<number>(-1);
 
   // Mutations with success/error handling
   const createIncomeProducts = useCreateIncomeProducts({
@@ -158,7 +159,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       });
     },
   });
-
+  const createAdvance = useCreateAdvance();
   // Check if the first payment is valid for breakage payment type
   const isFirstPaymentValid =
     formData.paymentType !== "breakage" ||
@@ -169,11 +170,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     createDirectDebt.isPending ||
     createExpenseProducts.isPending ||
     createIncomeProducts.isPending ||
+    createAdvance.isPending ||
     formData.totalAmount <= 0 ||
     (type === "products" &&
       mode === "income" &&
       (trayCount === null || trayCount < 0)) ||
-    !isFirstPaymentValid;
+    !isFirstPaymentValid ||
+    (type === "advance" && !formData.customerId); // Require customer for advances
 
   // Handlers
   const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -189,6 +192,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         customerPhone: selected_customer.phone,
       }));
     } else {
+      setSelectedCustomer(null);
       setFormData((prev) => ({
         ...prev,
         customerId: undefined,
@@ -279,6 +283,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         return mode === "income" ? "دخل مباشر جديد" : "مصروف مباشر جديد";
       case "debt":
         return mode === "income" ? "تحصيل دين" : "تسجيل دين جديد";
+      case "advance":
+        return "إنشاء سلفة جديدة";
+      default:
+        return "";
     }
   };
 
@@ -362,6 +370,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       return;
     }
 
+    // Validate customer selection for advances
+    if (type === "advance" && !formData.customerId) {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "يجب اختيار عميل للسلفة",
+      });
+      return;
+    }
+
     try {
       const baseInvoiceData = {
         customerId: formData.customerId,
@@ -369,8 +387,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         fundId,
       };
 
-      if (type === "products") {
-        // Handle product invoices
+      // Handle advance
+      if (type === "advance") {
+        await createAdvance.mutateAsync({
+          amount: formData.totalAmount,
+          customerId: formData.customerId!,
+          fundId,
+          notes: formData.notes,
+        });
+      }
+      // Handle product invoices
+      else if (type === "products") {
         const productInvoiceData = {
           ...baseInvoiceData,
           invoiceType: mode,
@@ -402,8 +429,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             productInvoiceData as ExpenseProductsDTO
           );
         }
-      } else {
-        // Handle direct/debt invoices
+      }
+      // Handle direct/debt invoices
+      else {
         const directDebtData: DirectDebtDTO = {
           ...baseInvoiceData,
           invoiceType: mode,
@@ -424,22 +452,29 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const CustomerSection = () => {
     // Filter customers if type is debt
     const filteredCustomers =
-      type == "debt" && mode == "income"
+      type === "debt" && mode === "income"
         ? customers?.filter((customer) => customer.totalDebt > 0)
         : customers;
+
+    const isCustomerRequired = type === "advance";
 
     return (
       <div className="space-y-2">
         <label className="block text-slate-200">
           {mode === "income" ? "العميل" : "المورد"}
-          {(type == "direct" || type == "debt") && " ( اختياري ) "}
+          {isCustomerRequired && <span className="text-red-400 mr-1">*</span>}
+          {(type === "direct" || type === "debt") && " ( اختياري ) "}
         </label>
         <div className="flex justify-center gap-5 ">
           <div className="relative flex-1">
             <select
               value={formData.customerId || ""}
               onChange={handleCustomerSelect}
-              className="w-full appearance-none bg-slate-800/50 text-slate-200 rounded-lg border border-slate-700/50 py-3 px-4 pr-10 focus:outline-none focus:border-slate-600 text-right"
+              className={`w-full appearance-none bg-slate-800/50 text-slate-200 rounded-lg border ${
+                isCustomerRequired && !formData.customerId
+                  ? "border-red-500/50"
+                  : "border-slate-700/50"
+              } py-3 px-4 pr-10 focus:outline-none focus:border-slate-600 text-right`}
             >
               <option value="" className="bg-slate-800">
                 اختر من القائمة
@@ -474,12 +509,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             </div>
           )}
         </div>
+        {isCustomerRequired && !formData.customerId && (
+          <div className="text-red-400 text-sm mt-1">
+            يجب اختيار عميل للسلفة
+          </div>
+        )}
       </div>
     );
   };
 
-  // Show simplified form for direct and debt income
-  if (type === "direct" || type === "debt") {
+  // Show simplified form for direct, debt, and advance
+  if (type === "direct" || type === "debt" || type === "advance") {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -508,10 +548,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
           <div className="space-y-6" dir="rtl">
             {/* Customer Information */}
-            {fundId != 1 && <CustomerSection />}
+            {(fundId != 1 || type === "advance") && <CustomerSection />}
+
             {/* Amount */}
             <div className="space-y-2">
-              <label className="block text-slate-200">القيمة</label>
+              <label className="block text-slate-200">
+                {type === "advance" ? "قيمة السلفة" : "القيمة"}
+              </label>
               <div className="relative">
                 <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <input
@@ -520,7 +563,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   value={formData.totalAmount}
                   onChange={handleChange}
                   className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                  placeholder="أدخل القيمة"
+                  placeholder={`أدخل ${
+                    type === "advance" ? "قيمة السلفة" : "القيمة"
+                  }`}
                 />
               </div>
             </div>
@@ -549,7 +594,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               >
                 {createDirectDebt.isPending ||
                 createExpenseProducts.isPending ||
-                createIncomeProducts.isPending ? (
+                createIncomeProducts.isPending ||
+                createAdvance.isPending ? (
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     <span>جاري الإنشاء...</span>
@@ -675,7 +721,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           )}
 
           {/* Item Selection */}
-
           {(selectedGroupId > 0 || isPurchaseInvoice) && (
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* Product Selection */}
@@ -708,34 +753,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     <select
                       value={selectedUnitIndex}
                       onChange={handleUnitChange}
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    >
-                      <option value={-1} className="bg-slate-800">
-                        اختر الوحدة
-                      </option>
-                      {items
-                        ?.find((item) => item.id === selectedItem)
-                        ?.units?.map((unit, index) => (
-                          <option
-                            key={index}
-                            value={index}
-                            className="bg-slate-800 py-2"
-                          >
-                            {unit.unit}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Price Input */}
-                  <div className="space-y-2">
-                    <label className="block text-slate-200">السعر</label>
-                    <input
-                      type="number"
-                      value={selectedItemPrice}
-                      onChange={(e) =>
-                        setSelectedItemPrice(Number(e.target.value))
-                      }
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                     />
                   </div>
@@ -953,7 +970,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             >
               {createDirectDebt.isPending ||
               createExpenseProducts.isPending ||
-              createIncomeProducts.isPending ? (
+              createIncomeProducts.isPending ||
+              createAdvance.isPending ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>جاري الإنشاء...</span>
