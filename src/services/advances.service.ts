@@ -31,7 +31,10 @@ export const AdvancesServices = {
   createAdvance: async (
     advanceData: CreateAdvanceDTO
   ): Promise<CreateAdvanceResponse> => {
-    const response = await apiClient.post("/advances", advanceData);
+    const response = await apiClient.post<CreateAdvanceResponse>(
+      "/advances",
+      advanceData
+    );
     return response;
   },
 
