@@ -6,6 +6,15 @@ interface BaseEntity {
   createdAt: string;
 }
 
+// Customer Category interface
+export interface CustomerCategory {
+  id: number;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Customer Information Interface
 export interface CustomerInfo {
   id: number;
@@ -15,6 +24,8 @@ export interface CustomerInfo {
   createdAt: string;
   updatedAt: string;
   customerSince: string;
+  categoryId: number | null;
+  category: CustomerCategory | null;
 }
 
 // Financial Summary Interface
@@ -48,7 +59,7 @@ export interface ActiveDebt {
   totalAmount: number;
   remainingAmount: number;
   createdAt: string;
-  lastPaymentDate: string;
+  lastPaymentDate: string | null;
   pendingSince: string;
   notes: string;
   paymentProgress: number;
@@ -221,6 +232,8 @@ export interface AllCustomerType extends BaseEntity {
   phone: string;
   notes: string | null;
   updatedAt: string;
+  categoryId: number | null;
+  category: CustomerCategory | null;
   invoices: AllCustomersInvoice[];
   trays: Tray[];
   debts: Debt[];
@@ -232,6 +245,9 @@ export interface CustomerType {
   name: string;
   phone: string;
   totalDebt: number;
+  category: CustomerCategory | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  activeAdvances: any;
 }
 
 // Request & Response Types for API Operations
@@ -241,6 +257,7 @@ export interface CreateCustomerRequest {
   name: string;
   phone: string;
   notes?: string | null;
+  categoryId?: number | null;
 }
 
 export type CreateCustomerResponse = CustomerInfo;
@@ -250,6 +267,7 @@ export interface UpdateCustomerRequest {
   name?: string;
   phone?: string;
   notes?: string | null;
+  categoryId?: number | null;
 }
 
 export type UpdateCustomerResponse = CustomerInfo;
@@ -280,3 +298,28 @@ export interface GetCustomerByIdRequest {
 }
 
 export type GetCustomerByIdResponse = AllCustomerType;
+
+// Customer Categories
+export interface GetCustomerCategoriesResponse {
+  categories: CustomerCategory[];
+}
+
+export interface CreateCustomerCategoryRequest {
+  name: string;
+  description?: string | null;
+}
+
+export type CreateCustomerCategoryResponse = CustomerCategory;
+
+export interface UpdateCustomerCategoryRequest {
+  name?: string;
+  description?: string | null;
+}
+
+export type UpdateCustomerCategoryResponse = CustomerCategory;
+
+export interface DeleteCustomerCategoryResponse {
+  success: boolean;
+  message: string;
+  deletedCategoryId: number;
+}

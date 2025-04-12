@@ -1,4 +1,3 @@
-// CustomerModal.tsx
 "use client";
 import {
   useCreateCustomer,
@@ -6,8 +5,9 @@ import {
   useUpdateCustomer,
 } from "@/hooks/customers/useCustomers";
 import { AllCustomerType, CreateCustomerRequest } from "@/types/customers.type";
+import { CustomerCategory } from "@/types/customerCategories.types";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, CheckCircle, Loader2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader2, Tag, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 
@@ -16,6 +16,7 @@ interface CustomerModalProps {
   onClose: () => void;
   mode: "create" | "update" | "delete";
   customerData: AllCustomerType | null;
+  categories: CustomerCategory[];
 }
 
 type FormValues = CreateCustomerRequest;
@@ -25,6 +26,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
   onClose,
   mode = "create",
   customerData = null,
+  categories = [],
 }) => {
   const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(
     null
@@ -37,13 +39,20 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<FormValues>({
     defaultValues: {
       name: "",
       phone: "",
       notes: "",
+      categoryId: null,
     },
+    // Add mode-specific validation
+    context: { isCreateMode: mode === "create" }
   });
+
+  // For watching the category selection
+  const selectedCategoryId = watch("categoryId");
 
   // Custom hooks for API operations
   const { mutateAsync: createCustomer, isPending: isCreating } =
@@ -60,11 +69,13 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         setValue("name", customerData.name || "");
         setValue("phone", customerData.phone || "");
         setValue("notes", customerData.notes || "");
+        setValue("categoryId", customerData.categoryId);
       } else if (mode === "create") {
         reset({
           name: "",
           phone: "",
           notes: "",
+          categoryId: null,
         });
       }
     }
@@ -163,8 +174,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                 {mode === "create"
                   ? "تم إضافة العميل بنجاح"
                   : mode === "update"
-                  ? "تم تحديث بيانات العميل بنجاح"
-                  : "تم حذف العميل بنجاح"}
+                    ? "تم تحديث بيانات العميل بنجاح"
+                    : "تم حذف العميل بنجاح"}
               </span>
             </div>
           )}
@@ -177,8 +188,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                 {mode === "create"
                   ? "حدث خطأ أثناء إضافة العميل"
                   : mode === "update"
-                  ? "حدث خطأ أثناء تحديث بيانات العميل"
-                  : "حدث خطأ أثناء حذف العميل"}
+                    ? "حدث خطأ أثناء تحديث بيانات العميل"
+                    : "حدث خطأ أثناء حذف العميل"}
               </span>
             </div>
           )}
@@ -247,9 +258,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                         message: "الاسم يجب أن يكون على الأقل حرفين",
                       },
                     })}
-                    className={`w-full px-3 py-2 bg-slate-700/50 border ${
-                      errors.name ? "border-red-500/50" : "border-slate-600/50"
-                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                    className={`w-full px-3 py-2 bg-slate-700/50 border ${errors.name ? "border-red-500/50" : "border-slate-600/50"
+                      } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                     placeholder="أدخل اسم العميل"
                   />
                   {errors.name && (
@@ -277,9 +287,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                         message: "رقم هاتف غير صالح",
                       },
                     })}
-                    className={`w-full px-3 py-2 bg-slate-700/50 border ${
-                      errors.phone ? "border-red-500/50" : "border-slate-600/50"
-                    } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                    className={`w-full px-3 py-2 bg-slate-700/50 border ${errors.phone ? "border-red-500/50" : "border-slate-600/50"
+                      } rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                     placeholder="أدخل رقم الهاتف"
                     dir="ltr"
                   />
@@ -287,6 +296,47 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                     <p className="mt-1 text-sm text-red-400">
                       {errors.phone.message}
                     </p>
+                  )}
+                </div>
+
+                {/* Category Field */}
+                <div>
+                  <label
+                    htmlFor="categoryId"
+                    className="block text-sm font-medium text-slate-300 mb-1"
+                  >
+                    التصنيف
+                  </label>
+                  {categories.length > 0 ? (
+                    <>
+                      <select
+                        id="categoryId"
+                        {...register("categoryId")}
+                        className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      >
+                        <option value="">بدون تصنيف</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {selectedCategoryId && (
+                        <div className="mt-2 flex">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            <Tag className="h-3 w-3" />
+                            {categories.find(
+                              (c) => c.id === Number(selectedCategoryId)
+                            )?.name}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-sm text-slate-400">
+                      لا توجد تصنيفات متاحة. يمكنك <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('add-category'))} className="text-purple-400 hover:underline">إضافة تصنيف جديد</button> أولاً.
+                    </div>
                   )}
                 </div>
 
@@ -313,7 +363,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                 <button
                   type="submit"
                   className="w-full px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors flex items-center justify-center gap-2"
-                  disabled={isCreating || isUpdating}
+                  disabled={isCreating || isUpdating || (mode === "create" && categories.length === 0)}
                 >
                   {(isCreating || isUpdating) && (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -323,8 +373,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                       ? "جاري الإضافة..."
                       : "إضافة العميل"
                     : isUpdating
-                    ? "جاري التحديث..."
-                    : "تحديث البيانات"}
+                      ? "جاري التحديث..."
+                      : "تحديث البيانات"}
                 </button>
               </div>
             </form>
@@ -333,6 +383,5 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
       </motion.div>
     </AnimatePresence>
   );
-};
-
-export default CustomerModal;
+}
+export default CustomerModal

@@ -91,30 +91,28 @@ const DebtTabs: React.FC<{
       <div className="flex">
         <button
           onClick={() => onTabChange("active")}
-          className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors ${
-            activeTab === "active"
-              ? "text-warning border-b-2 border-warning"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "active"
+            ? "text-warning border-b-2 border-warning"
+            : "text-muted-foreground hover:text-foreground"
+            }`}
         >
           <Clock className="h-4 w-4" />
           <span>الديون النشطة</span>
-          <span className="ml-2 bg-warning/10 text-warning px-2 py-0.5 rounded-full text-xs">
+          <span className="mx-2 bg-warning/10 text-warning px-2 py-0.5 rounded-full text-xs">
             {activeCount}
           </span>
         </button>
 
         <button
           onClick={() => onTabChange("paid")}
-          className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors ${
-            activeTab === "paid"
-              ? "text-success border-b-2 border-success"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "paid"
+            ? "text-success border-b-2 border-success"
+            : "text-muted-foreground hover:text-foreground"
+            }`}
         >
           <CheckCircle className="h-4 w-4" />
           <span>الديون المدفوعة</span>
-          <span className="ml-2 bg-success/10 text-success px-2 py-0.5 rounded-full text-xs">
+          <span className="mx-2 bg-success/10 text-success px-2 py-0.5 rounded-full text-xs">
             {paidCount}
           </span>
         </button>

@@ -29,14 +29,14 @@ import {
 
 // Types
 import { InvoiceCategory } from "@/types/invoice.type";
-import { AnyToGeneralBody, GeneralToMainBody } from "@/types/transfer.type";
+import { AnyToGeneralBody } from "@/types/transfer.type";
 import { FundType, InvoiceType, ShiftType } from "@/types/types";
 
 // Utils
 import PageSpinner from "@/components/common/PageSpinner";
+import { useFunds, useTransferToMain } from "@/hooks/funds/useFunds";
 import {
-  useTransferAnyToGeneral,
-  useTransferGeneralToMain,
+  useTransferAnyToGeneral
 } from "@/hooks/invoices/useTransfers";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 import { setLoading } from "@/redux/reducers/wrapper.slice";
@@ -46,30 +46,78 @@ import { useDispatch } from "react-redux";
 
 // Constants
 const TABS = [
+  { id: FundType.general, label: "عام" },
   { id: FundType.booth, label: "بسطة" },
   { id: FundType.university, label: "جامعة" },
-  { id: FundType.general, label: "عام" },
 ];
 
-// Transfer Modal Component
-const TransferModal = ({
+// Enhanced Transfer Modal Component with Improved UI
+const EnhancedTransferModal = ({
   isOpen,
   onClose,
   title,
   onSubmit,
   isPending,
+  funds,
+  sourceType = null,
+  destinationType = "main",
 }: {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   onSubmit: (data: { amount: number; notes: string }) => void;
   isPending: boolean;
-  sourceType?: "booth" | "university" | null;
+  funds: Array<{
+    id: number;
+    fundType: "main" | "general" | "booth" | "university";
+    currentBalance: number;
+    lastUpdate: string;
+  }>;
+  sourceType?: "general" | "booth" | "university" | "main" | null;
+  destinationType?: "main" | "general";
 }) => {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
 
   if (!isOpen) return null;
+
+  // Format fund name for display
+  const formatFundName = (type: string) => {
+    switch (type) {
+      case "main":
+        return "الرئيسية";
+      case "general":
+        return "العامة";
+      case "booth":
+        return "البسطة";
+      case "university":
+        return "الجامعة";
+      default:
+        return type;
+    }
+  };
+
+  // Get current balance of the source fund
+  const sourceBalance = funds.find(fund => fund.fundType === sourceType)?.currentBalance || 0;
+
+  // Get destination fund balance
+  const destinationBalance = funds.find(fund => fund.fundType === destinationType)?.currentBalance || 0;
+
+  // Get fund color by type (based on your screenshots)
+  const getFundColor = (type: string): string => {
+    switch (type) {
+      case "main":
+        return "text-pink-500"; // Pink for main fund
+      case "general":
+        return "text-cyan-400"; // Cyan for general fund
+      case "booth":
+        return "text-blue-500"; // Blue for booth fund
+      case "university":
+        return "text-purple-500"; // Purple for university fund
+      default:
+        return "text-foreground";
+    }
+  };
 
   return (
     <motion.div
@@ -83,17 +131,42 @@ const TransferModal = ({
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-card p-6 rounded-lg shadow-xl w-full max-w-md mx-4"
+        className="bg-slate-800/90 p-6 rounded-lg shadow-xl w-full max-w-md mx-4 border border-slate-700"
         onClick={(e) => e.stopPropagation()}
         dir="rtl"
       >
-        <h2 className="text-xl font-bold text-foreground mb-4">{title}</h2>
+        <h2 className="text-xl font-bold text-slate-200 mb-6">{title}</h2>
 
-        <div className="space-y-4">
+        {/* Fund Balances Section - Styled to match screenshot */}
+        <div className="mb-6">
+          <div className="text-sm font-medium text-slate-400 mb-2 px-1">
+            أرصدة الخزائن
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {sourceType && (
+              <div className="rounded-lg bg-slate-800/80 border border-slate-700/70 p-4 flex flex-col items-center">
+                <div className="text-xs text-slate-400 mb-2">خزينة {formatFundName(sourceType)}</div>
+                <div className={`text-lg font-bold ${getFundColor(sourceType)}`}>
+                  {sourceBalance.toLocaleString()} ر.س
+                </div>
+              </div>
+            )}
+            <div className="rounded-lg bg-slate-800/80 border border-slate-700/70 p-4 flex flex-col items-center">
+              <div className="text-xs text-slate-400 mb-2">
+                الخزينة {destinationType === "main" ? "الرئيسية" : "العامة"}
+              </div>
+              <div className={`text-lg font-bold ${getFundColor(destinationType)}`}>
+                {destinationBalance.toLocaleString()} ر.س
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5">
           <div className="space-y-2">
             <label
               htmlFor="amount"
-              className="text-sm font-medium text-foreground"
+              className="text-sm font-medium text-slate-300"
             >
               المبلغ
             </label>
@@ -102,15 +175,19 @@ const TransferModal = ({
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
               placeholder="أدخل المبلغ..."
+              max={sourceBalance}
             />
+            {Number(amount) > sourceBalance && (
+              <p className="text-red-400 text-xs">المبلغ أكبر من الرصيد المتاح</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <label
               htmlFor="notes"
-              className="text-sm font-medium text-foreground"
+              className="text-sm font-medium text-slate-300"
             >
               ملاحظات
             </label>
@@ -118,7 +195,7 @@ const TransferModal = ({
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[100px]"
+              className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400/30 min-h-[100px]"
               placeholder="أدخل الملاحظات..."
             />
           </div>
@@ -126,21 +203,21 @@ const TransferModal = ({
           <div className="flex gap-4 justify-end mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-secondary/20 text-secondary-foreground hover:bg-secondary/30 transition-colors"
+              className="px-4 py-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-700/70 transition-colors"
             >
               إلغاء
             </button>
             <button
               onClick={() => {
-                if (!amount) return;
+                if (!amount || Number(amount) > sourceBalance) return;
                 onSubmit({ amount: Number(amount), notes });
               }}
-              disabled={!amount || isPending}
-              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={!amount || isPending || Number(amount) > sourceBalance}
+              className="px-4 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isPending ? (
                 <>
-                  <span className="animate-spin h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"></span>
+                  <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full"></span>
                   جاري التحويل...
                 </>
               ) : (
@@ -172,7 +249,7 @@ export default function Page() {
   } | null>(null);
 
   // State Management
-  const [activeTab, setActiveTab] = useState<FundType>(FundType.booth);
+  const [activeTab, setActiveTab] = useState<FundType>(FundType.general);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -184,9 +261,12 @@ export default function Page() {
     useState<InvoiceCategory | null>(null);
 
   // Transfer State
-  const [showTransferToGeneralModal, setShowTransferToGeneralModal] =
-    useState(false);
+  const [showTransferToGeneralModal, setShowTransferToGeneralModal] = useState(false);
   const [showTransferToMainModal, setShowTransferToMainModal] = useState(false);
+  const [transferSource, setTransferSource] = useState<"general" | "booth" | "university" | null>(null);
+
+  // Added funds query
+  const { data: funds, isLoading: isFundsLoading } = useFunds();
 
   const { hasAnyRole } = useRoles();
   // Derived State
@@ -239,6 +319,7 @@ export default function Page() {
           severity: "success",
           message: "تم تحويل المبلغ بنجاح إلى الخزينة العامة",
         });
+        queryClient.invalidateQueries({ queryKey: ["funds"] });
       },
       onError: (error) => {
         setSnackbarConfig({
@@ -249,24 +330,9 @@ export default function Page() {
       },
     });
 
+  // Updated transfer to main mutation using the new hook
   const { mutateAsync: transferToMain, isPending: isTransferringToMain } =
-    useTransferGeneralToMain({
-      onSuccess: () => {
-        setShowTransferToMainModal(false);
-        setSnackbarConfig({
-          open: true,
-          severity: "success",
-          message: "تم تحويل المبلغ بنجاح إلى الخزينة الرئيسية",
-        });
-      },
-      onError: (error) => {
-        setSnackbarConfig({
-          open: true,
-          severity: "error",
-          message: error?.response?.data?.message || "فشل في تحويل المبلغ",
-        });
-      },
-    });
+    useTransferToMain();
 
   const {
     data: shiftSummary,
@@ -276,13 +342,13 @@ export default function Page() {
   } = useShiftSummary();
 
   useEffect(() => {
-    dispatch(setLoading(isShiftsLoading || isSummaryLoading));
+    dispatch(setLoading(isShiftsLoading || isSummaryLoading || isFundsLoading));
     console.log(
       "from app : Loading is set to ( " +
-        `${isShiftsLoading || isSummaryLoading}` +
-        " )"
+      `${isShiftsLoading || isSummaryLoading || isFundsLoading}` +
+      " )"
     );
-  }, [dispatch, isShiftsLoading, isSummaryLoading]);
+  }, [dispatch, isShiftsLoading, isSummaryLoading, isFundsLoading]);
 
   useEffect(() => {
     if (isShiftsLoading && lastShift) {
@@ -293,6 +359,7 @@ export default function Page() {
     if (isShiftsSuccess && lastShift) {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
     }
   }, [lastShift, isShiftsSuccess, queryClient]);
 
@@ -302,6 +369,7 @@ export default function Page() {
     refetchCUrrentInvoices();
     queryClient.refetchQueries({ queryKey: ["invoices"] });
     queryClient.refetchQueries({ queryKey: ["currentInvoices"] });
+    queryClient.refetchQueries({ queryKey: ["funds"] });
     setSnackbarConfig({
       open: true,
       severity: "success",
@@ -338,14 +406,12 @@ export default function Page() {
 
   const handleConfirmShiftClose = async ({
     amount,
-    status,
   }: {
-    status: "surplus" | "deficit";
     amount: number;
   }) => {
     if (lastShift?.closeTime) return;
     try {
-      await closeShift({ status, amount });
+      await closeShift({ amount });
     } catch (error) {
       console.error("Failed to close shift:", error);
     }
@@ -374,17 +440,13 @@ export default function Page() {
     }
   };
 
+  // Updated transfer to main handler
   const handleTransferToMain = async (data: {
     amount: number;
     notes: string;
   }) => {
     try {
-      const transferData: GeneralToMainBody = {
-        amount: data.amount,
-        notes: data.notes,
-      };
-
-      await transferToMain(transferData);
+      await transferToMain({ amount: data.amount });
     } catch (error) {
       console.error("Failed to transfer to main:", error);
     }
@@ -396,11 +458,11 @@ export default function Page() {
       shift.status === "closed"
         ? null
         : {
-            shiftType:
-              shift.shiftType === "morning"
-                ? ShiftType.morning
-                : ShiftType.evening,
-          }
+          shiftType:
+            shift.shiftType === "morning"
+              ? ShiftType.morning
+              : ShiftType.evening,
+        }
     );
   };
 
@@ -408,13 +470,27 @@ export default function Page() {
     if (!currentInvoices) return [];
     const section =
       currentInvoices[
-        activeTab === FundType.booth
-          ? "booth"
-          : activeTab === FundType.general
+      activeTab === FundType.booth
+        ? "booth"
+        : activeTab === FundType.general
           ? "general"
           : "university"
       ];
     return section?.invoices || [];
+  };
+
+  // Get fund type string based on active tab
+  const getActiveFundType = (): "general" | "booth" | "university" => {
+    switch (activeTab) {
+      case FundType.general:
+        return "general";
+      case FundType.booth:
+        return "booth";
+      case FundType.university:
+        return "university";
+      default:
+        return "general";
+    }
   };
 
   // Render Methods
@@ -449,49 +525,54 @@ export default function Page() {
 
       {/* Transfer Controls - Only show when shift is open */}
       {theShiftIsOpen && hasAnyRole([Role.ADMIN, Role.ShiftManager]) && (
-        <div className="flex gap-3 ml-auto">
+        <div className="flex gap-3 mx-auto">
           {/* Show transfer to general button only on booth and university tabs */}
           {(activeTab === FundType.booth ||
             activeTab === FundType.university) && (
-            <ActionButton
-              icon={<ArrowUpRight className="h-5 w-5" />}
-              label={`تحويل إلى الخزينة العامة`}
-              onClick={() => setShowTransferToGeneralModal(true)}
-              variant="income"
-            />
-          )}
+              <ActionButton
+                icon={<ArrowUpRight className="h-5 w-5" />}
+                label={`تحويل إلى الخزينة العامة`}
+                onClick={() => {
+                  setTransferSource(getActiveFundType());
+                  setShowTransferToGeneralModal(true);
+                }}
+                variant="income"
+              />
+            )}
 
-          {/* Show transfer to main button only on general tab */}
-          {activeTab === FundType.general && (
-            <ActionButton
-              icon={<ArrowUpRight className="h-5 w-5" />}
-              label="تحويل إلى الخزينة الرئيسية"
-              onClick={() => setShowTransferToMainModal(true)}
-              variant="expense"
-            />
-          )}
+          {/* Show transfer to main button on any tab */}
+          <ActionButton
+            icon={<ArrowUpRight className="h-5 w-5" />}
+            label="تحويل إلى الخزينة الرئيسية"
+            onClick={() => {
+              setTransferSource(getActiveFundType());
+              setShowTransferToMainModal(true);
+            }}
+            variant="expense"
+          />
         </div>
       )}
     </div>
   );
 
   const renderTabs = () => (
-    <div className="flex space-x-4 border-b border-border">
+    <div className="flex gap-4 border-b border-border">
       {TABS.map((tab) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${
-            activeTab === tab.id
-              ? "text-primary border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className={`px-4 py-2 -mb-px text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
+            ? "text-primary border-b-2 border-primary"
+            : "text-muted-foreground hover:text-foreground"
+            }`}
         >
           {tab.label}
         </button>
       ))}
     </div>
   );
+
+  // No longer needed - removed fund balance display from main page
 
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
@@ -509,8 +590,8 @@ export default function Page() {
         {showCloseShiftModal && theShiftIsOpen && shiftSummarySuccess && (
           <CloseShiftModal
             onClose={() => setShowCloseShiftModal(false)}
-            onConfirm={({ amount, status }) =>
-              handleConfirmShiftClose({ amount, status })
+            onConfirm={({ amount }) =>
+              handleConfirmShiftClose({ amount })
             }
             shiftType={
               currentShift && currentShift.shiftType === ShiftType.morning
@@ -544,27 +625,40 @@ export default function Page() {
           />
         )}
 
-        {/* Transfer Modals */}
-        {showTransferToGeneralModal && (
-          <TransferModal
+        {/* Updated Transfer Modals with Fund Balances */}
+        {showTransferToGeneralModal && funds && (
+          <EnhancedTransferModal
             isOpen={showTransferToGeneralModal}
             onClose={() => setShowTransferToGeneralModal(false)}
-            title={`تحويل من ${
-              activeTab === FundType.booth ? "البسطة" : "الجامعة"
-            } إلى الخزينة العامة`}
+            title={`تحويل من ${transferSource === "booth"
+              ? "البسطة"
+              : transferSource === "university"
+                ? "الجامعة"
+                : "العامة"
+              } إلى الخزينة العامة`}
             onSubmit={handleTransferToGeneral}
             isPending={isTransferringToGeneral}
-            sourceType={activeTab === FundType.booth ? "booth" : "university"}
+            funds={funds}
+            sourceType={transferSource}
+            destinationType="general"
           />
         )}
 
-        {showTransferToMainModal && (
-          <TransferModal
+        {showTransferToMainModal && funds && (
+          <EnhancedTransferModal
             isOpen={showTransferToMainModal}
             onClose={() => setShowTransferToMainModal(false)}
-            title="تحويل من الخزينة العامة إلى الخزينة الرئيسية"
+            title={`تحويل من ${transferSource === "general"
+              ? "الخزينة العامة"
+              : transferSource === "booth"
+                ? "البسطة"
+                : "الجامعة"
+              } إلى الخزينة الرئيسية`}
             onSubmit={handleTransferToMain}
             isPending={isTransferringToMain}
+            funds={funds}
+            sourceType={transferSource}
+            destinationType="main"
           />
         )}
       </AnimatePresence>
@@ -574,6 +668,9 @@ export default function Page() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {hasAnyRole([Role.ADMIN, Role.ShiftManager]) &&
               renderShiftControls()}
+
+            {/* Fund balances are now shown inside the transfer modal */}
+
             {theShiftIsOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

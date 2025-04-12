@@ -65,8 +65,8 @@ const ShiftSummaryModal = ({
                     {fund.fundType === "booth"
                       ? "البسطة"
                       : fund.fundType === "university"
-                      ? "الجامعة"
-                      : "الصندوق العام"}
+                        ? "الجامعة"
+                        : "الصندوق العام"}
                   </span>
                   <span className="text-gray-400">
                     ({fund.invoiceCount} فواتير)
@@ -96,23 +96,7 @@ const ShiftSummaryModal = ({
               </div>
             </div>
 
-            {summary.differenceStatus && (
-              <div className="p-4 rounded-lg bg-white/5">
-                <div className="flex justify-between items-center font-medium">
-                  <span className="text-white">فارق الوردية:</span>
-                  <span
-                    className={
-                      summary.differenceStatus === "surplus"
-                        ? "text-emerald-400"
-                        : "text-red-400"
-                    }
-                  >
-                    {summary.differenceValue}{" "}
-                    {summary.differenceStatus === "surplus" ? "زيادة" : "نقصان"}
-                  </span>
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </motion.div>

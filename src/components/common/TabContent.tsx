@@ -1,4 +1,4 @@
-import { Invoice } from "@/types/invoice.type";
+import { Invoice, ProductInvoice } from "@/types/invoice.type";
 import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { HomeInvoiceTable } from "./HomeInvoiceTable";
@@ -30,7 +30,7 @@ const TabContent: React.FC<TabContentProps> = ({
   currentShiftId,
 }) => {
   const { setSnackbarConfig } = useMokkBar();
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<ProductInvoice | null>(null);
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [dateFilter, setDateFilter] = useState("");
@@ -91,7 +91,7 @@ const TabContent: React.FC<TabContentProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-center overflow-hidden overflow-x-auto no-scrollbar mt-5">
-        <div className="sm:ml-auto">
+        <div className="sm:mx-auto">
           <InvoiceTypeToggle activeType={activeType} onToggle={setActiveType} />
         </div>
         <HomeInvoiceTableFilters
@@ -105,6 +105,7 @@ const TabContent: React.FC<TabContentProps> = ({
       </div>
       <HomeInvoiceTable
         data={filteredData}
+        // @ts-ignore
         onViewDetails={(invoice) => setSelectedInvoice(invoice)}
         onEditInvoice={(invoice) => setInvoiceToEdit(invoice)}
         onDeleteInvoice={(invoice) => setInvoiceToDelete(invoice)}

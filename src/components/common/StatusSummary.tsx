@@ -26,7 +26,7 @@ export const StatusSummary = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        <Loader2 className="h-5 w-5 animate-spin mx-2" />
         <span className="text-slate-400">جاري تحميل الإحصائيات...</span>
       </div>
     );

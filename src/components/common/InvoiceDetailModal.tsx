@@ -122,8 +122,8 @@ const InvoiceDetailModal = ({
                             {item.quantity}{" "}
                             {isInvoiceType(invoice)
                               ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                                //  @ts-ignore
-                                item.item.unit
+                              //  @ts-ignore
+                              item.item.unit
                               : ""}
                           </td>
                           <td className="p-2 text-slate-300">

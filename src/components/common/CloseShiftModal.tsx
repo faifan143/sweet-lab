@@ -20,19 +20,11 @@ export interface ShiftSummaryData {
   openTime: string;
   fundSummaries: Fund[];
   totalNet: number;
-  differenceStatus: "surplus" | "deficit";
-  differenceValue: number;
 }
 
 interface CloseShiftModalProps {
   onClose: () => void;
-  onConfirm: ({
-    amount,
-    status,
-  }: {
-    status: "surplus" | "deficit";
-    amount: number;
-  }) => void;
+  onConfirm: ({ amount }: { amount: number }) => void;
   shiftType: "صباحي" | "مسائي";
   shiftSummary?: ShiftSummaryData;
   isShiftClosing: boolean;
@@ -45,11 +37,7 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   shiftSummary,
   isShiftClosing,
 }) => {
-  const [diffStatus, setDiffStatus] = useState<"surplus" | "deficit">(
-    "surplus"
-  );
-
-  const [difference, setDifference] = useState<number>(0);
+  const [actualAmount, setActualAmount] = useState<number>(0);
   const { data } = useCheckPendingTransfers();
 
   return (
@@ -124,8 +112,8 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                         {fund.fundType === "booth"
                           ? "البسطة"
                           : fund.fundType === "university"
-                          ? "الجامعة"
-                          : "الصندوق العام"}
+                            ? "الجامعة"
+                            : "الصندوق العام"}
                       </span>
                       <span className="text-slate-400">
                         ({fund.invoiceCount} فواتير)
@@ -133,13 +121,13 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-y-1 text-sm">
                       <div className="text-emerald-400">
-                        المدخول: {fund.incomeTotal}
+                        المدخول: {formatAmount(fund.incomeTotal)}
                       </div>
                       <div className="text-red-400">
-                        المصروف: {fund.expenseTotal}
+                        المصروف: {formatAmount(fund.expenseTotal)}
                       </div>
                       <div className="col-span-2 text-slate-200">
-                        الصافي: {fund.netTotal}
+                        الصافي: {formatAmount(fund.netTotal)}
                       </div>
                     </div>
                   </div>
@@ -160,47 +148,24 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <label className="block text-slate-200 mb-2">
-                  قيمة الفوارق
+                  المبلغ الفعلي
                 </label>
                 <input
                   type="number"
-                  defaultValue={difference}
-                  onChange={(e) => setDifference(parseInt(e.target.value))}
+                  value={actualAmount || ''}
+                  onChange={(e) => setActualAmount(Number(e.target.value))}
                   className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 appearance-none"
-                  placeholder="أدخل قيمة الفوارق"
+                  placeholder="أدخل المبلغ الفعلي"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="block text-slate-200">نوع الفرق</label>
-                <div className="flex items-center gap-2 bg-slate-700/30 p-1 rounded-lg">
-                  <button
-                    className={`px-3 py-1.5 rounded transition-colors ${
-                      diffStatus == "surplus"
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "text-slate-400 hover:text-slate-300"
-                    }`}
-                    onClick={() => setDiffStatus("surplus")}
-                  >
-                    زيادة
-                  </button>
-                  <button
-                    className={`px-3 py-1.5 rounded transition-colors ${
-                      diffStatus == "deficit"
-                        ? "bg-red-500/20 text-red-400"
-                        : "text-slate-400 hover:text-slate-300"
-                    }`}
-                    onClick={() => setDiffStatus("deficit")}
-                  >
-                    نقصان
-                  </button>
-                </div>
-              </div>
             </div>
-            <p className="text-red-500">
-              {data &&
-                data.hasPendingTransfers &&
-                "عالج التحويلات المعلقة قبل انهاء الوردية"}
-            </p>
+            {data && data.hasPendingTransfers && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">
+                  عالج التحويلات المعلقة قبل انهاء الوردية
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -209,19 +174,26 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() =>
-                  onConfirm({ amount: difference, status: diffStatus })
-                }
-                className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20"
+                onClick={() => onConfirm({ amount: actualAmount })}
+                disabled={isShiftClosing}
+                className="flex-1 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors border border-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isShiftClosing ? "جارٍ إغلاق الوردية" : " تأكيد الإغلاق"}
+                {isShiftClosing ? (
+                  <div className="flex items-center justify-center">
+                    <span className="animate-spin h-4 w-4 border-2 border-red-400/30 border-t-red-400 rounded-full mx-2"></span>
+                    جارٍ إغلاق الوردية...
+                  </div>
+                ) : (
+                  "تأكيد الإغلاق"
+                )}
               </motion.button>
             )}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onClose}
-              className="flex-1 bg-slate-700/50 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              disabled={isShiftClosing}
+              className="flex-1 bg-slate-700/50 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
             >
               إلغاء
             </motion.button>

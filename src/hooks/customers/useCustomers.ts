@@ -13,6 +13,13 @@ import {
   GetCustomersListResponse,
   GetAllCustomersResponse,
   CustomerAccountStatementResponse,
+  CustomerCategory,
+  GetCustomerCategoriesResponse,
+  CreateCustomerCategoryRequest,
+  CreateCustomerCategoryResponse,
+  UpdateCustomerCategoryRequest,
+  UpdateCustomerCategoryResponse,
+  DeleteCustomerCategoryResponse,
 } from "@/types/customers.type";
 
 /**
@@ -49,22 +56,37 @@ export const useFetchCustomers = () => {
  * Hook for retrieving a comprehensive account statement for a specific customer
  */
 export const useSummaryCustomer = ({
-  customrerId,
+  customerId,
 }: {
-  customrerId: string;
+  customerId: string;
 }) => {
   return useQuery<CustomerSummaryData>({
-    queryKey: ["customer-summary", customrerId],
+    queryKey: ["customer-summary", customerId],
     queryFn: async () => {
-      if (!customrerId) {
+      if (!customerId) {
         throw new Error("Customer ID is required");
       }
       const response = await apiClient.get<CustomerAccountStatementResponse>(
-        `/customers/${customrerId}/account-statement`
+        `/customers/${customerId}/account-statement`
       );
       return response;
     },
-    enabled: !!customrerId, // Only run the query if we have a customer ID
+    enabled: !!customerId, // Only run the query if we have a customer ID
+  });
+};
+
+/**
+ * Hook for retrieving a list of all customer categories
+ */
+export const useCustomerCategories = () => {
+  return useQuery<CustomerCategory[]>({
+    queryKey: ["customer-categories"],
+    queryFn: async () => {
+      const response = await apiClient.get<GetCustomerCategoriesResponse>(
+        "/customers/categories"
+      );
+      return response.categories;
+    },
   });
 };
 
@@ -167,6 +189,91 @@ export const useDeleteCustomer = () => {
     },
     onError: (error) => {
       console.error("Error deleting customer:", error);
+      throw formatError(error);
+    },
+  });
+};
+
+/**
+ * Hook for creating a new customer category
+ */
+export const useCreateCustomerCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CreateCustomerCategoryResponse, Error, CreateCustomerCategoryRequest>({
+    mutationFn: async (categoryData: CreateCustomerCategoryRequest) => {
+      const response = await apiClient.post<CreateCustomerCategoryResponse>(
+        "/customers/categories",
+        categoryData
+      );
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
+    },
+    onError: (error) => {
+      console.error("Error creating customer category:", error);
+      throw formatError(error);
+    },
+  });
+};
+
+/**
+ * Hook for updating an existing customer category
+ */
+export const useUpdateCustomerCategory = () => {
+  const queryClient = useQueryClient();
+
+  interface UpdateCustomerCategoryParams extends UpdateCustomerCategoryRequest {
+    id: number;
+  }
+
+  return useMutation<UpdateCustomerCategoryResponse, Error, UpdateCustomerCategoryParams>({
+    mutationFn: async (categoryData: UpdateCustomerCategoryParams) => {
+      const { id, ...data } = categoryData;
+      const response = await apiClient.patch<UpdateCustomerCategoryResponse>(
+        `/customers/categories/${id}`,
+        data
+      );
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch categories
+      queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
+      // Also refresh customer data as it includes category info
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+    },
+    onError: (error) => {
+      console.error("Error updating customer category:", error);
+      throw formatError(error);
+    },
+  });
+};
+
+/**
+ * Hook for deleting a customer category
+ */
+export const useDeleteCustomerCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<DeleteCustomerCategoryResponse, Error, number>({
+    mutationFn: async (categoryId: number) => {
+      const response = await apiClient.delete<DeleteCustomerCategoryResponse>(
+        `/customers/categories/${categoryId}`
+      );
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
+      // Also refresh customer data as it includes category info
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+    },
+    onError: (error) => {
+      console.error("Error deleting customer category:", error);
       throw formatError(error);
     },
   });

@@ -12,10 +12,38 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 interface OpenShiftDTO {
   shiftType: "morning" | "evening";
 }
-interface CloseShiftDTO {
-  status: "surplus" | "deficit";
+// Define response type based on Postman response
+interface CloseShiftResponse {
+  message: string;
+  shift: {
+    id: number;
+    shiftType: "morning" | "evening";
+    status: "closed";
+    openTime: string;
+    closeTime: string;
+    differenceStatus: "surplus" | "deficit" | null;
+    differenceValue: number;
+    employeeId: number;
+    employee: {
+      id: number;
+      username: string;
+    };
+  };
+  expectedAmount: number;
+  actualAmount: number;
+  differenceStatus: "surplus" | "deficit" | null;
+  differenceValue: number;
+  transfers: {
+    boothTransfer: number;
+    universityTransfer: number;
+    totalTransferred: number;
+  };
+}
+// Input DTO for closing shift
+export interface CloseShiftDTO {
   amount: number;
 }
+
 // hooks/shifts/useShifts.ts
 export const useOpenShift = (options?: {
   onSuccess?: () => void;
@@ -32,14 +60,15 @@ export const useOpenShift = (options?: {
 };
 
 export const useCloseShift = (options?: {
-  onSuccess?: () => void;
+  onSuccess?: (data: CloseShiftResponse) => void;
   onError?: (error: any) => void;
 }) => {
-  return useMutation({
+  return useMutation<CloseShiftResponse, any, CloseShiftDTO>({
     mutationFn: async (data: CloseShiftDTO) => {
-      const response = await apiClient.get(
-        `/shifts/close?differenceStatus=${data.status}&differenceValue=${data.amount}`
-      );
+      // Changed to POST request with only actualAmount in the body
+      const response = await apiClient.post<CloseShiftResponse>("/shifts/close", {
+        actualAmount: data.amount
+      });
       return response;
     },
     onSuccess: options?.onSuccess,

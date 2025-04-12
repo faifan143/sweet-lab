@@ -165,3 +165,77 @@ export interface SingleFetchedInvoice {
     employeeId: number;
   };
 }
+
+
+
+// src/types/product-invoice-item.type.ts
+
+/**
+ * Represents a unit configuration for an item
+ */
+export interface ItemUnit {
+  unit: string;
+  price: number;
+  factor: number;
+}
+
+/**
+ * Represents an item in inventory
+ */
+export interface ProductItem {
+  id: number;
+  name: string;
+  type: "raw" | "production";
+  units: ItemUnit[];
+  defaultUnit: string;
+  cost: number;
+  price: number;
+  description: string;
+  groupId: number;
+}
+
+/**
+ * Represents a product invoice item with its associated item details
+ */
+export interface ProductInvoiceItem {
+  id: number;
+  quantity: number;
+  unitPrice: number;
+  subTotal: number;
+  unit: string;
+  invoiceId: number;
+  itemId: number;
+  item: ProductItem;
+}
+
+export interface ProductInvoice {
+  id: number;
+  invoiceNumber: string;
+  invoiceType: "expense" | "income";
+  invoiceCategory: InvoiceCategory;
+  customer?: {
+    id: number;
+    name: string;
+    phone: string;
+    notes: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  totalAmount: number;
+  discount: number;
+  paidStatus: boolean;
+  paymentDate: string | null;
+  createdAt: string;
+  notes: string;
+  fundId: number;
+  shiftId: number;
+  employeeId: number;
+  items: ProductInvoiceItem[];
+  employee: Employee;
+  fund: Fund;
+  shift: Shift;
+  trayCount: number;
+  // New fields for breakage type
+  isBreak?: boolean;
+  firstPayment?: number;
+}

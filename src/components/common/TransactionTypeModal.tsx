@@ -30,7 +30,6 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
     {
       id: "direct",
       value: "مباشر",
-
       icon: CreditCard,
       color: "text-blue-400",
       bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
@@ -40,7 +39,6 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
     {
       id: "debt",
       value: "دين",
-
       icon: Wallet,
       color: "text-purple-400",
       bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
@@ -49,11 +47,10 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
     {
       id: "advance",
       value: "سلفة",
-
       icon: CreditCardIcon,
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20",
-      description: mode === "income" ? "إضافة سلفة" : "",
+      description: mode === "income" ? "إضافة سلفة" : "إرجاع سلفة",
     },
   ];
 
@@ -85,26 +82,23 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-4" dir="rtl">
-          {types.map((type) => {
-            if (mode == "expense" && type.id == "advance") return;
-            return (
-              <button
-                key={type.id}
-                onClick={() => onSelect(type.id as InvoiceCategory)}
-                className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
-              >
-                <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
-                  <type.icon size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className={`font-semibold ${type.color} text-lg`}>
-                    {type.value}
-                  </h3>
-                  <p className="text-slate-400 text-sm">{type.description}</p>
-                </div>
-              </button>
-            );
-          })}
+          {types.map((type) => (
+            <button
+              key={type.id}
+              onClick={() => onSelect(type.id as InvoiceCategory)}
+              className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
+            >
+              <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>
+                <type.icon size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-semibold ${type.color} text-lg`}>
+                  {type.value}
+                </h3>
+                <p className="text-slate-400 text-sm">{type.description}</p>
+              </div>
+            </button>
+          ))}
         </div>
       </motion.div>
     </motion.div>

@@ -1,13 +1,13 @@
 "use client";
 import { formatSYP } from "@/hooks/invoices/useInvoiceStats";
-import { Invoice } from "@/types/invoice.type";
+import { ProductInvoice } from "@/types/invoice.type";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
 import { Phone, User, X } from "lucide-react";
 import React from "react";
 
 interface InvoiceDetailsModalProps {
-  invoice: Invoice;
+  invoice: ProductInvoice;
   onClose: () => void;
 }
 
@@ -17,6 +17,15 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
 }) => {
   const getPaymentStatusBadge = (paidStatus: boolean) => {
     return paidStatus ? "text-emerald-400" : "text-yellow-400";
+  };
+
+  // Helper function to get the unit display name
+  const getUnitDisplay = (item: any, unitName: string) => {
+    if (!item || !item.units) return unitName;
+
+    // Find the matching unit from the units array
+    const foundUnit = item.units.find((u: any) => u.unit === unitName);
+    return foundUnit ? foundUnit.unit : unitName;
   };
 
   return (
@@ -72,8 +81,8 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                   {invoice.invoiceCategory === "products"
                     ? "منتجات"
                     : invoice.invoiceCategory === "direct"
-                    ? "مباشر"
-                    : "دين"}
+                      ? "مباشر"
+                      : "دين"}
                 </p>
               </div>
             </div>
@@ -139,13 +148,13 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                           {item.item?.name}
                         </td>
                         <td className="p-2 text-slate-300">
-                          {item.quantity} {item.item?.unit}
+                          {item.quantity} {getUnitDisplay(item.item, item.unit)}
                         </td>
                         <td className="p-2 text-slate-300">
                           {formatSYP(item.unitPrice)}
                         </td>
                         <td className="p-2 text-slate-300">
-                          {formatSYP(item.quantity * item.unitPrice)}
+                          {formatSYP(item.subTotal)}
                         </td>
                       </tr>
                     ))}

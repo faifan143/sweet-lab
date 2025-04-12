@@ -1,13 +1,18 @@
-"use client";
-import { useCustomersList } from "@/hooks/customers/useCustomers";
+import {
+  useActiveAdvances,
+  useReceiveAdvance,
+  useRepayAdvance,
+} from "@/hooks/advances/useAdvances";
+import { useCreateCustomer, useCustomersList } from "@/hooks/customers/useCustomers";
 import {
   useCreateDirectDebt,
   useCreateExpenseProducts,
   useCreateIncomeProducts,
 } from "@/hooks/invoices/useInvoice";
-import { useCreateAdvance } from "@/hooks/advances/useAdvances";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useItems } from "@/hooks/items/useItems";
+import { Advance } from "@/types/advances.type";
+import { CustomerType } from "@/types/customers.type";
 import {
   DirectDebtDTO,
   ExpenseProductsDTO,
@@ -27,11 +32,26 @@ import {
   Loader2,
   Plus,
   Trash2,
-  X,
+  User,
+  X
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Controller, SubmitHandler, useForm } from "react-hook-form";
+import Select, { GroupBase, StylesConfig } from 'react-select';
 import { useMokkBar } from "../providers/MokkBarContext";
-import { CustomerType } from "@/types/customers.type";
+
+// Define interfaces for select options
+interface CustomerOption {
+  value: number;
+  label: string;
+  customer: CustomerType;
+}
+
+interface AdvanceOption {
+  value: number;
+  label: string;
+  advance: Advance;
+}
 
 type InvoiceType = Invoice["invoiceType"];
 type PaymentType = "paid" | "unpaid" | "breakage";
@@ -41,6 +61,7 @@ interface InvoiceFormProps {
   mode: InvoiceType;
   fundId: number;
   onClose: () => void;
+  customerId?: number; // Optional prop to pass a predefined customerId
 }
 
 interface FormData {
@@ -53,6 +74,7 @@ interface FormData {
   discount: number;
   paidStatus: boolean;
   notes?: string;
+  advanceId?: number; // Added for tracking selected advance
 }
 
 interface FormItem {
@@ -67,28 +89,74 @@ interface FormItem {
   item: Item;
 }
 
+// Interface for the customer form
+interface CustomerFormData {
+  name: string;
+  phone: string;
+  notes: string;
+}
+
 const InvoiceForm: React.FC<InvoiceFormProps> = ({
   type,
   mode,
   fundId,
+  customerId,
   onClose,
 }) => {
   const { setSnackbarConfig } = useMokkBar();
   const { data: customers } = useCustomersList();
   const { data: items } = useItems();
   const { data: itemGroups } = useItemGroups();
-  const [trayCount, setTrayCount] = useState<number | null>(null);
+  const [trayCount, setTrayCount] = useState<number | undefined>(undefined);
+
+  // Fetch active advances when in repay mode
+  const { data: activeAdvances } = useActiveAdvances();
+
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+
+  // Setup React Hook Form
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<CustomerFormData>({
+    defaultValues: {
+      name: "",
+      phone: "",
+      notes: ""
+    }
+  });
+
+  // Customer creation mutation
+  const createCustomer = useCreateCustomer();
 
   const isPurchaseInvoice = mode === "expense";
+  const isAdvanceRepay = type === "advance" && mode === "expense";
 
   // State
   const [formData, setFormData] = useState<FormData>({
+    customerId: customerId,
     paymentType: "paid",
     totalAmount: 0,
     firstPayment: 0,
     discount: 0,
     paidStatus: true,
   });
+
+  // Selected advance state
+  const [selectedAdvance, setSelectedAdvance] = useState<Advance | null>(null);
+
+  // Find and set the selected customer based on customerId
+  useEffect(() => {
+    if (customerId && customers) {
+      const customer = customers.find((c) => c.id === customerId);
+      if (customer) {
+        setSelectedCustomer(customer);
+        setFormData((prev) => ({
+          ...prev,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+        }));
+      }
+    }
+  }, [customerId, customers]);
 
   const [formItems, setFormItems] = useState<FormItem[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
@@ -159,7 +227,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       });
     },
   });
-  const createAdvance = useCreateAdvance();
+
+  // Use advance hooks
+  const receiveAdvance = useReceiveAdvance();
+  const repayAdvance = useRepayAdvance();
+
   // Check if the first payment is valid for breakage payment type
   const isFirstPaymentValid =
     formData.paymentType !== "breakage" ||
@@ -170,37 +242,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     createDirectDebt.isPending ||
     createExpenseProducts.isPending ||
     createIncomeProducts.isPending ||
-    createAdvance.isPending ||
+    receiveAdvance.isPending ||
+    repayAdvance.isPending ||
     formData.totalAmount <= 0 ||
     (type === "products" &&
       mode === "income" &&
-      (trayCount === null || trayCount < 0)) ||
+      (trayCount === undefined || trayCount < 0)) ||
     !isFirstPaymentValid ||
-    (type === "advance" && !formData.customerId); // Require customer for advances
-
-  // Handlers
-  const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected_customer = customers?.find(
-      (c) => c.id === Number(e.target.value)
-    );
-    if (selected_customer) {
-      setSelectedCustomer(selected_customer);
-      setFormData((prev) => ({
-        ...prev,
-        customerId: selected_customer.id,
-        customerName: selected_customer.name,
-        customerPhone: selected_customer.phone,
-      }));
-    } else {
-      setSelectedCustomer(null);
-      setFormData((prev) => ({
-        ...prev,
-        customerId: undefined,
-        customerName: "",
-        customerPhone: "",
-      }));
-    }
-  };
+    (type === "advance" && !formData.customerId);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -284,7 +333,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       case "debt":
         return mode === "income" ? "تحصيل دين" : "تسجيل دين جديد";
       case "advance":
-        return "إنشاء سلفة جديدة";
+        return mode === "income" ? "استلام سلفة" : "إرجاع سلفة";
       default:
         return "";
     }
@@ -321,7 +370,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setSelectedItemFactor(1);
     setSelectedUnitIndex(-1);
     setQuantity(1);
-    setTrayCount(0);
 
     // Update total amount
     setFormData((prev) => ({
@@ -341,11 +389,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleInvoiceSubmit = async () => {
     if (
       type === "products" &&
       mode === "income" &&
-      (trayCount === null || trayCount < 0)
+      (trayCount === undefined || trayCount < 0)
     ) {
       setSnackbarConfig({
         open: true,
@@ -354,6 +402,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       });
       return;
     }
+
 
     // Validate first payment for breakage type
     if (
@@ -389,12 +438,20 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       // Handle advance
       if (type === "advance") {
-        await createAdvance.mutateAsync({
-          amount: formData.totalAmount,
+        const advanceData = {
           customerId: formData.customerId!,
+          amount: formData.totalAmount,
           fundId,
           notes: formData.notes,
-        });
+        };
+
+        if (mode === "income") {
+          // Receive advance
+          await receiveAdvance.mutateAsync(advanceData);
+        } else {
+          // Repay advance
+          await repayAdvance.mutateAsync(advanceData);
+        }
       }
       // Handle product invoices
       else if (type === "products") {
@@ -450,65 +507,448 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   };
 
   const CustomerSection = () => {
-    // Filter customers if type is debt
-    const filteredCustomers =
-      type === "debt" && mode === "income"
-        ? customers?.filter((customer) => customer.totalDebt > 0)
-        : customers;
-
     const isCustomerRequired = type === "advance";
+    const isCustomerPreset = isAdvanceRepay && customerId;
+
+    // Format customers for react-select
+    const customerOptions: CustomerOption[] = useMemo(() => {
+      // Filter customers based on debt or advance repayment requirements
+      let filteredCustomers = customers || [];
+      if (type === "debt" && mode === "income" && customers) {
+        filteredCustomers = customers.filter((customer) => customer.totalDebt > 0);
+      }
+
+      return filteredCustomers.map(customer => ({
+        value: customer.id,
+        label: `${customer.name}${customer.phone ? ` - ${customer.phone}` : ''}`,
+        customer
+      }));
+    }, [customers, type, mode]);
+
+    // Format advances for react-select
+    const advanceOptions: AdvanceOption[] = useMemo(() => {
+      return (activeAdvances || []).map(advance => ({
+        value: advance.id,
+        label: `${advance.customer.name} - ${advance.remainingAmount} ليرة`,
+        advance
+      }));
+    }, [activeAdvances]);
+
+    // Handle selection change
+    const handleCustomerSelectChange = (selectedOption: CustomerOption | null) => {
+      if (selectedOption) {
+        const customer = selectedOption.customer;
+        setSelectedCustomer(customer);
+        setFormData(prev => ({
+          ...prev,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone
+        }));
+      } else {
+        setSelectedCustomer(null);
+        setFormData(prev => ({
+          ...prev,
+          customerId: undefined,
+          customerName: "",
+          customerPhone: ""
+        }));
+      }
+    };
+
+    // Handle advance selection change
+    const handleAdvanceSelectChange = (selectedOption: AdvanceOption | null) => {
+      if (selectedOption) {
+        const advance = selectedOption.advance;
+        setSelectedAdvance(advance);
+        setSelectedCustomer(advance.customer as unknown as CustomerType);
+        setFormData(prev => ({
+          ...prev,
+          advanceId: advance.id,
+          customerId: advance.customerId,
+          customerName: advance.customer.name,
+          customerPhone: advance.customer.phone,
+          totalAmount: advance.remainingAmount
+        }));
+      } else {
+        setSelectedAdvance(null);
+        setSelectedCustomer(null);
+        setFormData(prev => ({
+          ...prev,
+          advanceId: undefined,
+          customerId: undefined,
+          customerName: "",
+          customerPhone: "",
+          totalAmount: 0
+        }));
+      }
+    };
+
+    // Form submission handler for adding a new customer
+    const onSubmitNewCustomer: SubmitHandler<CustomerFormData> = async (data) => {
+      try {
+        const response = await createCustomer.mutateAsync({
+          name: data.name,
+          phone: data.phone,
+          notes: data.notes || null
+        });
+
+        // Set the newly created customer as selected
+        setSelectedCustomer(response as unknown as CustomerType);
+        setFormData(prev => ({
+          ...prev,
+          customerId: response.id,
+          customerName: response.name,
+          customerPhone: response.phone
+        }));
+
+        // Reset the form and hide it
+        reset();
+        setShowAddCustomer(false);
+
+        setSnackbarConfig({
+          open: true,
+          severity: "success",
+          message: "تم إضافة العميل بنجاح"
+        });
+      } catch (error) {
+        setSnackbarConfig({
+          open: true,
+          severity: "error",
+          message: "حدث خطأ أثناء إضافة العميل"
+        });
+      }
+    };
+
+    // Determine current selection for controlled component
+    const currentCustomerValue = useMemo(() => {
+      if (formData.customerId && customers) {
+        const customer = customers.find(c => c.id === formData.customerId);
+        if (customer) {
+          return {
+            value: customer.id,
+            label: `${customer.name}${customer.phone ? ` - ${customer.phone}` : ''}`,
+            customer
+          };
+        }
+      }
+      return null;
+    }, [formData.customerId, customers]);
+
+    // Determine current advance selection
+    const currentAdvanceValue = useMemo(() => {
+      if (formData.advanceId && activeAdvances) {
+        const advance = activeAdvances.find(a => a.id === formData.advanceId);
+        if (advance) {
+          return {
+            value: advance.id,
+            label: `${advance.customer.name} - ${advance.remainingAmount} ليرة`,
+            advance
+          };
+        }
+      }
+      return null;
+    }, [formData.advanceId, activeAdvances]);
+
+    // Custom styles for react-select - specific to customer options
+    const customerSelectStyles: StylesConfig<CustomerOption, false, GroupBase<CustomerOption>> = {
+      control: (provided) => ({
+        ...provided,
+        backgroundColor: 'rgba(51, 65, 85, 0.5)',
+        borderColor: isCustomerRequired && !formData.customerId
+          ? 'rgba(239, 68, 68, 0.5)'
+          : 'rgba(71, 85, 105, 0.5)',
+        borderRadius: '0.5rem',
+        padding: '0.25rem',
+        boxShadow: 'none',
+        '&:hover': {
+          borderColor: 'rgba(71, 85, 105, 0.8)'
+        }
+      }),
+      menu: (provided) => ({
+        ...provided,
+        backgroundColor: 'rgb(30, 41, 59)',
+        border: '1px solid rgba(51, 65, 85, 0.5)',
+        borderRadius: '0.5rem',
+        zIndex: 9999
+      }),
+      option: (provided, { isSelected, isFocused }) => ({
+        ...provided,
+        backgroundColor: isSelected
+          ? 'rgba(59, 130, 246, 0.5)'
+          : isFocused
+            ? 'rgba(51, 65, 85, 0.7)'
+            : 'transparent',
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right',
+        '&:hover': {
+          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.5)' : 'rgba(51, 65, 85, 0.7)'
+        }
+      }),
+      singleValue: (provided) => ({
+        ...provided,
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right'
+      }),
+      input: (provided) => ({
+        ...provided,
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right'
+      }),
+      placeholder: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)',
+        textAlign: 'right'
+      }),
+      indicatorSeparator: () => ({
+        display: 'none'
+      }),
+      dropdownIndicator: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)'
+      }),
+      clearIndicator: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)'
+      })
+    };
+
+    // Custom styles for react-select - specific to advance options
+    const advanceSelectStyles: StylesConfig<AdvanceOption, false, GroupBase<AdvanceOption>> = {
+      control: (provided) => ({
+        ...provided,
+        backgroundColor: 'rgba(51, 65, 85, 0.5)',
+        borderColor: isCustomerRequired && !formData.customerId
+          ? 'rgba(239, 68, 68, 0.5)'
+          : 'rgba(71, 85, 105, 0.5)',
+        borderRadius: '0.5rem',
+        padding: '0.25rem',
+        boxShadow: 'none',
+        '&:hover': {
+          borderColor: 'rgba(71, 85, 105, 0.8)'
+        }
+      }),
+      menu: (provided) => ({
+        ...provided,
+        backgroundColor: 'rgb(30, 41, 59)',
+        border: '1px solid rgba(51, 65, 85, 0.5)',
+        borderRadius: '0.5rem',
+        zIndex: 9999
+      }),
+      option: (provided, { isSelected, isFocused }) => ({
+        ...provided,
+        backgroundColor: isSelected
+          ? 'rgba(59, 130, 246, 0.5)'
+          : isFocused
+            ? 'rgba(51, 65, 85, 0.7)'
+            : 'transparent',
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right',
+        '&:hover': {
+          backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.5)' : 'rgba(51, 65, 85, 0.7)'
+        }
+      }),
+      singleValue: (provided) => ({
+        ...provided,
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right'
+      }),
+      input: (provided) => ({
+        ...provided,
+        color: 'rgb(226, 232, 240)',
+        textAlign: 'right'
+      }),
+      placeholder: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)',
+        textAlign: 'right'
+      }),
+      indicatorSeparator: () => ({
+        display: 'none'
+      }),
+      dropdownIndicator: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)'
+      }),
+      clearIndicator: (provided) => ({
+        ...provided,
+        color: 'rgb(148, 163, 184)'
+      })
+    };
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-4">
         <label className="block text-slate-200">
-          {mode === "income" ? "العميل" : "المورد"}
-          {isCustomerRequired && <span className="text-red-400 mr-1">*</span>}
+          {isAdvanceRepay ? "السلفة" : mode === "income" ? "العميل" : "المورد"}
+          {isCustomerRequired && <span className="text-red-400 mx-1">*</span>}
           {(type === "direct" || type === "debt") && " ( اختياري ) "}
         </label>
-        <div className="flex justify-center gap-5 ">
-          <div className="relative flex-1">
-            <select
-              value={formData.customerId || ""}
-              onChange={handleCustomerSelect}
-              className={`w-full appearance-none bg-slate-800/50 text-slate-200 rounded-lg border ${
-                isCustomerRequired && !formData.customerId
-                  ? "border-red-500/50"
-                  : "border-slate-700/50"
-              } py-3 px-4 pr-10 focus:outline-none focus:border-slate-600 text-right`}
-            >
-              <option value="" className="bg-slate-800">
-                اختر من القائمة
-              </option>
-              {filteredCustomers?.map((customer) => (
-                <option
-                  key={customer.id}
-                  value={customer.id}
-                  className="bg-slate-800 py-2 text-right"
-                >
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-400">
-              <svg
-                className="h-4 w-4 fill-current"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
+
+        {isCustomerPreset ? (
+          // Display selected customer info when customerId is preset
+          <div className="bg-slate-800/50 text-slate-200 rounded-lg border border-slate-700/50 py-3 px-4">
+            {selectedCustomer?.name || "العميل المحدد"}
           </div>
-          {selectedCustomer && selectedCustomer.totalDebt > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 text-yellow-400 rounded-lg hover:bg-yellow-500/20 transition-colors disabled:opacity-50 w-fit">
-              الدين الذي عليه {selectedCustomer.totalDebt} ليرة
+        ) : (
+          // React-select for customer selection
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                {isAdvanceRepay ? (
+                  <Select<AdvanceOption, false, GroupBase<AdvanceOption>>
+                    value={currentAdvanceValue}
+                    onChange={handleAdvanceSelectChange}
+                    options={advanceOptions}
+                    styles={advanceSelectStyles}
+                    isRtl={true}
+                    placeholder="اختر من القائمة"
+                    noOptionsMessage={() => "لا توجد خيارات متاحة"}
+                    isClearable
+                    menuPlacement="auto"
+                    classNamePrefix="react-select"
+                  />
+                ) : (
+                  <Select<CustomerOption, false, GroupBase<CustomerOption>>
+                    value={currentCustomerValue}
+                    onChange={handleCustomerSelectChange}
+                    options={customerOptions}
+                    styles={customerSelectStyles}
+                    isRtl={true}
+                    placeholder="اختر من القائمة"
+                    noOptionsMessage={() => "لا توجد خيارات متاحة"}
+                    isClearable
+                    menuPlacement="auto"
+                    classNamePrefix="react-select"
+                  />
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddCustomer(!showAddCustomer);
+                  if (showAddCustomer) {
+                    reset();
+                  }
+                }}
+                className="bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                type="button"
+              >
+                <Plus className="h-5 w-5" />
+                {showAddCustomer ? "إلغاء" : "إضافة عميل"}
+              </button>
             </div>
-          )}
-        </div>
+
+            {/* Add New Customer Form */}
+            {showAddCustomer && (
+              <form
+                onSubmit={handleSubmit(onSubmitNewCustomer)}
+                className="p-4 border border-blue-500/20 bg-blue-500/5 rounded-lg space-y-3"
+                noValidate
+              >
+                <h3 className="text-blue-400 text-lg font-medium">إضافة عميل جديد</h3>
+
+                {/* Name Field */}
+                <div className="space-y-2">
+                  <label htmlFor="name" className="block text-slate-200">الاسم</label>
+                  <div className="relative">
+                    <User className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Controller
+                      name="name"
+                      control={control}
+                      rules={{ required: "اسم العميل مطلوب" }}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          id="name"
+                          type="text"
+                          placeholder="أدخل اسم العميل"
+                          className={`w-full pl-4 pr-12 py-2 bg-slate-700/50 border ${errors.name ? "border-red-500/50" : "border-slate-600/50"
+                            } rounded-lg text-slate-200`}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  {errors.name && (
+                    <p className="text-red-400 text-sm">{errors.name.message as string}</p>
+                  )}
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="block text-slate-200">رقم الهاتف</label>
+                  <Controller
+                    name="phone"
+                    control={control}
+                    rules={{ required: "رقم الهاتف مطلوب" }}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        id="phone"
+                        type="text"
+                        placeholder="أدخل رقم الهاتف"
+                        className={`w-full px-4 py-2 bg-slate-700/50 border ${errors.phone ? "border-red-500/50" : "border-slate-600/50"
+                          } rounded-lg text-slate-200`}
+                      />
+                    )}
+                  />
+                  {errors.phone && (
+                    <p className="text-red-400 text-sm">{errors.phone.message as string}</p>
+                  )}
+                </div>
+
+                {/* Notes Field */}
+                <div className="space-y-2">
+                  <label htmlFor="notes" className="block text-slate-200">ملاحظات (اختياري)</label>
+                  <Controller
+                    name="notes"
+                    control={control}
+                    render={({ field }) => (
+                      <textarea
+                        {...field}
+                        id="notes"
+                        placeholder="أي ملاحظات إضافية"
+                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 resize-none h-20"
+                      />
+                    )}
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={createCustomer.isPending}
+                  className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg w-full mt-2 transition-colors disabled:opacity-50"
+                >
+                  {createCustomer.isPending ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>جاري الإضافة...</span>
+                    </div>
+                  ) : (
+                    <span>إضافة العميل</span>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* Customer information display */}
+        {selectedCustomer && (
+          <>
+            {selectedCustomer.totalDebt > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 text-yellow-400 rounded-lg hover:bg-yellow-500/20 transition-colors disabled:opacity-50 w-fit">
+                الدين الذي عليه {selectedCustomer.totalDebt} ليرة
+              </div>
+            )}
+            {selectedAdvance && isAdvanceRepay && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50 w-fit">
+                السلفة النشطة {selectedAdvance.remainingAmount} ليرة
+              </div>
+            )}
+          </>
+        )}
+
         {isCustomerRequired && !formData.customerId && (
           <div className="text-red-400 text-sm mt-1">
             يجب اختيار عميل للسلفة
@@ -517,6 +957,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       </div>
     );
   };
+
 
   // Show simplified form for direct, debt, and advance
   if (type === "direct" || type === "debt" || type === "advance") {
@@ -553,7 +994,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             {/* Amount */}
             <div className="space-y-2">
               <label className="block text-slate-200">
-                {type === "advance" ? "قيمة السلفة" : "القيمة"}
+                {type === "advance"
+                  ? mode === "income"
+                    ? "قيمة السلفة"
+                    : "قيمة إرجاع السلفة"
+                  : "القيمة"}
               </label>
               <div className="relative">
                 <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -563,9 +1008,12 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   value={formData.totalAmount}
                   onChange={handleChange}
                   className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                  placeholder={`أدخل ${
-                    type === "advance" ? "قيمة السلفة" : "القيمة"
-                  }`}
+                  placeholder={`أدخل ${type === "advance"
+                    ? mode === "income"
+                      ? "قيمة السلفة"
+                      : "قيمة إرجاع السلفة"
+                    : "القيمة"
+                    }`}
                 />
               </div>
             </div>
@@ -588,14 +1036,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             {/* Action Buttons */}
             <div className="flex gap-4 pt-4">
               <button
-                onClick={handleSubmit}
+                onClick={handleInvoiceSubmit}
                 disabled={isSubmitting}
                 className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createDirectDebt.isPending ||
-                createExpenseProducts.isPending ||
-                createIncomeProducts.isPending ||
-                createAdvance.isPending ? (
+                  createExpenseProducts.isPending ||
+                  createIncomeProducts.isPending ||
+                  receiveAdvance.isPending ||
+                  repayAdvance.isPending ? (
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     <span>جاري الإنشاء...</span>
@@ -617,7 +1066,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     );
   }
 
-  // Product form
+  // Product form (rest of the component remains the same)
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -652,36 +1101,34 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           {mode == "income" && (
             <div className="space-y-2">
               <label className="block text-slate-200">حالة الدفع</label>
-              <div className="flex gap-4">
+              < div className="flex gap-4" >
                 <button
                   onClick={() => handlePaymentTypeChange("paid")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    formData.paymentType === "paid"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === "paid"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                    }`
+                  }
                 >
                   <CreditCard className="h-5 w-5" />
                   دفعة كاملة
                 </button>
-                <button
+                < button
                   onClick={() => handlePaymentTypeChange("unpaid")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    formData.paymentType === "unpaid"
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === "unpaid"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                    }`}
                 >
                   <Calendar className="h-5 w-5" />
                   غير مدفوع
                 </button>
-                <button
+                < button
                   onClick={() => handlePaymentTypeChange("breakage")}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    formData.paymentType === "breakage"
-                      ? "bg-red-500/20 text-red-400"
-                      : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === "breakage"
+                    ? "bg-red-500/20 text-red-400"
+                    : "bg-slate-700/50 text-slate-300 hover:bg-slate-700"
+                    }`}
                 >
                   <AlertTriangle className="h-5 w-5" />
                   كسر
@@ -705,17 +1152,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <option value={0}>اختر التصنيف</option>
                 {mode == "expense"
                   ? itemGroups
-                      ?.filter((itemGroup) => itemGroup.type == "raw")
-                      .map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))
-                  : itemGroups?.map((group) => (
+                    ?.filter((itemGroup) => itemGroup.type == "raw")
+                    .map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
                       </option>
-                    ))}
+                    ))
+                  : itemGroups?.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
               </select>
             </div>
           )}
@@ -754,7 +1201,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       value={selectedUnitIndex}
                       onChange={handleUnitChange}
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    />
+                    >
+                      {items
+                        ?.find((item) => item.id === selectedItem)
+                        ?.units?.map((unit, index) => (
+                          <option key={index} value={index}>
+                            {unit.unit}
+                          </option>
+                        ))}
+                    </select>
                   </div>
 
                   {/* Factor Input */}
@@ -842,15 +1297,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <input
                   type="number"
                   min="0"
-                  value={trayCount === null ? "" : trayCount}
+                  value={trayCount === undefined ? "" : trayCount}
                   onChange={(e) => {
-                    const value =
-                      e.target.value === "" ? null : Number(e.target.value);
+                    const value = e.target.value === ""
+                      ? undefined
+                      : Number(e.target.value);
                     setTrayCount(value);
                   }}
                   className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                 />
-                {trayCount === null && (
+                {trayCount === undefined && (
                   <div className="text-red-400 text-sm mt-1">
                     يجب إدخال عدد الفوارغ
                   </div>
@@ -858,6 +1314,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               </div>
             </div>
           )}
+
 
           {/* First Payment Field (Only show when payment type is "breakage") */}
           {formData.paymentType === "breakage" && (
@@ -964,14 +1421,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           {/* Action Buttons */}
           <div className="flex gap-4 pt-4">
             <button
-              onClick={handleSubmit}
+              onClick={handleInvoiceSubmit}
               disabled={isSubmitting}
               className="flex-1 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createDirectDebt.isPending ||
-              createExpenseProducts.isPending ||
-              createIncomeProducts.isPending ||
-              createAdvance.isPending ? (
+                createExpenseProducts.isPending ||
+                createIncomeProducts.isPending ||
+                receiveAdvance.isPending ||
+                repayAdvance.isPending ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>جاري الإنشاء...</span>

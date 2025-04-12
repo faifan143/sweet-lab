@@ -31,7 +31,7 @@ const StoredMaterialsGrid = ({
               <p className="text-sm text-gray-400">الكمية</p>
               <p className="text-white font-medium">
                 {material.totalQuantity}
-                <span className="text-xs text-gray-400 mr-1">وحدة</span>
+                <span className="text-xs text-gray-400 mx-1">وحدة</span>
               </p>
             </div>
 
@@ -39,7 +39,7 @@ const StoredMaterialsGrid = ({
               <p className="text-sm text-gray-400">متوسط السعر</p>
               <p className="text-white font-medium">
                 {material.averageUnitPrice.toFixed(2)}
-                <span className="text-xs text-gray-400 mr-1">ر.س</span>
+                <span className="text-xs text-gray-400 mx-1">ر.س</span>
               </p>
             </div>
           </div>

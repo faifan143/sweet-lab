@@ -54,4 +54,5 @@ export interface Debt {
   notes: string;
   customer: Customer;
   relatedInvoices: RelatedInvoice[];
+  discount: number
 }

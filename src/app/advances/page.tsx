@@ -2,6 +2,7 @@
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
+import InvoiceForm from "@/components/common/InvoiceForm";
 import {
   useActiveAdvances,
   useAdvanceDetails,
@@ -17,6 +18,8 @@ import {
   Search,
   User,
   X,
+  RefreshCw,
+  ArrowDown,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,6 +28,8 @@ const AdvancesPage = () => {
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<number | null>(
     null
   );
+  const [showRepayForm, setShowRepayForm] = useState(false);
+  const [repayAdvanceId, setRepayAdvanceId] = useState<number | null>(null);
 
   // Fetch active advances
   const { data: activeAdvances, isLoading: isLoadingAdvances } =
@@ -52,6 +57,18 @@ const AdvancesPage = () => {
   // Back to list
   const handleBackToList = () => {
     setSelectedAdvanceId(null);
+  };
+
+  // Open repay form
+  const handleOpenRepayForm = (advanceId: number) => {
+    setRepayAdvanceId(advanceId);
+    setShowRepayForm(true);
+  };
+
+  // Close repay form
+  const handleCloseRepayForm = () => {
+    setShowRepayForm(false);
+    setRepayAdvanceId(null);
   };
 
   return (
@@ -119,10 +136,12 @@ const AdvancesPage = () => {
                         key={advance.id}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:bg-white/10 transition-colors cursor-pointer group"
-                        onClick={() => handleSelectAdvance(advance.id)}
+                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:bg-white/10 transition-colors group"
                       >
-                        <div className="p-5">
+                        <div
+                          className="p-5 cursor-pointer"
+                          onClick={() => handleSelectAdvance(advance.id)}
+                        >
                           <div className="flex justify-between items-start mb-4">
                             <span className="bg-blue-500/20 text-blue-400 rounded-lg text-xs px-2 py-1">
                               سلفة نشطة
@@ -168,9 +187,21 @@ const AdvancesPage = () => {
                           )}
                         </div>
 
-                        <div className="border-t border-white/10 p-3 text-sm flex justify-end items-center gap-2 text-blue-400 group-hover:bg-blue-500/10 transition-colors">
-                          عرض التفاصيل
-                          <ArrowUpRight className="h-4 w-4" />
+                        <div className="border-t border-white/10 flex">
+                          <div
+                            className="flex-1 p-3 text-sm flex justify-center items-center gap-2 text-blue-400 hover:bg-blue-500/10 transition-colors cursor-pointer"
+                            onClick={() => handleSelectAdvance(advance.id)}
+                          >
+                            عرض التفاصيل
+                            <ArrowUpRight className="h-4 w-4" />
+                          </div>
+                          <div
+                            className="flex-1 p-3 text-sm flex justify-center items-center gap-2 text-green-400 hover:bg-green-500/10 transition-colors cursor-pointer border-r border-white/10"
+                            onClick={() => handleOpenRepayForm(advance.id)}
+                          >
+                            تسديد دفعة
+                            <ArrowDown className="h-4 w-4" />
+                          </div>
                         </div>
                       </motion.div>
                     ))
@@ -182,13 +213,23 @@ const AdvancesPage = () => {
             {/* Advance Details View */}
             {selectedAdvanceId && selectedAdvance && (
               <div dir="rtl">
-                <button
-                  onClick={handleBackToList}
-                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                  العودة إلى قائمة السلف
-                </button>
+                <div className="flex flex-wrap justify-between items-center mb-6">
+                  <button
+                    onClick={handleBackToList}
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                    العودة إلى قائمة السلف
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenRepayForm(selectedAdvanceId)}
+                    className="mt-2 sm:mt-0 flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-colors"
+                  >
+                    <RefreshCw className="h-5 w-5" />
+                    تسديد دفعة من السلفة
+                  </button>
+                </div>
 
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
                   {/* Header */}
@@ -380,7 +421,7 @@ const AdvancesPage = () => {
                                             إنشاء سلفة
                                           </span>
                                         ) : (
-                                          <span className="text-blue-400">
+                                          <span className="text-red-400">
                                             تسديد سلفة
                                           </span>
                                         )}
@@ -415,6 +456,22 @@ const AdvancesPage = () => {
           </div>
         </main>
       </div>
+
+      {/* Repay Advance Form */}
+      {showRepayForm && repayAdvanceId && (
+        <InvoiceForm
+          type="advance"
+          mode="expense"
+          fundId={1}
+          onClose={handleCloseRepayForm}
+          customerId={
+            selectedAdvanceId
+              ? selectedAdvance?.customer?.id
+              : activeAdvances?.find((adv) => adv.id === repayAdvanceId)
+                  ?.customer?.id
+          }
+        />
+      )}
     </div>
   );
 };

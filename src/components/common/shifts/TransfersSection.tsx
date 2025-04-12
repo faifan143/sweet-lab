@@ -79,8 +79,8 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
           {status === "pending"
             ? "لا توجد تحويلات معلقة"
             : status === "accepted"
-            ? "لا توجد تحويلات مقبولة"
-            : "لا توجد تحويلات مرفوضة"}
+              ? "لا توجد تحويلات مقبولة"
+              : "لا توجد تحويلات مرفوضة"}
         </div>
       );
     }
@@ -94,19 +94,18 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
           >
             <div className="flex flex-wrap justify-between items-center gap-2">
               <span
-                className={`px-3 py-1 text-sm rounded-full ${
-                  status === "pending"
+                className={`px-3 py-1 text-sm rounded-full ${status === "pending"
                     ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300"
                     : status === "accepted"
-                    ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300"
-                    : "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
-                }`}
+                      ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300"
+                      : "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
+                  }`}
               >
                 {status === "pending"
                   ? "معلق"
                   : status === "accepted"
-                  ? "مقبول"
-                  : "مرفوض"}
+                    ? "مقبول"
+                    : "مرفوض"}
               </span>
               <span className="font-medium text-sm text-white">
                 رقم التحويل: {transfer.transferNumber}
@@ -212,45 +211,42 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
             <div className="flex flex-wrap border-b border-slate-700/50 mb-4">
               <button
                 onClick={() => setActiveTab("pending")}
-                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${
-                  activeTab === "pending"
+                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${activeTab === "pending"
                     ? "border-b-2 border-blue-500 text-blue-400"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <span className="text-sm md:text-base">التحويلات المعلقة</span>
                 {pendingTransfers?.count ? (
-                  <span className="mr-1 md:mr-2 bg-red-500/20 text-red-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
+                  <span className="mx-1 md:mx-2 bg-red-500/20 text-red-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
                     {pendingTransfers.count}
                   </span>
                 ) : null}
               </button>
               <button
                 onClick={() => setActiveTab("accepted")}
-                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${
-                  activeTab === "accepted"
+                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${activeTab === "accepted"
                     ? "border-b-2 border-emerald-500 text-emerald-400"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <span className="text-sm md:text-base">المقبولة</span>
                 {acceptedTransfers?.count ? (
-                  <span className="mr-1 md:mr-2 bg-emerald-500/20 text-emerald-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
+                  <span className="mx-1 md:mx-2 bg-emerald-500/20 text-emerald-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
                     {acceptedTransfers.count}
                   </span>
                 ) : null}
               </button>
               <button
                 onClick={() => setActiveTab("rejected")}
-                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${
-                  activeTab === "rejected"
+                className={`flex items-center justify-center flex-1 py-2 px-1 min-w-[80px] transition-colors ${activeTab === "rejected"
                     ? "border-b-2 border-red-500 text-red-400"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <span className="text-sm md:text-base">المرفوضة</span>
                 {rejectedTransfers?.count ? (
-                  <span className="mr-1 md:mr-2 bg-red-500/20 text-red-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
+                  <span className="mx-1 md:mx-2 bg-red-500/20 text-red-400 rounded-full px-1.5 md:px-2 py-0.5 text-xs whitespace-nowrap">
                     {rejectedTransfers.count}
                   </span>
                 ) : null}
@@ -295,7 +291,7 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
               pendingTransfers && (
                 <div className="mt-4 text-center text-slate-400">
                   إجمالي المبلغ المعلق:
-                  <span className="text-blue-400 mr-1">
+                  <span className="text-blue-400 mx-1">
                     ${pendingTransfers.totalPendingAmount.toLocaleString()}
                   </span>
                 </div>
@@ -306,7 +302,7 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
               acceptedTransfers && (
                 <div className="mt-4 text-center text-slate-400">
                   إجمالي المبلغ المقبول:
-                  <span className="text-emerald-400 mr-1">
+                  <span className="text-emerald-400 mx-1">
                     ${acceptedTransfers.totalAmount.toLocaleString()}
                   </span>
                 </div>
@@ -317,7 +313,7 @@ const TransfersSection = ({ currentShiftId }: { currentShiftId: number }) => {
               rejectedTransfers && (
                 <div className="mt-4 text-center text-slate-400">
                   إجمالي المبلغ المرفوض:
-                  <span className="text-red-400 mr-1">
+                  <span className="text-red-400 mx-1">
                     ${rejectedTransfers.totalAmount.toLocaleString()}
                   </span>
                 </div>

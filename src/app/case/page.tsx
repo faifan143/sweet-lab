@@ -180,20 +180,20 @@ const Case = () => {
   // Filter transactions
   const filteredTransactions = transactions
     ? transactions.filter((transaction) => {
-        // Apply search filter
-        const searchMatch =
-          transaction.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          transaction.employee.username
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          transaction.totalAmount.toString().includes(searchTerm);
+      // Apply search filter
+      const searchMatch =
+        transaction.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.employee.username
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        transaction.totalAmount.toString().includes(searchTerm);
 
-        // Apply type filter
-        const typeMatch =
-          filterType === "all" || transaction.invoiceType === filterType;
+      // Apply type filter
+      const typeMatch =
+        filterType === "all" || transaction.invoiceType === filterType;
 
-        return searchMatch && typeMatch;
-      })
+      return searchMatch && typeMatch;
+    })
     : [];
 
   // Pagination for invoices
@@ -289,21 +289,19 @@ const Case = () => {
             <div className="mb-8 flex border-b border-white/10" dir="rtl">
               <button
                 onClick={() => setActiveTab("invoices")}
-                className={`px-4 py-3 font-medium transition-colors ${
-                  activeTab === "invoices"
+                className={`px-4 py-3 font-medium transition-colors ${activeTab === "invoices"
                     ? "text-blue-400 border-b-2 border-blue-400"
                     : "text-white hover:text-blue-200"
-                }`}
+                  }`}
               >
                 فواتير الخزينة
               </button>
               <button
                 onClick={() => setActiveTab("transfers")}
-                className={`px-4 py-3 font-medium transition-colors ${
-                  activeTab === "transfers"
+                className={`px-4 py-3 font-medium transition-colors ${activeTab === "transfers"
                     ? "text-blue-400 border-b-2 border-blue-400"
                     : "text-white hover:text-blue-200"
-                }`}
+                  }`}
               >
                 سجل التحويلات
               </button>
@@ -351,9 +349,8 @@ const Case = () => {
                       <div>
                         <div className="text-sm text-gray-400">الرصيد</div>
                         <div
-                          className={`text-xl font-semibold ${
-                            balance >= 0 ? "text-blue-400" : "text-red-400"
-                          }`}
+                          className={`text-xl font-semibold ${balance >= 0 ? "text-blue-400" : "text-red-400"
+                            }`}
                         >
                           {balance} ليرة
                         </div>
@@ -440,7 +437,7 @@ const Case = () => {
                                     إضافة دخل نقدي مباشر للخزينة
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
@@ -460,7 +457,7 @@ const Case = () => {
                                     إنشاء فاتورة بيع جديدة للعملاء
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
@@ -480,7 +477,7 @@ const Case = () => {
                                     تسجيل تحصيل دين من العملاء
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
@@ -500,7 +497,7 @@ const Case = () => {
                                     تسجيل سلفة جديدة من العملاء
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
@@ -529,11 +526,10 @@ const Case = () => {
                                     إضافة مصروف نقدي مباشر من الخزينة
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
-
                               <button
                                 onClick={() =>
                                   openInvoiceForm("expense", "products")
@@ -549,11 +545,10 @@ const Case = () => {
                                     إنشاء فاتورة شراء جديدة للموردين
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
-
                               <button
                                 onClick={() =>
                                   openInvoiceForm("expense", "debt")
@@ -569,7 +564,26 @@ const Case = () => {
                                     تسجيل دين جديد للموردين
                                   </div>
                                 </div>
-                                <div className="mr-auto">
+                                <div className="mx-auto">
+                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  openInvoiceForm("expense", "advance")
+                                }
+                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 hover:shadow-red-500/10 hover:shadow-md group"
+                              >
+                                <div className="bg-red-500/20 rounded-full p-2 group-hover:bg-red-500/30 transition-colors">
+                                  <CreditCard className="h-5 w-5" />
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-medium">إرجاع سلفة</div>
+                                  <div className="text-xs text-red-500/70">
+                                    تسجيل إرجاع سلفة للعملاء
+                                  </div>
+                                </div>
+                                <div className="mx-auto">
                                   <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </button>
@@ -652,14 +666,15 @@ const Case = () => {
                                     "منتجات"}
                                   {transaction.invoiceCategory === "debt" &&
                                     "دين"}
+                                  {transaction.invoiceCategory === "advance" &&
+                                    "سلفة"}
                                 </td>
                                 <td className="p-4 text-slate-300">
                                   <div
-                                    className={`font-medium ${
-                                      transaction.invoiceType === "income"
+                                    className={`font-medium ${transaction.invoiceType === "income"
                                         ? "text-emerald-400"
                                         : "text-red-400"
-                                    }`}
+                                      }`}
                                   >
                                     {transaction.totalAmount} ليرة
                                   </div>
@@ -740,35 +755,32 @@ const Case = () => {
                 <div className="mb-8 flex flex-wrap gap-4">
                   <button
                     onClick={() => setTransferStatus("pending")}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      transferStatus === "pending"
+                    className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "pending"
                         ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
                         : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-                    }`}
+                      }`}
                   >
-                    <Clock className="h-4 w-4 inline-block mr-2" />
+                    <Clock className="h-4 w-4 inline-block mx-2" />
                     التحويلات المعلقة
                   </button>
                   <button
                     onClick={() => setTransferStatus("confirmed")}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      transferStatus === "confirmed"
+                    className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "confirmed"
                         ? "bg-green-500/20 text-green-400 border border-green-500/30"
                         : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-                    }`}
+                      }`}
                   >
-                    <CheckCircle className="h-4 w-4 inline-block mr-2" />
+                    <CheckCircle className="h-4 w-4 inline-block mx-2" />
                     التحويلات المؤكدة
                   </button>
                   <button
                     onClick={() => setTransferStatus("rejected")}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      transferStatus === "rejected"
+                    className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "rejected"
                         ? "bg-red-500/20 text-red-400 border border-red-500/30"
                         : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-                    }`}
+                      }`}
                   >
-                    <XCircle className="h-4 w-4 inline-block mr-2" />
+                    <XCircle className="h-4 w-4 inline-block mx-2" />
                     التحويلات المرفوضة
                   </button>
                 </div>
@@ -830,35 +842,35 @@ const Case = () => {
                                       Role.ADMIN,
                                       Role.TreasuryManager,
                                     ]) && (
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() =>
-                                            handleTransferAction(
-                                              transfer.id.toString(),
-                                              true
-                                            )
-                                          }
-                                          className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
-                                          disabled={isConfirming}
-                                        >
-                                          <Check className="h-4 w-4 inline-block" />
-                                          <span className="mr-1">تأكيد</span>
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setSelectedTransferId(
-                                              transfer.id.toString()
-                                            );
-                                            setShowRejectionModal(true);
-                                          }}
-                                          className="px-3 py-1 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                                          disabled={isConfirming}
-                                        >
-                                          <X className="h-4 w-4 inline-block" />
-                                          <span className="mr-1">رفض</span>
-                                        </button>
-                                      </div>
-                                    )}
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() =>
+                                              handleTransferAction(
+                                                transfer.id.toString(),
+                                                true
+                                              )
+                                            }
+                                            className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                                            disabled={isConfirming}
+                                          >
+                                            <Check className="h-4 w-4 inline-block" />
+                                            <span className="mx-1">تأكيد</span>
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedTransferId(
+                                                transfer.id.toString()
+                                              );
+                                              setShowRejectionModal(true);
+                                            }}
+                                            className="px-3 py-1 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                            disabled={isConfirming}
+                                          >
+                                            <X className="h-4 w-4 inline-block" />
+                                            <span className="mx-1">رفض</span>
+                                          </button>
+                                        </div>
+                                      )}
                                   </td>
                                 </tr>
                               ))
@@ -890,89 +902,101 @@ const Case = () => {
                       </div>
                     )
                   ) : // Transfer History Table
-                  isHistoryLoading ? (
-                    <div className="flex justify-center items-center py-16">
-                      <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
-                    </div>
-                  ) : transferHistory ? (
-                    <table className="w-full">
-                      <thead className="bg-white/5">
-                        <tr>
-                          <th className="text-right text-slate-200 p-4">
-                            التاريخ
-                          </th>
-                          <th className="text-right text-slate-200 p-4">
-                            المبلغ
-                          </th>
-                          <th className="text-right text-slate-200 p-4">
-                            الملاحظات
-                          </th>
-                          <th className="text-right text-slate-200 p-4">
-                            طلب بواسطة
-                          </th>
-                          {transferStatus === "confirmed" && (
+                    isHistoryLoading ? (
+                      <div className="flex justify-center items-center py-16">
+                        <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+                      </div>
+                    ) : transferHistory ? (
+                      <table className="w-full">
+                        <thead className="bg-white/5">
+                          <tr>
                             <th className="text-right text-slate-200 p-4">
-                              تأكيد بواسطة
+                              التاريخ
                             </th>
-                          )}
-                          <th className="text-right text-slate-200 p-4">
-                            الحالة
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Array.isArray(transferHistory) ? (
-                          transferHistory.length > 0 ? (
-                            transferHistory.map((transfer) => (
-                              <tr
-                                key={transfer.id}
-                                className="border-t border-white/10 hover:bg-white/5 transition-colors"
-                              >
-                                <td className="p-4 text-slate-300">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                    {formatDate(transfer.requestedAt)}
-                                  </div>
-                                </td>
-                                <td className="p-4 text-slate-300 font-medium">
-                                  {transfer.amount} ليرة
-                                </td>
-                                <td className="p-4 text-slate-300">
-                                  {transfer.notes || "-"}
-                                </td>
-                                <td className="p-4 text-slate-300">
-                                  {transfer.requestedBy?.username || "-"}
-                                </td>
-                                {transferStatus === "rejected" && (
-                                  <td className="p-4 text-red-400">
-                                    {transfer.rejectionReason || "-"}
-                                  </td>
-                                )}
-                                {transferStatus === "confirmed" && (
+                            <th className="text-right text-slate-200 p-4">
+                              المبلغ
+                            </th>
+                            <th className="text-right text-slate-200 p-4">
+                              الملاحظات
+                            </th>
+                            <th className="text-right text-slate-200 p-4">
+                              طلب بواسطة
+                            </th>
+                            {transferStatus === "confirmed" && (
+                              <th className="text-right text-slate-200 p-4">
+                                تأكيد بواسطة
+                              </th>
+                            )}
+                            <th className="text-right text-slate-200 p-4">
+                              الحالة
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.isArray(transferHistory) ? (
+                            transferHistory.length > 0 ? (
+                              transferHistory.map((transfer) => (
+                                <tr
+                                  key={transfer.id}
+                                  className="border-t border-white/10 hover:bg-white/5 transition-colors"
+                                >
                                   <td className="p-4 text-slate-300">
-                                    {transfer.confirmedBy?.username || "-"}
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-gray-400" />
+                                      {formatDate(transfer.requestedAt)}
+                                    </div>
                                   </td>
-                                )}
-                                <td className="p-4">
-                                  {transfer.status === "confirmed" ? (
-                                    <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm">
-                                      <CheckCircle className="h-4 w-4 inline-block mr-1" />
-                                      مؤكد
-                                    </span>
-                                  ) : transfer.status === "rejected" ? (
-                                    <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm flex flex-nowrap items-end">
-                                      <XCircle className="h-4 w-4 inline-block mr-1" />
-                                      مرفوض
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">
-                                      <Clock className="h-4 w-4 inline-block mr-1" />
-                                      معلق
-                                    </span>
+                                  <td className="p-4 text-slate-300 font-medium">
+                                    {transfer.amount} ليرة
+                                  </td>
+                                  <td className="p-4 text-slate-300">
+                                    {transfer.notes || "-"}
+                                  </td>
+                                  <td className="p-4 text-slate-300">
+                                    {transfer.requestedBy?.username || "-"}
+                                  </td>
+                                  {transferStatus === "rejected" && (
+                                    <td className="p-4 text-red-400">
+                                      {transfer.rejectionReason || "-"}
+                                    </td>
                                   )}
+                                  {transferStatus === "confirmed" && (
+                                    <td className="p-4 text-slate-300">
+                                      {transfer.confirmedBy?.username || "-"}
+                                    </td>
+                                  )}
+                                  <td className="p-4">
+                                    {transfer.status === "confirmed" ? (
+                                      <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm">
+                                        <CheckCircle className="h-4 w-4 inline-block mx-1" />
+                                        مؤكد
+                                      </span>
+                                    ) : transfer.status === "rejected" ? (
+                                      <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm flex flex-nowrap items-end">
+                                        <XCircle className="h-4 w-4 inline-block mx-1" />
+                                        مرفوض
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">
+                                        <Clock className="h-4 w-4 inline-block mx-1" />
+                                        معلق
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={transferStatus === "rejected" ? 6 : 5}
+                                  className="p-8 text-center text-gray-400"
+                                >
+                                  {transferStatus === "confirmed"
+                                    ? "لا توجد تحويلات مؤكدة"
+                                    : "لا توجد تحويلات مرفوضة"}
                                 </td>
                               </tr>
-                            ))
+                            )
                           ) : (
                             <tr>
                               <td
@@ -984,26 +1008,14 @@ const Case = () => {
                                   : "لا توجد تحويلات مرفوضة"}
                               </td>
                             </tr>
-                          )
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan={transferStatus === "rejected" ? 6 : 5}
-                              className="p-8 text-center text-gray-400"
-                            >
-                              {transferStatus === "confirmed"
-                                ? "لا توجد تحويلات مؤكدة"
-                                : "لا توجد تحويلات مرفوضة"}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="p-8 text-center text-gray-400">
-                      لا توجد بيانات تحويلات
-                    </div>
-                  )}
+                          )}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="p-8 text-center text-gray-400">
+                        لا توجد بيانات تحويلات
+                      </div>
+                    )}
                 </div>
               </div>
             )}

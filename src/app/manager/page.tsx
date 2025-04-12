@@ -79,9 +79,8 @@ const Section = ({
           {title}
         </h2>
         <ChevronDown
-          className={`h-5 w-5 text-slate-400 transform transition-transform duration-300 sm:hidden ${
-            isExpanded ? "rotate-180" : ""
-          }`}
+          className={`h-5 w-5 text-slate-400 transform transition-transform duration-300 sm:hidden ${isExpanded ? "rotate-180" : ""
+            }`}
         />
       </div>
 
@@ -389,11 +388,10 @@ const Page = () => {
                                     : [...prev, role.value as Role]
                                 );
                               }}
-                              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                selectedRoles.includes(role.value as Role)
+                              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedRoles.includes(role.value as Role)
                                   ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50"
                                   : "bg-slate-700/50 text-slate-300 border-2 border-transparent hover:border-slate-600/50"
-                              }`}
+                                }`}
                             >
                               {role.label}
                             </button>
@@ -456,19 +454,18 @@ const Page = () => {
                                 {user.roles.map((role, index) => (
                                   <span
                                     key={index}
-                                    className={`text-xs px-2 py-1 rounded-full ${
-                                      role === "ADMIN"
+                                    className={`text-xs px-2 py-1 rounded-full ${role === "ADMIN"
                                         ? "bg-red-400/10 text-red-400"
                                         : role === "MANAGER"
-                                        ? "bg-blue-400/10 text-blue-400"
-                                        : "bg-emerald-400/10 text-emerald-400"
-                                    }`}
+                                          ? "bg-blue-400/10 text-blue-400"
+                                          : "bg-emerald-400/10 text-emerald-400"
+                                      }`}
                                   >
                                     {role === "ADMIN"
                                       ? "مسؤول"
                                       : role === "MANAGER"
-                                      ? "مدير"
-                                      : "موظف"}
+                                        ? "مدير"
+                                        : "موظف"}
                                   </span>
                                 ))}
                               </div>
@@ -511,8 +508,8 @@ const Page = () => {
                         <p className="text-xl sm:text-2xl font-semibold text-slate-200">
                           {fundsData
                             ? fundsData
-                                .find((f) => f.fundType === "general")
-                                ?.currentBalance.toFixed(2) || 0
+                              .find((f) => f.fundType === "general")
+                              ?.currentBalance.toFixed(2) || 0
                             : "0"}
                         </p>
                       </div>
@@ -525,7 +522,7 @@ const Page = () => {
                         <p className="text-xl sm:text-2xl font-semibold text-slate-200">
                           {fundsData
                             ? fundsData.find((f) => f.fundType === "main")
-                                ?.currentBalance || 0
+                              ?.currentBalance || 0
                             : "0"}
                         </p>
                       </div>
@@ -624,7 +621,7 @@ const Page = () => {
                               {/* Remaining Balance Indicator */}
                               <div className="text-sm text-slate-400">
                                 الرصيد المتاح:
-                                <span className="text-emerald-400 mr-1">
+                                <span className="text-emerald-400 mx-1">
                                   {fundsData
                                     ?.find((f) => f.fundType === "general")
                                     ?.currentBalance.toFixed(2) || "0"}{" "}
@@ -658,13 +655,12 @@ const Page = () => {
                               </p>
                             </div>
                             <p
-                              className={`font-semibold ${
-                                transaction.type === "deposit"
+                              className={`font-semibold ${transaction.type === "deposit"
                                   ? "text-emerald-400"
                                   : transaction.type === "withdrawal"
-                                  ? "text-red-400"
-                                  : "text-blue-400"
-                              }`}
+                                    ? "text-red-400"
+                                    : "text-blue-400"
+                                }`}
                             >
                               {transaction.type === "withdrawal" ? "-" : ""}$
                               {transaction.amount.toLocaleString()}

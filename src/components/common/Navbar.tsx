@@ -427,7 +427,7 @@ const Navbar = () => {
               exit="exit"
               className="overflow-hidden"
             >
-              <div className="pl-4 space-y-1 border-r-2 border-blue-400/20 mr-2 py-1">
+              <div className="pl-4 space-y-1 border-r-2 border-blue-400/20 mx-2 py-1">
                 {item.items.map((subItem) => (
                   <RouteWrapper
                     key={subItem.name}
@@ -502,7 +502,7 @@ const Navbar = () => {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="flex space-x-8"
+                className="flex gap-8"
               >
                 {filteredNavItems.map((item) => (
                   <motion.div

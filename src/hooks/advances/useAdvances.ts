@@ -1,23 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AdvancesServices } from "@/services/advances.service";
+import {
+  AdvancesServices,
+  CreateAdvanceInvoiceDTO,
+  AdvanceInvoiceResponse,
+} from "@/services/advances.service";
 import { Advance } from "@/types/advances.type";
-
-// Type for creating an advance
-export interface CreateAdvanceDTO {
-  amount: number;
-  customerId: number;
-  fundId: number;
-  notes?: string;
-}
-
-// Type for response from create advance
-export interface CreateAdvanceResponse {
-  success: boolean;
-  message: string;
-  advanceRecord: Advance;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  invoice: any; // You can define a more specific type if needed
-}
 
 // Get all active advances
 export const useActiveAdvances = () => {
@@ -45,28 +32,45 @@ export const useAdvanceDetails = (advanceId: number) => {
   });
 };
 
-// Create a new advance
-export const useCreateAdvance = () => {
+// Interface for receiving an advance
+export interface ReceiveAdvanceDTO {
+  customerId: number;
+  amount: number;
+  fundId: number;
+  notes?: string;
+}
+
+// Interface for repaying an advance
+export interface RepayAdvanceDTO {
+  customerId: number;
+  amount: number;
+  fundId: number;
+  notes?: string;
+}
+
+// Create a new advance (receive advance)
+export const useReceiveAdvance = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<CreateAdvanceResponse, Error, CreateAdvanceDTO>({
-    mutationFn: AdvancesServices.createAdvance,
+  return useMutation<AdvanceInvoiceResponse, Error, ReceiveAdvanceDTO>({
+    mutationFn: AdvancesServices.receiveAdvance,
     onSuccess: () => {
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ["activeAdvances"] });
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "customerAdvances",
       });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
     },
   });
 };
 
-// You might want to add a mutation for repaying an advance
-// This is just a placeholder - adjust according to your API
+// Repay an advance
 export const useRepayAdvance = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<AdvanceInvoiceResponse, Error, RepayAdvanceDTO>({
     mutationFn: AdvancesServices.repayAdvance,
     onSuccess: () => {
       // Invalidate all relevant queries
@@ -76,6 +80,26 @@ export const useRepayAdvance = () => {
           query.queryKey[0] === "customerAdvances" ||
           query.queryKey[0] === "advanceDetails",
       });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+    },
+  });
+};
+
+// Direct creation of advance invoice (for advanced use cases)
+export const useCreateAdvanceInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<AdvanceInvoiceResponse, Error, CreateAdvanceInvoiceDTO>({
+    mutationFn: AdvancesServices.createAdvanceInvoice,
+    onSuccess: () => {
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: ["activeAdvances"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "customerAdvances",
+      });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
     },
   });
 };

@@ -1,4 +1,3 @@
-import { CustomerType } from "./customers.type";
 import { Invoice } from "./invoice.type";
 
 export interface Advance {
@@ -10,6 +9,13 @@ export interface Advance {
   lastPaymentDate: string | null;
   status: "active" | "completed" | "cancelled";
   notes: string | null;
-  customer?: CustomerType;
+  customer: {
+    id: number;
+    name: string;
+    phone: string;
+    notes: string;
+    createdAt: string;
+    updatedAt: string;
+  };
   relatedInvoices?: Invoice[];
 }
