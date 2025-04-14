@@ -151,14 +151,14 @@ const EnhancedTransferModal = ({
                 </div>
               </div>
             )}
-            <div className="rounded-lg bg-slate-800/80 border border-slate-700/70 p-4 flex flex-col items-center">
+            {destinationType == "general" && <div className="rounded-lg bg-slate-800/80 border border-slate-700/70 p-4 flex flex-col items-center">
               <div className="text-xs text-slate-400 mb-2">
-                الخزينة {destinationType === "main" ? "الرئيسية" : "العامة"}
+                الصندوق العام
               </div>
               <div className={`text-lg font-bold ${getFundColor(destinationType)}`}>
-                {destinationBalance.toLocaleString()} {destinationType == "general" && "ل.س"}
+                {destinationBalance.toLocaleString()} ل.س
               </div>
-            </div>
+            </div>}
           </div>
         </div>
 

@@ -3,8 +3,8 @@ import { formatAmount } from "@/hooks/invoices/useInvoiceStats";
 import { useCheckPendingTransfers } from "@/hooks/shifts/useShifts";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
-import { X, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { X, AlertTriangle, TrendingDown, TrendingUp, DollarSign } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface Fund {
   fundType: string;
@@ -38,7 +38,26 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
   isShiftClosing,
 }) => {
   const [actualAmount, setActualAmount] = useState<number>(0);
+  const [difference, setDifference] = useState<number>(0);
   const { data } = useCheckPendingTransfers();
+
+  // Calculate difference when actualAmount or shiftSummary changes
+  useEffect(() => {
+    if (shiftSummary && actualAmount) {
+      setDifference(actualAmount - shiftSummary.totalNet);
+    } else {
+      setDifference(0);
+    }
+  }, [actualAmount, shiftSummary]);
+
+  // Get status based on difference
+  const getDifferenceStatus = () => {
+    if (difference > 0) return "surplus";
+    if (difference < 0) return "leakage";
+    return "balanced";
+  };
+
+  const differenceStatus = getDifferenceStatus();
 
   return (
     <motion.div
@@ -159,6 +178,67 @@ const CloseShiftModal: React.FC<CloseShiftModalProps> = ({
                 />
               </div>
             </div>
+
+            {/* Difference Indicator - New UI */}
+            {actualAmount > 0 && shiftSummary && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-4 rounded-lg flex items-center justify-between ${differenceStatus === "surplus"
+                  ? "bg-emerald-500/10 border border-emerald-500/20"
+                  : differenceStatus === "leakage"
+                    ? "bg-red-500/10 border border-red-500/20"
+                    : "bg-blue-500/10 border border-blue-500/20"
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  {differenceStatus === "surplus" ? (
+                    <div className="rounded-full bg-emerald-500/20 p-2">
+                      <TrendingUp className="w-6 h-6 text-emerald-400" />
+                    </div>
+                  ) : differenceStatus === "leakage" ? (
+                    <div className="rounded-full bg-red-500/20 p-2">
+                      <TrendingDown className="w-6 h-6 text-red-400" />
+                    </div>
+                  ) : (
+                    <div className="rounded-full bg-blue-500/20 p-2">
+                      <DollarSign className="w-6 h-6 text-blue-400" />
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className={`text-lg font-medium ${differenceStatus === "surplus"
+                      ? "text-emerald-400"
+                      : differenceStatus === "leakage"
+                        ? "text-red-400"
+                        : "text-blue-400"
+                      }`}>
+                      {differenceStatus === "surplus"
+                        ? "فائض"
+                        : differenceStatus === "leakage"
+                          ? "عجز"
+                          : "متوازن"}
+                    </h4>
+                    <p className="text-slate-300 text-sm">
+                      {differenceStatus === "surplus"
+                        ? "المبلغ الفعلي أكبر من المتوقع"
+                        : differenceStatus === "leakage"
+                          ? "المبلغ الفعلي أقل من المتوقع"
+                          : "المبلغ الفعلي يساوي المتوقع"}
+                    </p>
+                  </div>
+                </div>
+                <div className={`text-xl font-bold ${differenceStatus === "surplus"
+                  ? "text-emerald-400"
+                  : differenceStatus === "leakage"
+                    ? "text-red-400"
+                    : "text-blue-400"
+                  }`}>
+                  {formatAmount(Math.abs(difference))}
+                </div>
+              </motion.div>
+            )}
+
             {data && data.hasPendingTransfers && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                 <p className="text-red-400 text-sm">

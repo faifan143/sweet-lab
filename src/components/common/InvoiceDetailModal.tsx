@@ -2,6 +2,7 @@ import { Invoice } from "@/types/invoice.type";
 import { WareHouseInvoice } from "@/types/warehouse.type";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { AnimatePresence, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 interface InvoiceDetailModalProps {
   invoice: Invoice | WareHouseInvoice;
@@ -20,6 +21,11 @@ const InvoiceDetailModal = ({
   ): invoice is Invoice => {
     return "invoiceType" in invoice;
   };
+
+  const path = usePathname()
+
+  console.log("the screen is : ", path);
+  console.log("the invoice is : ", invoice);
 
   return (
     <AnimatePresence>
@@ -123,7 +129,7 @@ const InvoiceDetailModal = ({
                             {isInvoiceType(invoice)
                               ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                               //  @ts-ignore
-                              item.item.unit
+                              item.unit
                               : ""}
                           </td>
                           <td className="p-2 text-slate-300">

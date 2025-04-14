@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { formatDate } from "@/utils/formatters";
 import { ShiftsInvoices } from "@/types/shifts.type";
+import { useState } from "react";
 
 interface InvoicesModalProps {
   type: "boothInvoices" | "universityInvoices" | "generalInvoices";
@@ -10,6 +11,8 @@ interface InvoicesModalProps {
 }
 
 const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "income" | "expense">("all");
+
   const getTitle = () => {
     switch (type) {
       case "boothInvoices":
@@ -23,18 +26,40 @@ const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
 
   const getInvoices = () => {
     if (!data) return [];
+    let invoices;
+
     switch (type) {
       case "boothInvoices":
-        return data.boothInvoices;
+        invoices = data.boothInvoices;
+        break;
       case "universityInvoices":
-        return data.universityInvoices;
+        invoices = data.universityInvoices;
+        break;
       case "generalInvoices":
-        return data.generalInvoices;
+        invoices = data.generalInvoices;
+        break;
     }
+
+    // Filter invoices based on the selected filter
+    if (invoiceFilter === "income") {
+      return invoices.filter(invoice => invoice.invoiceType === "income");
+    } else if (invoiceFilter === "expense") {
+      return invoices.filter(invoice => invoice.invoiceType === "expense");
+    }
+
+    return invoices;
   };
 
   const invoices = getInvoices();
   const total = invoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+
+  // Calculate totals for each type
+  const allInvoices = getInvoices();
+  const incomeInvoices = allInvoices.filter(invoice => invoice.invoiceType === "income");
+  const expenseInvoices = allInvoices.filter(invoice => invoice.invoiceType === "expense");
+
+  const incomeTotal = incomeInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+  const expenseTotal = expenseInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
 
   return (
     <motion.div
@@ -67,6 +92,51 @@ const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
           <div className="text-gray-400">
             عدد الفواتير: {invoices.length} | الإجمالي: {total.toLocaleString()}{" "}
             ليرة
+          </div>
+        </div>
+
+        {/* Filter Toggle */}
+        <div className="px-6 pt-4 flex flex-col sm:flex-row gap-4 justify-between items-center">
+          <div className="bg-slate-700/50 p-1 rounded-lg flex text-sm">
+            <button
+              onClick={() => setInvoiceFilter("all")}
+              className={`px-4 py-2 rounded-md transition-colors ${invoiceFilter === "all"
+                ? "bg-indigo-500 text-white"
+                : "text-gray-300 hover:bg-slate-700"
+                }`}
+            >
+              جميع الفواتير ({allInvoices.length})
+            </button>
+            <button
+              onClick={() => setInvoiceFilter("income")}
+              className={`px-4 py-2 rounded-md transition-colors ${invoiceFilter === "income"
+                ? "bg-emerald-500 text-white"
+                : "text-gray-300 hover:bg-slate-700"
+                }`}
+            >
+              الدخل ({incomeInvoices.length})
+            </button>
+            <button
+              onClick={() => setInvoiceFilter("expense")}
+              className={`px-4 py-2 rounded-md transition-colors ${invoiceFilter === "expense"
+                ? "bg-red-500 text-white"
+                : "text-gray-300 hover:bg-slate-700"
+                }`}
+            >
+              الصرف ({expenseInvoices.length})
+            </button>
+          </div>
+
+          <div className="flex gap-4 text-sm">
+            <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400">
+              الدخل: {incomeTotal.toLocaleString()} ليرة
+            </div>
+            <div className="px-3 py-1 rounded-lg bg-red-500/10 text-red-400">
+              الصرف: {expenseTotal.toLocaleString()} ليرة
+            </div>
+            <div className="px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-400">
+              الصافي: {(incomeTotal - expenseTotal).toLocaleString()} ليرة
+            </div>
           </div>
         </div>
 
@@ -108,7 +178,10 @@ const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
                   {invoices.map((invoice) => (
                     <tr
                       key={invoice.id}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      className={`border-b border-white/5 hover:bg-white/5 transition-colors ${invoice.invoiceType === "expense"
+                        ? "bg-red-500/5"
+                        : "bg-emerald-500/5"
+                        }`}
                     >
                       <td className="py-3 px-4 text-white">#{invoice.id}</td>
                       <td className="py-3 px-4 text-white">
@@ -125,10 +198,9 @@ const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
                         <span
                           className={`
                             px-3 py-1 rounded-full text-sm font-medium
-                            ${
-                              invoice.paidStatus
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-red-500/10 text-red-400"
+                            ${invoice.paidStatus
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-red-500/10 text-red-400"
                             }
                           `}
                         >
@@ -139,10 +211,9 @@ const InvoicesModal = ({ type, data, onClose }: InvoicesModalProps) => {
                         <span
                           className={`
                             px-3 py-1 rounded-full text-sm font-medium
-                            ${
-                              invoice.invoiceType === "expense"
-                                ? "bg-red-500/10 text-red-400"
-                                : "bg-emerald-500/10 text-emerald-400"
+                            ${invoice.invoiceType === "expense"
+                              ? "bg-red-500/10 text-red-400"
+                              : "bg-emerald-500/10 text-emerald-400"
                             }
                           `}
                         >

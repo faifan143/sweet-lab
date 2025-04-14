@@ -121,92 +121,113 @@ export const InvoiceTable = ({
   const endIndex = startIndex + PAGE_SIZE;
   const paginatedInvoices = invoices.slice(startIndex, endIndex);
 
-  // Get the appropriate icon for invoice type
-  const TypeIcon = invoiceType === "income" ? ArrowDownSquare : ArrowUpSquare;
-  const typeColorClass = invoiceType === "income"
-    ? "text-emerald-400 bg-emerald-500/10"
-    : "text-amber-400 bg-amber-500/10";
+  // Get type label and styling based on invoice type and category
+  const getTypeLabel = (invoice: Invoice, invoiceType: "income" | "expense") => {
+    // If the invoice category is debt, show a specialized label
+    if (invoice.invoiceCategory === "debt") {
+      return {
+        label: invoiceType === "income" ? "تحصيل دين" : "تسجيل دين",
+        colorClass: invoiceType === "income"
+          ? "text-blue-400 bg-blue-500/10"
+          : "text-purple-400 bg-purple-500/10",
+        icon: invoiceType === "income" ? ArrowDownSquare : ArrowUpSquare
+      };
+    }
+
+    // Regular invoice (not debt)
+    return {
+      label: invoiceType === "income" ? "مبيعات" : "مشتريات",
+      colorClass: invoiceType === "income"
+        ? "text-emerald-400 bg-emerald-500/10"
+        : "text-amber-400 bg-amber-500/10",
+      icon: invoiceType === "income" ? ArrowDownSquare : ArrowUpSquare
+    };
+  };
 
   const renderMobileView = () => (
     <>
       <div className="space-y-4">
-        {paginatedInvoices.map((invoice) => (
-          <div
-            key={invoice.id}
-            className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="text-sm text-slate-400">رقم الفاتورة</div>
-                <div className="text-foreground">
-                  #{invoice.invoiceNumber}
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <StatusBadge invoice={invoice} />
-                <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${typeColorClass}`}>
-                  <TypeIcon className="h-3 w-3" />
-                  {invoiceType === "income" ? "مبيعات" : "مشتريات"}
-                </span>
-              </div>
-            </div>
+        {paginatedInvoices.map((invoice) => {
+          const { label, colorClass, icon: TypeIconDynamic } = getTypeLabel(invoice, invoiceType);
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-sm text-slate-400">العميل</div>
-                <div className="text-foreground">
-                  {invoice.customer ? invoice.customer.name : "-"}
+          return (
+            <div
+              key={invoice.id}
+              className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-sm text-slate-400">رقم الفاتورة</div>
+                  <div className="text-foreground">
+                    #{invoice.invoiceNumber}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <StatusBadge invoice={invoice} />
+                  <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${colorClass}`}>
+                    <TypeIconDynamic className="h-3 w-3" />
+                    {label}
+                  </span>
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-slate-400">الهاتف</div>
-                <div className="text-foreground">
-                  {invoice.customer ? invoice.customer.phone : "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-slate-400">المبلغ</div>
-                <div className="text-foreground">
-                  {formatCurrency(invoice.totalAmount)}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-slate-400">التاريخ</div>
-                <div className="text-foreground">
-                  {formatDate(invoice.createdAt)}
-                </div>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
-                <>
-                  <button
-                    onClick={() => onStatusChange(invoice, "paid")}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    <span>تحويل لمدفوع</span>
-                  </button>
-                  <button
-                    onClick={() => onStatusChange(invoice, "debt")}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-warning/10 text-warning hover:bg-warning/20 transition-colors flex-1"
-                  >
-                    <Clock className="h-4 w-4" />
-                    <span>تحويل إلى دين</span>
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => onViewDetail(invoice)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
-              >
-                <Eye className="h-4 w-4" />
-                <span>عرض التفاصيل</span>
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-sm text-slate-400">العميل</div>
+                  <div className="text-foreground">
+                    {invoice.customer ? invoice.customer.name : "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">الهاتف</div>
+                  <div className="text-foreground">
+                    {invoice.customer ? invoice.customer.phone : "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">المبلغ</div>
+                  <div className="text-foreground">
+                    {formatCurrency(invoice.totalAmount)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-400">التاريخ</div>
+                  <div className="text-foreground">
+                    {formatDate(invoice.createdAt)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
+                  <>
+                    <button
+                      onClick={() => onStatusChange(invoice, "paid")}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      <span>تحويل لمدفوع</span>
+                    </button>
+                    <button
+                      onClick={() => onStatusChange(invoice, "debt")}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-warning/10 text-warning hover:bg-warning/20 transition-colors flex-1"
+                    >
+                      <Clock className="h-4 w-4" />
+                      <span>تحويل إلى دين</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => onViewDetail(invoice)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>عرض التفاصيل</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {invoices.length === 0 && (
           <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-lg">
             لا توجد فواتير متطابقة مع معايير البحث
@@ -257,68 +278,72 @@ export const InvoiceTable = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {paginatedInvoices.map((invoice) => (
-                <tr
-                  key={invoice.id}
-                  className="hover:bg-slate-700/25 transition-colors"
-                >
-                  <td className="p-4 text-foreground text-center">
-                    #{invoice.invoiceNumber}
-                  </td>
-                  <td className="p-4 text-foreground text-center">
-                    {formatDate(invoice.createdAt)}
-                  </td>
-                  <td className="p-4 text-foreground text-center">
-                    {invoice.customer ? invoice.customer.name : "-"}
-                  </td>
-                  <td className="p-4 text-foreground text-center">
-                    {invoice.customer ? invoice.customer.phone : "-"}
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className={`px-2 py-1 rounded-md text-xs flex items-center justify-center gap-1 ${typeColorClass} inline-flex mx-auto`}>
-                      <TypeIcon className="h-3 w-3" />
-                      {invoiceType === "income" ? "مبيعات" : "مشتريات"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-foreground text-center">
-                    {formatCurrency(invoice.totalAmount)}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex justify-center">
-                      <StatusBadge invoice={invoice} />
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex flex-col items-center gap-2">
-                      {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => onStatusChange(invoice, "paid")}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-success/10 text-success hover:bg-success/20 transition-colors"
-                          >
-                            <DollarSign className="h-3 w-3" />
-                            <span>تحويل لمدفوع</span>
-                          </button>
-                          <button
-                            onClick={() => onStatusChange(invoice, "debt")}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
-                          >
-                            <Clock className="h-3 w-3" />
-                            <span>تحويل إلى دين</span>
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => onViewDetail(invoice)}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors"
-                      >
-                        <Eye className="h-3 w-3" />
-                        <span>عرض التفاصيل</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {paginatedInvoices.map((invoice) => {
+                const { label, colorClass, icon: TypeIconDynamic } = getTypeLabel(invoice, invoiceType);
+
+                return (
+                  <tr
+                    key={invoice.id}
+                    className="hover:bg-slate-700/25 transition-colors"
+                  >
+                    <td className="p-4 text-foreground text-center">
+                      #{invoice.invoiceNumber}
+                    </td>
+                    <td className="p-4 text-foreground text-center">
+                      {formatDate(invoice.createdAt)}
+                    </td>
+                    <td className="p-4 text-foreground text-center">
+                      {invoice.customer ? invoice.customer.name : "-"}
+                    </td>
+                    <td className="p-4 text-foreground text-center">
+                      {invoice.customer ? invoice.customer.phone : "-"}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className={`px-2 py-1 rounded-md text-xs flex items-center justify-center gap-1 ${colorClass} inline-flex mx-auto`}>
+                        <TypeIconDynamic className="h-3 w-3" />
+                        {label}
+                      </span>
+                    </td>
+                    <td className="p-4 text-foreground text-center">
+                      {formatCurrency(invoice.totalAmount)}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex justify-center">
+                        <StatusBadge invoice={invoice} />
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-col items-center gap-2">
+                        {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => onStatusChange(invoice, "paid")}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-success/10 text-success hover:bg-success/20 transition-colors"
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              <span>تحويل لمدفوع</span>
+                            </button>
+                            <button
+                              onClick={() => onStatusChange(invoice, "debt")}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
+                            >
+                              <Clock className="h-3 w-3" />
+                              <span>تحويل إلى دين</span>
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => onViewDetail(invoice)}
+                          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors"
+                        >
+                          <Eye className="h-3 w-3" />
+                          <span>عرض التفاصيل</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {invoices.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-slate-400">
