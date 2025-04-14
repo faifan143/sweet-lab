@@ -38,6 +38,12 @@ const Shifts = () => {
     null
   );
 
+  // State for invoice modals
+  const [selectedInvoicesShift, setSelectedInvoicesShift] = useState<number | null>(null);
+  const [invoicesModalType, setInvoicesModalType] = useState<
+    "boothInvoices" | "universityInvoices" | "generalInvoices" | null
+  >(null);
+
   const itemsPerPage = 10;
   const { data: shifts, isLoading } = useShifts();
   const { mutate: fetchSummary, isPending: isSummaryLoading } =
@@ -45,25 +51,42 @@ const Shifts = () => {
       onSuccess: (data) => setShiftSummary(data),
     });
 
-  const [selectedInvoicesShift, setSelectedInvoicesShift] = useState<
-    string | null
-  >(null);
-
-  const [invoicesModalType, setInvoicesModalType] = useState<
-    "boothInvoices" | "universityInvoices" | "generalInvoices" | null
-  >(null);
-
+  // Use the hook only when we have both a shift ID and a modal type
   const {
     data: invoicesData,
-    refetch: fetchInvoices,
     isLoading: isInvoicesLoading,
-  } = useShiftInvoices(selectedInvoicesShift || "");
-
-  // console.log(invoicesData);
+  } = useShiftInvoices(
+    selectedInvoicesShift ? selectedInvoicesShift.toString() : "",
+    {
+      enabled: !!selectedInvoicesShift && !!invoicesModalType
+    }
+  );
 
   const handleShiftClick = (shiftId: number) => {
     setSelectedShift(shiftId);
     fetchSummary(shiftId);
+  };
+
+  // Improved invoice handlers - they now set both states at once
+  const handleBoothInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId);
+    setInvoicesModalType("boothInvoices");
+  };
+
+  const handleUniversityInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId);
+    setInvoicesModalType("universityInvoices");
+  };
+
+  const handleGeneralInvoices = (shiftId: number) => {
+    setSelectedInvoicesShift(shiftId);
+    setInvoicesModalType("generalInvoices");
+  };
+
+  // Handle closing the invoice modal
+  const handleCloseInvoiceModal = () => {
+    setSelectedInvoicesShift(null);
+    setInvoicesModalType(null);
   };
 
   // Filter and search logic
@@ -90,23 +113,7 @@ const Shifts = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-  const handleBoothInvoices = (shiftId: number) => {
-    setSelectedInvoicesShift(shiftId.toString());
-    setInvoicesModalType("boothInvoices");
-    fetchInvoices();
-  };
 
-  const handleUniversityInvoices = (shiftId: number) => {
-    setSelectedInvoicesShift(shiftId.toString());
-    setInvoicesModalType("universityInvoices");
-    fetchInvoices();
-  };
-
-  const handleGeneralInvoices = (shiftId: number) => {
-    setSelectedInvoicesShift(shiftId.toString());
-    setInvoicesModalType("generalInvoices");
-    fetchInvoices();
-  };
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
       {(isLoading || isSummaryLoading || isInvoicesLoading) && <PageSpinner />}
@@ -122,14 +129,11 @@ const Shifts = () => {
             }}
           />
         )}
-        {selectedInvoicesShift && invoicesModalType && (
+        {selectedInvoicesShift && invoicesModalType && invoicesData && (
           <InvoicesModal
             type={invoicesModalType}
             data={invoicesData}
-            onClose={() => {
-              setSelectedInvoicesShift(null);
-              setInvoicesModalType(null);
-            }}
+            onClose={handleCloseInvoiceModal}
           />
         )}
       </AnimatePresence>
@@ -221,32 +225,29 @@ const Shifts = () => {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            shift.shiftType === "morning"
-                              ? "bg-yellow-500/10 text-yellow-400"
-                              : "bg-blue-500/10 text-blue-400"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${shift.shiftType === "morning"
+                            ? "bg-yellow-500/10 text-yellow-400"
+                            : "bg-blue-500/10 text-blue-400"
+                            }`}
                         >
                           {shift.shiftType === "morning"
                             ? "وردية صباحية"
                             : "وردية مسائية"}
                         </div>
                         <div
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            shift.status === "open"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-red-500/10 text-red-400"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${shift.status === "open"
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-red-500/10 text-red-400"
+                            }`}
                         >
                           {shift.status === "open" ? "مفتوحة" : "مغلقة"}
                         </div>
                         {shift.differenceStatus && (
                           <div
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              shift.differenceStatus === "surplus"
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-red-500/10 text-red-400"
-                            }`}
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${shift.differenceStatus === "surplus"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-red-500/10 text-red-400"
+                              }`}
                           >
                             {shift.differenceValue}{" "}
                             {shift.differenceStatus === "surplus"
@@ -296,7 +297,7 @@ const Shifts = () => {
                       </div>
                     </div>
 
-                    {/* New Actions Section */}
+                    {/* Actions Section */}
                     <div className="border-t border-white/10 pt-4 mt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <button

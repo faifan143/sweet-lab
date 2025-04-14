@@ -101,7 +101,7 @@ const EnhancedTransferModal = ({
   const sourceBalance = funds.find(fund => fund.fundType === sourceType)?.currentBalance || 0;
 
   // Get destination fund balance
-  const destinationBalance = funds.find(fund => fund.fundType === destinationType)?.currentBalance || 0;
+  const destinationBalance = destinationType == "main" ? " " : funds.find(fund => fund.fundType === destinationType)?.currentBalance || 0;
 
   // Get fund color by type (based on your screenshots)
   const getFundColor = (type: string): string => {
@@ -147,7 +147,7 @@ const EnhancedTransferModal = ({
               <div className="rounded-lg bg-slate-800/80 border border-slate-700/70 p-4 flex flex-col items-center">
                 <div className="text-xs text-slate-400 mb-2">خزينة {formatFundName(sourceType)}</div>
                 <div className={`text-lg font-bold ${getFundColor(sourceType)}`}>
-                  {sourceBalance.toLocaleString()} ر.س
+                  {sourceBalance.toLocaleString()} ل.س
                 </div>
               </div>
             )}
@@ -156,7 +156,7 @@ const EnhancedTransferModal = ({
                 الخزينة {destinationType === "main" ? "الرئيسية" : "العامة"}
               </div>
               <div className={`text-lg font-bold ${getFundColor(destinationType)}`}>
-                {destinationBalance.toLocaleString()} ر.س
+                {destinationBalance.toLocaleString()} {destinationType == "general" && "ل.س"}
               </div>
             </div>
           </div>

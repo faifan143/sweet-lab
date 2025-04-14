@@ -51,7 +51,7 @@ export const useOpenShift = (options?: {
 }) => {
   return useMutation({
     mutationFn: async (data: OpenShiftDTO) => {
-      const response = await apiClient.post("/shifts", data);
+      const response = await apiClient.post("shifts", data);
       return response;
     },
     onSuccess: options?.onSuccess,
@@ -66,7 +66,7 @@ export const useCloseShift = (options?: {
   return useMutation<CloseShiftResponse, any, CloseShiftDTO>({
     mutationFn: async (data: CloseShiftDTO) => {
       // Changed to POST request with only actualAmount in the body
-      const response = await apiClient.post<CloseShiftResponse>("/shifts/close", {
+      const response = await apiClient.post<CloseShiftResponse>("shifts/close", {
         actualAmount: data.amount
       });
       return response;
@@ -88,7 +88,7 @@ export const useShiftSummary = () => {
     queryKey: ["shiftSummary"],
     queryFn: async () => {
       const response = (await apiClient.get(
-        "/shifts/current/summary"
+        "shifts/current/summary"
       )) as ShiftSummaryData;
       return response;
     },
@@ -96,16 +96,16 @@ export const useShiftSummary = () => {
   });
 };
 
-export const useShiftInvoices = (id: string) => {
+export const useShiftInvoices = (id: string, options?: { enabled?: boolean }) => {
   return useQuery<ShiftsInvoices>({
     queryKey: ["shiftInvoices", id],
     queryFn: async () => {
       const response = (await apiClient.get(
-        `/shifts/${id}/invoices-by-fund`
+        `shifts/${id}/invoices-by-fund`
       )) as ShiftsInvoices;
       return response;
     },
-    enabled: false,
+    enabled: !!id && (options?.enabled !== false),
   });
 };
 
@@ -115,7 +115,7 @@ export const useFetchShiftSummary = (options?: {
 }) => {
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiClient.get(`/shifts/${id}/summary`);
+      const response = await apiClient.get(`shifts/${id}/summary`);
       return response as ShiftSummaryData;
     },
     onSuccess: options?.onSuccess,
@@ -144,7 +144,7 @@ export const useShifts = () => {
   return useQuery<QueryShiftType[]>({
     queryKey: ["shifts"],
     queryFn: async () => {
-      const response = (await apiClient.get("/shifts")) as QueryShiftType[];
+      const response = (await apiClient.get("shifts")) as QueryShiftType[];
       return response;
     },
     // enabled: false,

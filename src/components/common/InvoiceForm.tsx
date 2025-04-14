@@ -1158,11 +1158,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                         {group.name}
                       </option>
                     ))
-                  : itemGroups?.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
+                  : itemGroups
+                    ?.filter((itemGroup) => itemGroup.type == "production")
+                    .map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
               </select>
             </div>
           )}
@@ -1224,6 +1226,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <label className="block text-slate-200">الكمية</label>
                     <input
@@ -1231,6 +1234,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       min="1"
                       value={quantity}
                       onChange={(e) => setQuantity(Number(e.target.value))}
+                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-slate-200">السعر</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={selectedItemPrice}
+                      onChange={(e) => setSelectedItemPrice(Number(e.target.value))}
                       className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                     />
                   </div>
@@ -1289,6 +1302,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               </table>
             </div>
           )}
+
           {/* Trays Count */}
           {type === "products" && mode === "income" && (
             <div className="space-y-2">
@@ -1345,6 +1359,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 )}
             </div>
           )}
+
           {/* Discount Field */}
           {!isPurchaseInvoice && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

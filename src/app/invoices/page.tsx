@@ -11,10 +11,14 @@ import StatusTransitionModal from "@/components/common/StatusTransitionModal";
 import { useInvoices } from "@/hooks/invoices/useInvoice";
 import { useInvoiceFilters } from "@/hooks/invoices/useInvoiceFilter";
 import { Invoice } from "@/types/invoice.type";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
+import { ArrowLeftRight } from "lucide-react";
 
 const InvoiceManagementPage = () => {
+  // Type toggle state - we'll add this without changing any hooks
+  const [invoiceType, setInvoiceType] = useState<"income" | "expense">("income");
+
   // Use the filter status to fetch the appropriate invoices
   const {
     activeStatus,
@@ -43,11 +47,24 @@ const InvoiceManagementPage = () => {
     "paid" | "unpaid" | "debt" | "breakage" | null
   >(null);
 
-  // Update the filtered invoices when new invoices are loaded
+  // Filter invoices by type manually since we can't modify the hooks
+  const typeFilteredInvoices = (invoices || []).filter(
+    invoice => invoice.invoiceType === invoiceType
+  );
+
+  // Update the filtered invoices to include type filtering
   const displayInvoices =
     filteredInvoices && filteredInvoices.length > 0
-      ? filteredInvoices
-      : invoices || [];
+      ? filteredInvoices.filter(invoice => invoice.invoiceType === invoiceType)
+      : typeFilteredInvoices;
+
+  // Type toggle handler
+  const handleTypeToggle = () => {
+    setInvoiceType(prev => prev === "income" ? "expense" : "income");
+    // Also reset other filters for a cleaner experience
+    setSearchTerm("");
+    setDateFilter({ startDate: null, endDate: null });
+  };
 
   if (isError) {
     return (
@@ -65,8 +82,9 @@ const InvoiceManagementPage = () => {
         <Navbar />
         <main className="pt-32 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <StatusSummary />
+
+            <div className=" mb-6">
+              {/* <StatusSummary  /> */}
               <InvoiceFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -74,6 +92,32 @@ const InvoiceManagementPage = () => {
                 onDateFilterChange={setDateFilter}
               />
             </div>
+
+            {/* Invoice Type Toggle */}
+            <div className="mb-6 flex justify-between items-center" dir="rtl">
+              <div className="text-xl font-bold text-slate-100">
+                {invoiceType === "income" ? "فواتير الدخل" : "فواتير الصرف"}
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleTypeToggle}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${invoiceType !== "income"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                  }`}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                <span>
+                  {invoiceType === "income"
+                    ? "عرض فواتير الصرف"
+                    : "عرض فواتير الدخل"}
+                </span>
+              </motion.button>
+            </div>
+
+            {/* Status Tabs */}
             <InvoiceTabs
               activeStatus={activeStatus}
               onStatusChange={(status) => {
@@ -83,20 +127,31 @@ const InvoiceManagementPage = () => {
                 setDateFilter({ startDate: null, endDate: null });
               }}
             />
-            <InvoiceTable
-              invoices={displayInvoices}
-              onViewDetail={(invoice) => {
-                setSelectedInvoiceForDetail(invoice);
-                setIsDetailModalOpen(true);
-              }}
-              onStatusChange={(invoice, status) => {
-                setSelectedInvoice(invoice);
-                setTargetStatus(status);
-              }}
-            />
+
+            {/* Invoices Table with type filtering */}
+            <motion.div
+              key={invoiceType}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <InvoiceTable
+                invoices={displayInvoices}
+                invoiceType={invoiceType}
+                onViewDetail={(invoice) => {
+                  setSelectedInvoiceForDetail(invoice);
+                  setIsDetailModalOpen(true);
+                }}
+                onStatusChange={(invoice, status) => {
+                  setSelectedInvoice(invoice);
+                  setTargetStatus(status);
+                }}
+              />
+            </motion.div>
           </div>
         </main>
       </div>
+
       {/* Modals */}
       <AnimatePresence>
         {selectedInvoice && targetStatus && (
@@ -110,6 +165,7 @@ const InvoiceManagementPage = () => {
           />
         )}
       </AnimatePresence>
+
       {selectedInvoiceForDetail && (
         <InvoiceDetailModal
           invoice={selectedInvoiceForDetail}

@@ -10,16 +10,17 @@ import { useDeleteItem, useItems } from "@/hooks/items/useItems";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 import { Item, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
-import { Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Filter } from "lucide-react";
+import { useState, useMemo } from "react";
 
 const MaterialsPage = () => {
   // States
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedType, setSelectedType] = useState<ItemType | "all">("all");
+  const [activeTab, setActiveTab] = useState<ItemType | "all">("all");
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     itemId: number | null;
@@ -29,6 +30,7 @@ const MaterialsPage = () => {
   });
 
   const { hasAnyRole } = useRoles();
+
   // Queries
   const { data: items, isLoading: isLoadingItems } = useItems();
   const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
@@ -43,15 +45,28 @@ const MaterialsPage = () => {
   };
 
   // Filter items
-  const filteredItems = items?.filter((item) => {
-    const matchesType =
-      selectedType === "all" ? true : item.type === selectedType;
-    const matchesGroup = selectedGroup ? item.groupId === selectedGroup : true;
-    const matchesSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return matchesType && matchesGroup && matchesSearch;
-  });
+  const filteredItems = useMemo(() => {
+    return items?.filter((item) => {
+      const matchesType = activeTab === "all" ? true : item.type === activeTab;
+      const matchesGroup = selectedGroup ? item.groupId === selectedGroup : true;
+      const matchesSearch = item.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+        (item.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+      return matchesType && matchesGroup && matchesSearch;
+    });
+  }, [items, activeTab, selectedGroup, searchTerm]);
+
+  // Counts for tab badges
+  const rawItemsCount = useMemo(() =>
+    items?.filter(item => item.type === "raw").length || 0,
+    [items]
+  );
+
+  const productionItemsCount = useMemo(() =>
+    items?.filter(item => item.type === "production").length || 0,
+    [items]
+  );
 
   // Loading state
   if (isLoadingItems || isLoadingGroups) {
@@ -67,91 +82,140 @@ const MaterialsPage = () => {
       <SplineBackground activeTab="عام" />
       <div className="relative z-10">
         <Navbar />
-        <main className="pt-32 p-4">
+        <main className="pt-28 p-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8" dir="rtl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6" dir="rtl">
               <h1 className="text-2xl font-bold text-slate-100">
                 إدارة المواد والمنتجات
               </h1>
-              {hasAnyRole([Role.ADMIN]) && (
+
+              <div className="flex items-center gap-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                  onClick={() => {
-                    setEditingItem(null);
-                    setModalVisible(true);
-                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-600/50 transition-colors"
+                  onClick={() => setShowFilters(!showFilters)}
                 >
-                  <Plus className="h-5 w-5" />
-                  إضافة جديد
+                  <Filter className="h-4 w-4" />
+                  {showFilters ? "إخفاء المرشحات" : "إظهار المرشحات"}
                 </motion.button>
-              )}
+
+                {hasAnyRole([Role.ADMIN]) && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                    onClick={() => {
+                      setEditingItem(null);
+                      setModalVisible(true);
+                    }}
+                  >
+                    <Plus className="h-5 w-5" />
+                    إضافة جديد
+                  </motion.button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="mb-6" dir="rtl">
+              <div className="flex border-b border-slate-700/50">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === "all"
+                    ? "text-emerald-400 border-b-2 border-emerald-400"
+                    : "text-slate-400 hover:text-slate-300"
+                    }`}
+                >
+                  الكل
+                  <span className="mx-2 px-2 py-0.5 bg-slate-700 text-xs rounded-full">
+                    {items?.length || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("production")}
+                  className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === "production"
+                    ? "text-emerald-400 border-b-2 border-emerald-400"
+                    : "text-slate-400 hover:text-slate-300"
+                    }`}
+                >
+                  المنتجات
+                  <span className="mx-2 px-2 py-0.5 bg-slate-700 text-xs rounded-full">
+                    {productionItemsCount}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("raw")}
+                  className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === "raw"
+                    ? "text-emerald-400 border-b-2 border-emerald-400"
+                    : "text-slate-400 hover:text-slate-300"
+                    }`}
+                >
+                  المواد الخام
+                  <span className="mx-2 px-2 py-0.5 bg-slate-700 text-xs rounded-full">
+                    {rawItemsCount}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Filters */}
-            <div className="mb-6 space-y-4" dir="rtl">
-              {/* Search and Type Filter */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="بحث..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-4 pr-12 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50"
-                    />
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6"
+                dir="rtl"
+              >
+                <div className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4 backdrop-blur-sm">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm text-slate-400 mb-1">بحث</label>
+                      <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="بحث بالاسم أو الوصف..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500/50"
+                        />
+                      </div>
+                    </div>
+                    <div className="sm:w-64">
+                      <label className="block text-sm text-slate-400 mb-1">التصنيف</label>
+                      <select
+                        value={selectedGroup === null ? "all" : selectedGroup}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedGroup(value === "all" ? null : Number(value));
+                        }}
+                        className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 px-4 py-2 focus:outline-none focus:border-emerald-500/50"
+                      >
+                        <option value="all">جميع التصنيفات</option>
+                        {itemGroups?.map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <select
-                  value={selectedType}
-                  onChange={(e) =>
-                    setSelectedType(e.target.value as ItemType | "all")
-                  }
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 px-4 py-2 focus:outline-none focus:border-emerald-500/50"
-                >
-                  <option value="all">جميع الأنواع</option>
-                  <option value="production">منتجات</option>
-                  <option value="raw">مواد خام</option>
-                </select>
-              </div>
-
-              {/* Groups Filter */}
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-                <button
-                  onClick={() => setSelectedGroup(null)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                    selectedGroup === null
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
-                  }`}
-                >
-                  الكل
-                </button>
-                {itemGroups?.map((group) => (
-                  <button
-                    key={group.id}
-                    onClick={() => setSelectedGroup(group.id)}
-                    className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                      selectedGroup === group.id
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
-                    }`}
-                  >
-                    {group.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+              </motion.div>
+            )}
 
             {/* Table Container */}
-            <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden backdrop-blur-sm">
+            <motion.div
+              layout
+              className="bg-slate-800/50 rounded-lg border border-slate-700/50 overflow-hidden backdrop-blur-sm"
+            >
               <MaterialTable
                 items={filteredItems || []}
                 getDefaultUnitPrice={getDefaultUnitPrice}
+                activeTab={activeTab}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setModalVisible(true);
@@ -163,7 +227,7 @@ const MaterialsPage = () => {
                   });
                 }}
               />
-            </div>
+            </motion.div>
           </div>
         </main>
       </div>
@@ -177,6 +241,7 @@ const MaterialsPage = () => {
           }}
           item={editingItem}
           itemGroups={itemGroups || []}
+          defaultType={activeTab !== "all" ? activeTab : undefined}
         />
       )}
 

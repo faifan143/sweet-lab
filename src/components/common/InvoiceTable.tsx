@@ -1,4 +1,4 @@
-// src/components/invoices/InvoiceTable.tsx
+// src/components/common/InvoiceTable.tsx
 import { useState, useEffect } from "react";
 import { Invoice } from "@/types/invoice.type";
 import { formatCurrency, formatDate } from "@/utils/formatters";
@@ -10,12 +10,15 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ArrowDownSquare,
+  ArrowUpSquare
 } from "lucide-react";
 import { useMediaQuery } from "@mui/material";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 
 interface InvoiceTableProps {
   invoices?: Invoice[];
+  invoiceType?: "income" | "expense"; // Make this optional to work with existing code
   onViewDetail: (invoice: Invoice) => void;
   onStatusChange: (invoice: Invoice, status: "paid" | "debt") => void;
 }
@@ -46,11 +49,10 @@ const PaginationControls = ({
           <button
             key={number}
             onClick={() => onPageChange(number)}
-            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-              currentPage === number
-                ? "bg-slate-700/50 text-slate-200"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
-            }`}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === number
+              ? "bg-slate-700/50 text-slate-200"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
+              }`}
           >
             {number}
           </button>
@@ -70,13 +72,12 @@ const PaginationControls = ({
 
 const StatusBadge: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
   <span
-    className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs ${
-      invoice.paidStatus
-        ? "bg-success/10 text-success"
-        : invoice.invoiceCategory === "debt"
+    className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs ${invoice.paidStatus
+      ? "bg-success/10 text-success"
+      : invoice.invoiceCategory === "debt"
         ? "bg-warning/10 text-warning"
         : "bg-danger/10 text-danger"
-    }`}
+      }`}
   >
     {invoice.paidStatus ? (
       <>
@@ -99,6 +100,7 @@ const StatusBadge: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
 
 export const InvoiceTable = ({
   invoices = [],
+  invoiceType = "income", // Default to income for backward compatibility
   onViewDetail,
   onStatusChange,
 }: InvoiceTableProps) => {
@@ -111,7 +113,7 @@ export const InvoiceTable = ({
   // Reset to first page when invoices change
   useEffect(() => {
     setCurrentPage(1);
-  }, [invoices.length]);
+  }, [invoices.length, invoiceType]);
 
   // Calculate pagination
   const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
@@ -119,56 +121,66 @@ export const InvoiceTable = ({
   const endIndex = startIndex + PAGE_SIZE;
   const paginatedInvoices = invoices.slice(startIndex, endIndex);
 
+  // Get the appropriate icon for invoice type
+  const TypeIcon = invoiceType === "income" ? ArrowDownSquare : ArrowUpSquare;
+  const typeColorClass = invoiceType === "income"
+    ? "text-emerald-400 bg-emerald-500/10"
+    : "text-amber-400 bg-amber-500/10";
+
   const renderMobileView = () => (
     <>
       <div className="space-y-4">
-        {paginatedInvoices.map((invoice) => {
-          console.log("single filtered invoice :  ", invoice.customer);
-
-          return (
-            <div
-              key={invoice.id}
-              className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-sm text-slate-400">رقم الفاتورة</div>
-                  <div className="text-foreground">
-                    #{invoice.invoiceNumber}
-                  </div>
+        {paginatedInvoices.map((invoice) => (
+          <div
+            key={invoice.id}
+            className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-4 space-y-3"
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-sm text-slate-400">رقم الفاتورة</div>
+                <div className="text-foreground">
+                  #{invoice.invoiceNumber}
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
                 <StatusBadge invoice={invoice} />
+                <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${typeColorClass}`}>
+                  <TypeIcon className="h-3 w-3" />
+                  {invoiceType === "income" ? "مبيعات" : "مشتريات"}
+                </span>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-sm text-slate-400">العميل</div>
-                  <div className="text-foreground">
-                    {invoice.customer ? invoice.customer.name : "-"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">الهاتف</div>
-                  <div className="text-foreground">
-                    {invoice.customer ? invoice.customer.phone : "-"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">المبلغ</div>
-                  <div className="text-foreground">
-                    {formatCurrency(invoice.totalAmount)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-400">النوع</div>
-                  <div className="text-foreground">
-                    {invoice.invoiceType === "expense" ? "صرف" : "دخل"}
-                  </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-sm text-slate-400">العميل</div>
+                <div className="text-foreground">
+                  {invoice.customer ? invoice.customer.name : "-"}
                 </div>
               </div>
+              <div>
+                <div className="text-sm text-slate-400">الهاتف</div>
+                <div className="text-foreground">
+                  {invoice.customer ? invoice.customer.phone : "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">المبلغ</div>
+                <div className="text-foreground">
+                  {formatCurrency(invoice.totalAmount)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400">التاريخ</div>
+                <div className="text-foreground">
+                  {formatDate(invoice.createdAt)}
+                </div>
+              </div>
+            </div>
 
-              <div className="flex flex-wrap gap-2 pt-2">
-                {!invoice.paidStatus && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
+                <>
                   <button
                     onClick={() => onStatusChange(invoice, "paid")}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
@@ -176,18 +188,25 @@ export const InvoiceTable = ({
                     <DollarSign className="h-4 w-4" />
                     <span>تحويل لمدفوع</span>
                   </button>
-                )}
-                <button
-                  onClick={() => onViewDetail(invoice)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>عرض التفاصيل</span>
-                </button>
-              </div>
+                  <button
+                    onClick={() => onStatusChange(invoice, "debt")}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-warning/10 text-warning hover:bg-warning/20 transition-colors flex-1"
+                  >
+                    <Clock className="h-4 w-4" />
+                    <span>تحويل إلى دين</span>
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => onViewDetail(invoice)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors flex-1"
+              >
+                <Eye className="h-4 w-4" />
+                <span>عرض التفاصيل</span>
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
         {invoices.length === 0 && (
           <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-lg">
             لا توجد فواتير متطابقة مع معايير البحث
@@ -255,40 +274,45 @@ export const InvoiceTable = ({
                   <td className="p-4 text-foreground text-center">
                     {invoice.customer ? invoice.customer.phone : "-"}
                   </td>
-                  <td className="p-4 text-foreground text-center">
-                    {invoice.invoiceType === "expense" ? "صرف" : "دخل"}
+                  <td className="p-4 text-center">
+                    <span className={`px-2 py-1 rounded-md text-xs flex items-center justify-center gap-1 ${typeColorClass} inline-flex mx-auto`}>
+                      <TypeIcon className="h-3 w-3" />
+                      {invoiceType === "income" ? "مبيعات" : "مشتريات"}
+                    </span>
                   </td>
                   <td className="p-4 text-foreground text-center">
                     {formatCurrency(invoice.totalAmount)}
                   </td>
                   <td className="p-4">
-                    <StatusBadge invoice={invoice} />
+                    <div className="flex justify-center">
+                      <StatusBadge invoice={invoice} />
+                    </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex flex-col  items-center gap-2">
+                    <div className="flex flex-col items-center gap-2">
                       {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
-                        <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="flex gap-2">
                           <button
                             onClick={() => onStatusChange(invoice, "paid")}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-400 bg-opacity-10 text-success hover:bg-slate-700 transition-colors "
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-success/10 text-success hover:bg-success/20 transition-colors"
                           >
-                            <DollarSign className="h-4 w-4" />
+                            <DollarSign className="h-3 w-3" />
                             <span>تحويل لمدفوع</span>
                           </button>
                           <button
                             onClick={() => onStatusChange(invoice, "debt")}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-400 bg-opacity-10 text-warning hover:bg-slate-700 transition-colors "
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
                           >
-                            <DollarSign className="h-4 w-4" />
+                            <Clock className="h-3 w-3" />
                             <span>تحويل إلى دين</span>
                           </button>
                         </div>
                       )}
                       <button
                         onClick={() => onViewDetail(invoice)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors"
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3" />
                         <span>عرض التفاصيل</span>
                       </button>
                     </div>
