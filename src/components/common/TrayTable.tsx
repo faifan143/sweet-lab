@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "@mui/material";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  X
+} from "lucide-react";
 import { TrayTracking } from "@/types/items.type";
 import { formatDate } from "@/utils/formatters";
 import PageSpinner from "./PageSpinner";
@@ -18,6 +26,10 @@ interface MobileTrayCardProps {
   isPending: boolean;
   onReturn: (tray: TrayTracking) => void;
 }
+
+// Define sort types
+type SortField = 'customerName' | 'customerPhone' | 'totalTrays' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
 
 // Pagination Controls Component
 const PaginationControls = ({
@@ -46,11 +58,10 @@ const PaginationControls = ({
           <button
             key={number}
             onClick={() => onPageChange(number)}
-            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-              currentPage === number
-                ? "bg-slate-700/50 text-slate-200"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
-            }`}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === number
+              ? "bg-slate-700/50 text-slate-200"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
+              }`}
           >
             {number}
           </button>
@@ -67,6 +78,34 @@ const PaginationControls = ({
     </div>
   );
 };
+
+// Table header component with sort functionality
+const SortableHeader: React.FC<{
+  field: SortField;
+  currentSortField: SortField | null;
+  sortDirection: SortDirection;
+  onClick: (field: SortField) => void;
+  title: string;
+  className?: string;
+}> = ({ field, currentSortField, sortDirection, onClick, title, className }) => (
+  <th
+    className={`text-right p-3 text-slate-300 cursor-pointer hover:bg-slate-700/20 transition-colors ${className || ''}`}
+    onClick={() => onClick(field)}
+  >
+    <div className="flex items-center gap-1">
+      {title}
+      {currentSortField === field ? (
+        sortDirection === 'asc' ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )
+      ) : (
+        <div className="h-4 w-4"></div> // Empty placeholder to maintain alignment
+      )}
+    </div>
+  </th>
+);
 
 // Mobile Card Component
 const MobileTrayCard: React.FC<MobileTrayCardProps> = ({
@@ -122,6 +161,36 @@ const MobileTrayCard: React.FC<MobileTrayCardProps> = ({
   );
 };
 
+// Search Component
+const SearchBox: React.FC<{
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+}> = ({ searchQuery, setSearchQuery }) => {
+  return (
+    <div className="relative mb-4">
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <Search className="h-5 w-5 text-slate-400" />
+      </div>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full p-3 pr-10 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+        placeholder="بحث بإسم العميل أو رقم الهاتف..."
+        dir="rtl"
+      />
+      {searchQuery && (
+        <button
+          onClick={() => setSearchQuery('')}
+          className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-slate-200"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const TrayTable: React.FC<TrayTableProps> = ({
   trays = [],
   isLoading,
@@ -130,19 +199,88 @@ export const TrayTable: React.FC<TrayTableProps> = ({
 }) => {
   const isMobile = useMediaQuery("(max-width:768px)");
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const PAGE_SIZE = 10;
   const { hasAnyRole } = useRoles();
 
-  // Reset to first page when trays change
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Reset to first page when trays change or search query changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [trays.length]);
+  }, [trays.length, searchQuery]);
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, set to ascending by default
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter trays based on search query
+  const filteredTrays = trays.filter(tray => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase().trim();
+    const customerName = tray.customer.name.toLowerCase();
+    const customerPhone = (tray.customer.phone || '').toLowerCase();
+
+    return customerName.includes(query) || customerPhone.includes(query);
+  });
+
+  // Apply sorting to filtered trays
+  const sortedTrays = [...filteredTrays].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let valueA, valueB;
+
+    // Get comparative values based on sort field
+    switch (sortField) {
+      case 'customerName':
+        valueA = a.customer.name.toLowerCase();
+        valueB = b.customer.name.toLowerCase();
+        break;
+      case 'customerPhone':
+        valueA = (a.customer.phone || '').toLowerCase();
+        valueB = (b.customer.phone || '').toLowerCase();
+        break;
+      case 'totalTrays':
+        valueA = a.totalTrays;
+        valueB = b.totalTrays;
+        break;
+      case 'createdAt':
+        valueA = new Date(a.createdAt).getTime();
+        valueB = new Date(b.createdAt).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    // String comparison for string values
+    if (typeof valueA === 'string' && typeof valueB === 'string') {
+      return sortDirection === 'asc'
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    }
+
+    // Numeric comparison for numbers
+    return sortDirection === 'asc'
+      ? (valueA as number) - (valueB as number)
+      : (valueB as number) - (valueA as number);
+  });
 
   // Calculate pagination
-  const totalPages = Math.ceil(trays.length / PAGE_SIZE);
+  const totalPages = Math.ceil(sortedTrays.length / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const paginatedTrays = trays.slice(startIndex, endIndex);
+  const paginatedTrays = sortedTrays.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
@@ -152,9 +290,44 @@ export const TrayTable: React.FC<TrayTableProps> = ({
     );
   }
 
+  // Mobile sorting options component
+  const MobileSortOptions = () => (
+    <div className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-3 mb-4">
+      <div className="text-sm text-slate-300 mb-2">ترتيب حسب:</div>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { field: 'customerName', label: 'العميل' },
+          { field: 'totalTrays', label: 'عدد الفوارغ' },
+          { field: 'createdAt', label: 'تاريخ الاستلام' }
+        ].map((item) => (
+          <button
+            key={item.field}
+            onClick={() => handleSort(item.field as SortField)}
+            className={`px-3 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors
+              ${sortField === item.field
+                ? "bg-blue-500/20 text-blue-400"
+                : "bg-slate-700/30 text-slate-300"
+              }`}
+          >
+            {item.label}
+            {sortField === item.field && (
+              sortDirection === 'asc'
+                ? <ChevronUp className="h-3 w-3" />
+                : <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div className="space-y-4">
+        <SearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+
+        {filteredTrays.length > 0 && <MobileSortOptions />}
+
         {paginatedTrays.map((tray) => (
           <MobileTrayCard
             key={tray.id}
@@ -163,12 +336,14 @@ export const TrayTable: React.FC<TrayTableProps> = ({
             onReturn={onReturn}
           />
         ))}
-        {!trays.length && (
+
+        {filteredTrays.length === 0 && (
           <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-lg">
-            لا توجد فوارغ معلقة
+            {searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد فوارغ معلقة'}
           </div>
         )}
-        {trays.length > PAGE_SIZE && (
+
+        {filteredTrays.length > PAGE_SIZE && (
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
@@ -181,14 +356,40 @@ export const TrayTable: React.FC<TrayTableProps> = ({
 
   return (
     <>
+      <SearchBox searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+
       <div className="bg-slate-800/50 rounded-lg border border-slate-700/50">
         <table className="w-full" dir="rtl">
           <thead className="bg-slate-700/30">
             <tr>
-              <th className="text-right p-3 text-slate-300">العميل</th>
-              <th className="text-right p-3 text-slate-300">رقم الهاتف</th>
-              <th className="text-right p-3 text-slate-300">عدد الفوارغ</th>
-              <th className="text-right p-3 text-slate-300">تاريخ الاستلام</th>
+              <SortableHeader
+                field="customerName"
+                currentSortField={sortField}
+                sortDirection={sortDirection}
+                onClick={handleSort}
+                title="العميل"
+              />
+              <SortableHeader
+                field="customerPhone"
+                currentSortField={sortField}
+                sortDirection={sortDirection}
+                onClick={handleSort}
+                title="رقم الهاتف"
+              />
+              <SortableHeader
+                field="totalTrays"
+                currentSortField={sortField}
+                sortDirection={sortDirection}
+                onClick={handleSort}
+                title="عدد الفوارغ"
+              />
+              <SortableHeader
+                field="createdAt"
+                currentSortField={sortField}
+                sortDirection={sortDirection}
+                onClick={handleSort}
+                title="تاريخ الاستلام"
+              />
               <th className="text-right p-3 text-slate-300">ملاحظات</th>
               <th className="text-right p-3 text-slate-300">الإجراءات</th>
             </tr>
@@ -227,17 +428,17 @@ export const TrayTable: React.FC<TrayTableProps> = ({
                 </td>
               </tr>
             ))}
-            {!trays.length && (
+            {filteredTrays.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center p-4 text-slate-400">
-                  لا توجد فوارغ معلقة
+                  {searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد فوارغ معلقة'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      {trays.length > PAGE_SIZE && (
+      {filteredTrays.length > PAGE_SIZE && (
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}

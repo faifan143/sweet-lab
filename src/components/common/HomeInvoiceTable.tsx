@@ -2,7 +2,18 @@ import { formatSYP } from "@/hooks/invoices/useInvoiceStats";
 import { Invoice } from "@/types/invoice.type";
 import { formatDate } from "@/utils/formatters";
 import { motion } from "framer-motion";
-import { BellDot, Calendar, ChevronLeft, ChevronRight, Clipboard, CreditCard, FileText, User } from "lucide-react";
+import {
+  BellDot,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clipboard,
+  CreditCard,
+  FileText,
+  User,
+  ChevronDown,
+  ChevronUp
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import InvoicesActionsMenu from "./InvoicesActionsMenu";
 
@@ -12,6 +23,10 @@ interface HomeInvoiceTableProps {
   onEditInvoice: (invoice: Invoice) => void;
   onDeleteInvoice?: (invoice: Invoice) => void;
 }
+
+// Define sort types
+type SortField = 'invoiceNumber' | 'createdAt' | 'invoiceType' | 'customer' | 'amount' | 'paidStatus';
+type SortDirection = 'asc' | 'desc';
 
 const PaginationControls = ({
   currentPage,
@@ -100,6 +115,34 @@ const PaginationControls = ({
   );
 };
 
+// Table header component with sort functionality
+const SortableHeader: React.FC<{
+  field: SortField;
+  currentSortField: SortField | null;
+  sortDirection: SortDirection;
+  onClick: (field: SortField) => void;
+  title: string;
+  className?: string;
+}> = ({ field, currentSortField, sortDirection, onClick, title, className }) => (
+  <th
+    className={`p-3 text-slate-300 text-sm cursor-pointer hover:bg-slate-700/20 transition-colors ${className || ''}`}
+    onClick={() => onClick(field)}
+  >
+    <div className="flex items-center justify-center gap-1">
+      {title}
+      {currentSortField === field ? (
+        sortDirection === 'asc' ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )
+      ) : (
+        <div className="h-4 w-4"></div> // Empty placeholder to maintain alignment
+      )}
+    </div>
+  </th>
+);
+
 export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
   data,
   onViewDetails,
@@ -109,16 +152,81 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
 
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
   // Reset to first page when data changes
   useEffect(() => {
     setCurrentPage(1);
   }, [data.length]);
 
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, set to ascending by default
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Apply sorting to data
+  const sortedData = [...data].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let valueA, valueB;
+
+    // Get comparative values based on sort field
+    switch (sortField) {
+      case 'invoiceNumber':
+        valueA = a.invoiceNumber;
+        valueB = b.invoiceNumber;
+        break;
+      case 'createdAt':
+        valueA = new Date(a.createdAt).getTime();
+        valueB = new Date(b.createdAt).getTime();
+        break;
+      case 'invoiceType':
+        valueA = a.invoiceType;
+        valueB = b.invoiceType;
+        break;
+      case 'customer':
+        valueA = a.customer?.name || '';
+        valueB = b.customer?.name || '';
+        break;
+      case 'amount':
+        valueA = a.totalAmount - a.discount;
+        valueB = b.totalAmount - b.discount;
+        break;
+      case 'paidStatus':
+        valueA = a.paidStatus ? 1 : 0;
+        valueB = b.paidStatus ? 1 : 0;
+        break;
+      default:
+        return 0;
+    }
+
+    // String comparison for string values
+    if (typeof valueA === 'string' && typeof valueB === 'string') {
+      return sortDirection === 'asc'
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    }
+
+    // Numeric comparison for numbers
+    return sortDirection === 'asc'
+      ? (valueA as number) - (valueB as number)
+      : (valueB as number) - (valueA as number);
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(data.length / PAGE_SIZE);
+  const totalPages = Math.ceil(sortedData.length / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const paginatedData = data.slice(startIndex, endIndex);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
 
   // Calculate total for all data (not just paginated)
   const totalAmount = data.reduce(
@@ -134,22 +242,51 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
   return (
     <>
       {/* Desktop view - Full table */}
-      <div className="hidden md:block overflow-x-auto overflow-y-auto no-scrollbar">
+      <div className="hidden md:block overflow-x-auto overflow-y-auto no-scrollbar" >
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           className="min-w-full bg-slate-800/50 rounded-lg border border-slate-700/50"
         >
-          <table className="w-full text-right">
+          <table className="w-full text-right" dir="rtl">
             <thead className="bg-slate-800/50">
               <tr>
-                <th className="p-3 text-slate-300 text-sm">رقم الفاتورة</th>
-                <th className="p-3 text-slate-300 text-sm">التاريخ</th>
-                <th className="p-3 text-slate-300 text-sm">النوع</th>
-                <th className="p-3 text-slate-300 text-sm">العميل</th>
-                <th className="p-3 text-slate-300 text-sm">المبلغ</th>
-                <th className="p-3 text-slate-300 text-sm">الحالة</th>
+                <SortableHeader
+                  field="invoiceNumber"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="رقم الفاتورة"
+                />
+                <SortableHeader
+                  field="createdAt"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="التاريخ"
+                />
+                <SortableHeader
+                  field="customer"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="العميل"
+                />
+                <SortableHeader
+                  field="amount"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="المبلغ"
+                />
+                <SortableHeader
+                  field="paidStatus"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="الحالة"
+                />
                 <th className="p-3 text-slate-300 text-sm">الإجراءات</th>
               </tr>
             </thead>
@@ -163,7 +300,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                   layout
                   className="border-b border-slate-700/50 hover:bg-slate-700/25 transition-colors"
                 >
-                  <td className="p-3 text-slate-300 text-sm">
+                  <td className="p-3 text-center text-slate-300 text-sm">
                     <div className="flex items-center">
                       {invoice.invoiceNumber}
                       {hasNotes(invoice) && (
@@ -173,17 +310,14 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                       )}
                     </div>
                   </td>
-                  <td className="p-3 text-slate-300 text-sm">{formatDate(invoice.createdAt)}</td>
-                  <td className="p-3 text-slate-300 text-sm">
-                    {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
-                  </td>
-                  <td className="p-3 text-slate-300 text-sm">
+                  <td className="p-3 text-center text-slate-300 text-sm">{formatDate(invoice.createdAt)}</td>
+                  <td className="p-3 text-center text-slate-300 text-sm">
                     {invoice.customer ? invoice.customer.name : "-"}
                   </td>
-                  <td className="p-3 text-slate-300 text-sm">
+                  <td className="p-3 text-center text-slate-300 text-sm">
                     {formatSYP(invoice.totalAmount - invoice.discount)}
                   </td>
-                  <td className="p-3">
+                  <td className="p-3 text-center">
                     <span
                       className={`inline-flex px-2 py-1 rounded-full text-xs ${invoice.paidStatus
                         ? "bg-emerald-500/10 text-emerald-400"
@@ -193,7 +327,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                       {invoice.isBreak ? "كسر" : invoice.paidStatus ? "نقدي" : "آجل"}
                     </span>
                   </td>
-                  <td className="p-3 text-center">
+                  <td className="p-3 text-center text-center">
                     <InvoicesActionsMenu
                       invoice={invoice}
                       onViewDetails={onViewDetails}
@@ -221,7 +355,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                   <td colSpan={4} className="p-3 text-slate-300 font-semibold">
                     المجموع
                   </td>
-                  <td className="p-3 text-emerald-400 font-semibold">
+                  <td className="p-3 text-center text-emerald-400 font-semibold">
                     {formatSYP(totalAmount)}
                   </td>
                   <td colSpan={2}></td>
@@ -244,6 +378,40 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
           </motion.div>
         ) : (
           <>
+            {/* Mobile sorting options */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-slate-800/50 rounded-lg border border-slate-700/50 p-3 mb-3"
+            >
+              <div className="text-sm text-slate-300 mb-2">ترتيب حسب:</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { field: 'invoiceNumber', label: 'رقم الفاتورة' },
+                  { field: 'createdAt', label: 'التاريخ' },
+                  { field: 'amount', label: 'المبلغ' },
+                  { field: 'paidStatus', label: 'الحالة' }
+                ].map((item) => (
+                  <button
+                    key={item.field}
+                    onClick={() => handleSort(item.field as SortField)}
+                    className={`px-3 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors
+                      ${sortField === item.field
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-slate-700/30 text-slate-300"
+                      }`}
+                  >
+                    {item.label}
+                    {sortField === item.field && (
+                      sortDirection === 'asc'
+                        ? <ChevronUp className="h-3 w-3" />
+                        : <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {paginatedData.map((invoice) => (
                 <motion.div

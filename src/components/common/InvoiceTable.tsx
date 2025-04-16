@@ -11,17 +11,28 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowDownSquare,
-  ArrowUpSquare
+  ArrowUpSquare,
+  ChevronDown,
+  ChevronUp,
+  FileX,
+  MoreHorizontal,
+  Glasses,
+  GlassWater
 } from "lucide-react";
 import { useMediaQuery } from "@mui/material";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 
 interface InvoiceTableProps {
   invoices?: Invoice[];
-  invoiceType?: "income" | "expense"; // Make this optional to work with existing code
+  invoiceType?: "income" | "expense";
   onViewDetail: (invoice: Invoice) => void;
   onStatusChange: (invoice: Invoice, status: "paid" | "debt") => void;
+  onConvertToBreak?: (invoice: Invoice) => void;
 }
+
+// Define sort types
+type SortField = 'invoiceNumber' | 'createdAt' | 'customerName' | 'customerPhone' | 'type' | 'totalAmount' | 'paidStatus';
+type SortDirection = 'asc' | 'desc';
 
 const PaginationControls = ({
   currentPage,
@@ -89,7 +100,10 @@ const StatusBadge: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
         <Clock className="h-3 w-3" />
         <span>دين</span>
       </>
-    ) : (
+    ) : invoice.isBreak == true ? (<>
+      <GlassWater className="h-3 w-3" />
+      <span>كسر</span>
+    </>) : (
       <>
         <AlertCircle className="h-3 w-3" />
         <span>غير مدفوع</span>
@@ -98,15 +112,49 @@ const StatusBadge: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
   </span>
 );
 
+// Table header component with sort functionality
+const SortableHeader: React.FC<{
+  field: SortField;
+  currentSortField: SortField | null;
+  sortDirection: SortDirection;
+  onClick: (field: SortField) => void;
+  title: string;
+  className?: string;
+}> = ({ field, currentSortField, sortDirection, onClick, title, className }) => (
+  <th
+    className={`text-center text-muted-foreground font-medium p-4 cursor-pointer hover:bg-slate-700/20 ${className || ''}`}
+    onClick={() => onClick(field)}
+  >
+    <div className="flex items-center justify-center gap-1">
+      {title}
+      {currentSortField === field ? (
+        sortDirection === 'asc' ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )
+      ) : (
+        <div className="h-4 w-4"></div> // Empty placeholder to maintain alignment
+      )}
+    </div>
+  </th>
+);
+
 export const InvoiceTable = ({
   invoices = [],
   invoiceType = "income", // Default to income for backward compatibility
   onViewDetail,
+  onConvertToBreak,
   onStatusChange,
 }: InvoiceTableProps) => {
   const isMobile = useMediaQuery("(max-width:768px)");
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
+  const [actionInvoice, setActionInvoice] = useState<Invoice | null>(null);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { hasAnyRole } = useRoles();
 
@@ -115,11 +163,76 @@ export const InvoiceTable = ({
     setCurrentPage(1);
   }, [invoices.length, invoiceType]);
 
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, set to ascending by default
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Apply sorting to invoices
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let valueA, valueB;
+
+    // Get comparative values based on sort field
+    switch (sortField) {
+      case 'invoiceNumber':
+        valueA = a.invoiceNumber;
+        valueB = b.invoiceNumber;
+        break;
+      case 'createdAt':
+        valueA = new Date(a.createdAt).getTime();
+        valueB = new Date(b.createdAt).getTime();
+        break;
+      case 'customerName':
+        valueA = a.customer?.name || '';
+        valueB = b.customer?.name || '';
+        break;
+      case 'customerPhone':
+        valueA = a.customer?.phone || '';
+        valueB = b.customer?.phone || '';
+        break;
+      case 'type':
+        valueA = a.invoiceCategory;
+        valueB = b.invoiceCategory;
+        break;
+      case 'totalAmount':
+        valueA = a.totalAmount;
+        valueB = b.totalAmount;
+        break;
+      case 'paidStatus':
+        valueA = a.paidStatus ? 1 : 0;
+        valueB = b.paidStatus ? 1 : 0;
+        break;
+      default:
+        return 0;
+    }
+
+    // String comparison for string values
+    if (typeof valueA === 'string' && typeof valueB === 'string') {
+      return sortDirection === 'asc'
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
+    }
+
+    // Numeric comparison for numbers
+    return sortDirection === 'asc'
+      ? (valueA as number) - (valueB as number)
+      : (valueB as number) - (valueA as number);
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
+  const totalPages = Math.ceil(sortedInvoices.length / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
-  const paginatedInvoices = invoices.slice(startIndex, endIndex);
+  const paginatedInvoices = sortedInvoices.slice(startIndex, endIndex);
 
   // Get type label and styling based on invoice type and category
   const getTypeLabel = (invoice: Invoice, invoiceType: "income" | "expense") => {
@@ -143,6 +256,84 @@ export const InvoiceTable = ({
       icon: invoiceType === "income" ? ArrowDownSquare : ArrowUpSquare
     };
   };
+
+
+  const ActionModal = () => {
+    if (!actionInvoice) return null;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={() => setActionInvoice(null)}
+      >
+        <div
+          className="bg-slate-800 border border-slate-700 rounded-lg p-4 w-full max-w-xs"
+          onClick={(e) => e.stopPropagation()}
+          dir="rtl"
+        >
+          <h3 className="text-slate-200 font-medium mb-3 text-sm">اختر إجراء للفاتورة #{actionInvoice.invoiceNumber}</h3>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                onStatusChange(actionInvoice, "paid");
+                setActionInvoice(null);
+              }}
+              className="flex w-full   items-center gap-2 p-3 rounded-lg text-success bg-emerald-600/10 hover:bg-emerald-600/20 transition-colors text-sm text-right"
+            >
+              <DollarSign className="h-4 w-4" />
+              <span>تحويل لمدفوع</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onStatusChange(actionInvoice, "debt");
+                setActionInvoice(null);
+              }}
+              className="flex w-full   items-center gap-2 p-3 rounded-lg text-warning bg-amber-400/10 hover:bg-amber-400/20 transition-colors text-sm text-right"
+            >
+              <Clock className="h-4 w-4" />
+              <span>تحويل إلى دين</span>
+            </button>
+
+            {invoiceType === "income" && onConvertToBreak && (
+              <button
+                onClick={() => {
+                  onConvertToBreak(actionInvoice);
+                  setActionInvoice(null);
+                }}
+                className="flex w-full items-center gap-2 p-3 rounded-lg text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-colors text-sm text-right"
+              >
+                <FileX className="h-4 w-4" />
+                <span>تحويل إلى كسر</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                onViewDetail(actionInvoice);
+                setActionInvoice(null);
+              }}
+              className="flex w-full items-center gap-2 p-3 rounded-lg text-slate-300 bg-slate-700/50 hover:bg-slate-700/70 transition-colors text-sm text-right"
+            >
+              <Eye className="h-4 w-4" />
+              <span>عرض التفاصيل</span>
+            </button>
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => setActionInvoice(null)}
+              className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors text-sm"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
 
   const renderMobileView = () => (
     <>
@@ -203,18 +394,28 @@ export const InvoiceTable = ({
                   <>
                     <button
                       onClick={() => onStatusChange(invoice, "paid")}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-success/10 text-success hover:bg-success/20 transition-colors flex-1"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm  text-emerald-600 bg-emerald-600/10 hover:bg-emerald-600/20 transition-colors flex-1"
                     >
                       <DollarSign className="h-4 w-4" />
                       <span>تحويل لمدفوع</span>
                     </button>
                     <button
                       onClick={() => onStatusChange(invoice, "debt")}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-warning/10 text-warning hover:bg-warning/20 transition-colors flex-1"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm  text-amber-400 bg-amber-400/10 hover:bg-amber-400/20 transition-colors flex-1"
                     >
                       <Clock className="h-4 w-4" />
                       <span>تحويل إلى دين</span>
                     </button>
+                    {/* Add breakage conversion button only for income invoices */}
+                    {invoiceType === "income" && onConvertToBreak && (
+                      <button
+                        onClick={() => onConvertToBreak(invoice)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors flex-1"
+                      >
+                        <FileX className="h-4 w-4" />
+                        <span>تحويل إلى كسر</span>
+                      </button>
+                    )}
                   </>
                 )}
                 <button
@@ -251,27 +452,60 @@ export const InvoiceTable = ({
           <table className="w-full" dir="rtl">
             <thead>
               <tr className="border-b border-slate-700/50">
-                <th className="text-center text-muted-foreground font-medium p-4 w-24">
-                  رقم الفاتورة
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4">
-                  التاريخ
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4">
-                  العميل
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4 w-28">
-                  الهاتف
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4 w-28">
-                  النوع
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4 w-28">
-                  المبلغ
-                </th>
-                <th className="text-center text-muted-foreground font-medium p-4 w-32">
-                  الحالة
-                </th>
+                <SortableHeader
+                  field="invoiceNumber"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="رقم الفاتورة"
+                  className="w-24"
+                />
+                <SortableHeader
+                  field="createdAt"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="التاريخ"
+                />
+                <SortableHeader
+                  field="customerName"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="العميل"
+                />
+                <SortableHeader
+                  field="customerPhone"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="الهاتف"
+                  className="w-28"
+                />
+                <SortableHeader
+                  field="type"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="النوع"
+                  className="w-28"
+                />
+                <SortableHeader
+                  field="totalAmount"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="المبلغ"
+                  className="w-28"
+                />
+                <SortableHeader
+                  field="paidStatus"
+                  currentSortField={sortField}
+                  sortDirection={sortDirection}
+                  onClick={handleSort}
+                  title="الحالة"
+                  className="w-32"
+                />
                 <th className="text-center text-muted-foreground font-medium p-4 w-52">
                   الإجراءات
                 </th>
@@ -312,35 +546,35 @@ export const InvoiceTable = ({
                         <StatusBadge invoice={invoice} />
                       </div>
                     </td>
-                    <td className="p-4">
-                      <div className="flex flex-col items-center gap-2">
-                        {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => onStatusChange(invoice, "paid")}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-success/10 text-success hover:bg-success/20 transition-colors"
-                            >
-                              <DollarSign className="h-3 w-3" />
-                              <span>تحويل لمدفوع</span>
-                            </button>
-                            <button
-                              onClick={() => onStatusChange(invoice, "debt")}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-warning/10 text-warning hover:bg-warning/20 transition-colors"
-                            >
-                              <Clock className="h-3 w-3" />
-                              <span>تحويل إلى دين</span>
-                            </button>
-                          </div>
-                        )}
+
+
+
+
+                    <td className="p-3 text-center">
+                      {!invoice.paidStatus && hasAnyRole([Role.ADMIN]) ? (
+                        <button
+                          onClick={() => setActionInvoice(invoice)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-slate-700/50 text-slate-200 hover:bg-slate-700/70 transition-colors"
+                        >
+                          <span>إجراءات</span>
+                        </button>
+                      ) : (
                         <button
                           onClick={() => onViewDetail(invoice)}
-                          className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs bg-slate-700/25 text-slate-300 hover:bg-slate-700/50 transition-colors"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-slate-700/50 text-slate-200 hover:bg-slate-700/70 transition-colors"
                         >
-                          <Eye className="h-3 w-3" />
+                          <Eye className="h-4 w-4" />
                           <span>عرض التفاصيل</span>
                         </button>
-                      </div>
+                      )}
                     </td>
+
+
+
+
+
+
+
                   </tr>
                 );
               })}
@@ -365,7 +599,12 @@ export const InvoiceTable = ({
     </>
   );
 
-  return isMobile ? renderMobileView() : renderDesktopView();
+  return (
+    <>
+      {actionInvoice && <ActionModal />}
+      {isMobile ? renderMobileView() : renderDesktopView()}
+    </>
+  );
 };
 
 export default InvoiceTable;

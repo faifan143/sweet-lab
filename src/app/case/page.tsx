@@ -1,16 +1,21 @@
 "use client";
+import EditInvoiceModal from "@/components/common/EditInvoiceModal";
+import HomeInvoiceTable from "@/components/common/HomeInvoiceTable";
+import { InvoiceDetailsModal } from "@/components/common/InvoiceDetailsModal";
 import InvoiceForm from "@/components/common/InvoiceForm";
+import DeleteConfirmationModal from "@/components/common/invoices/DeleteConfirmationModal";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
 import { useMokkBar } from "@/components/providers/MokkBarContext";
-import { useFundInvoices } from "@/hooks/invoices/useInvoice";
+import { useDeleteInvoice, useFundInvoices } from "@/hooks/invoices/useInvoice";
 import {
   useMainTransferHistory,
   useTransferConfirmation,
 } from "@/hooks/invoices/useTransfers";
 import { Role, useRoles } from "@/hooks/users/useRoles";
-import { motion } from "framer-motion";
+import { Invoice, ProductInvoice } from "@/types/invoice.type";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -114,6 +119,10 @@ const RejectionModal = ({
 // Modified Case component with support for all invoice types
 const Case = () => {
   // State
+  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<ProductInvoice | null>(null);
+
   const { setSnackbarConfig } = useMokkBar();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
@@ -171,6 +180,30 @@ const Case = () => {
         });
       },
     });
+
+  const deleteInvoice = useDeleteInvoice({
+    onSuccess: () => {
+      setInvoiceToDelete(null);
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم حذف الفاتورة بنجاح",
+      });
+    },
+    onError: (error) => {
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: error?.response?.data?.message || "فشل في حذف الفاتورة",
+      });
+    },
+  });
+
+  const handleConfirmDelete = async () => {
+    if (invoiceToDelete) {
+      await deleteInvoice.mutateAsync(invoiceToDelete.id);
+    }
+  };
 
   // Reset to first page when search or filter changes
   useEffect(() => {
@@ -359,48 +392,7 @@ const Case = () => {
                   </div>
                 </div>
 
-                {/* Search and Filters */}
-                <div
-                  className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 px-4"
-                  dir="rtl"
-                >
-                  {/* Search */}
-                  <div className="relative md:col-span-1">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="بحث في السجلات..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:border-blue-500/30"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={() => setSearchTerm("")}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
 
-                  {/* Type Filter */}
-                  <div>
-                    <select
-                      value={filterType}
-                      onChange={(e) =>
-                        setFilterType(
-                          e.target.value as "all" | "income" | "expense"
-                        )
-                      }
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
-                    >
-                      <option value="all">جميع العمليات</option>
-                      <option value="income">الدخل فقط</option>
-                      <option value="expense">المصروفات فقط</option>
-                    </select>
-                  </div>
-                </div>
 
                 {/* Action Buttons for Adding Invoices */}
                 {hasAnyRole([Role.ADMIN, Role.TreasuryManager]) && (
@@ -595,8 +587,52 @@ const Case = () => {
                   </div>
                 )}
 
+
+                {/* Search and Filters */}
+                <div
+                  className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 px-4"
+                  dir="rtl"
+                >
+                  {/* Search */}
+                  <div className="relative md:col-span-1">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="بحث في السجلات..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:border-blue-500/30"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Type Filter */}
+                  <div>
+                    <select
+                      value={filterType}
+                      onChange={(e) =>
+                        setFilterType(
+                          e.target.value as "all" | "income" | "expense"
+                        )
+                      }
+                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                    >
+                      <option value="all">جميع العمليات</option>
+                      <option value="income">الدخل فقط</option>
+                      <option value="expense">المصروفات فقط</option>
+                    </select>
+                  </div>
+                </div>
+
                 {/* Transactions Table */}
-                <div className="container mx-auto px-4" dir="rtl">
+                {/* <div className="container mx-auto px-4" dir="rtl">
                   {isInvoicesLoading ? (
                     <div className="flex justify-center items-center py-20">
                       <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
@@ -692,7 +728,15 @@ const Case = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                </div> */}
+                <HomeInvoiceTable
+                  data={paginatedTransactions}
+                  // @ts-ignore
+                  onViewDetails={(invoice) => setSelectedInvoice(invoice)}
+                  onEditInvoice={(invoice) => setInvoiceToEdit(invoice)}
+                  onDeleteInvoice={(invoice) => setInvoiceToDelete(invoice)}
+                />
+
 
                 {/* Pagination for Invoices */}
                 {totalInvoicePages > 1 && (
@@ -1035,6 +1079,29 @@ const Case = () => {
           fundId={1}
         />
       )}
+
+      <AnimatePresence>
+        {selectedInvoice && (
+          <InvoiceDetailsModal
+            invoice={selectedInvoice}
+            onClose={() => setSelectedInvoice(null)}
+          />
+        )}
+        {invoiceToEdit && (
+          <EditInvoiceModal
+            invoice={invoiceToEdit}
+            onClose={() => setInvoiceToEdit(null)}
+          />
+        )}
+        {invoiceToDelete && (
+          <DeleteConfirmationModal
+            invoice={invoiceToDelete}
+            isDeleting={deleteInvoice.isPending}
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setInvoiceToDelete(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

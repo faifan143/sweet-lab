@@ -71,6 +71,7 @@ const TabContent: React.FC<TabContentProps> = ({
   }
 
   const filteredData = tableData.filter((invoice) => {
+    if (invoice.invoiceType != activeType) return false;
     // Then apply date filter
     if (dateFilter) {
       const invoiceDate = new Date(invoice.createdAt)
@@ -108,7 +109,7 @@ const TabContent: React.FC<TabContentProps> = ({
         onEditInvoice={(invoice) => setInvoiceToEdit(invoice)}
         onDeleteInvoice={(invoice) => setInvoiceToDelete(invoice)}
       />
-      <InvoiceStats data={filteredData} />
+      <InvoiceStats data={tableData} />
       <TransfersSection currentShiftId={currentShiftId} />
 
       <AnimatePresence>

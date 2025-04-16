@@ -8,17 +8,19 @@ import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
 import { StatusSummary } from "@/components/common/StatusSummary";
 import StatusTransitionModal from "@/components/common/StatusTransitionModal";
-import { useInvoices } from "@/hooks/invoices/useInvoice";
+import { useInvoices, useMarkInvoiceAsBreak } from "@/hooks/invoices/useInvoice";
 import { useInvoiceFilters } from "@/hooks/invoices/useInvoiceFilter";
 import { Invoice } from "@/types/invoice.type";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
+import BreakageConversionModal from "@/components/common/invoices/BreakageConversionModal";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
 
 const InvoiceManagementPage = () => {
   // Type toggle state - we'll add this without changing any hooks
   const [invoiceType, setInvoiceType] = useState<"income" | "expense">("income");
-
+  const { setSnackbarConfig } = useMokkBar()
   // Use the filter status to fetch the appropriate invoices
   const {
     activeStatus,
@@ -37,6 +39,8 @@ const InvoiceManagementPage = () => {
     isError,
     error,
   } = useInvoices(activeStatus as InvoiceStatus | "all");
+  const [invoiceForBreak, setInvoiceForBreak] = useState<Invoice | null>(null);
+  const markAsBreak = useMarkInvoiceAsBreak();
 
   // Modal states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -66,6 +70,41 @@ const InvoiceManagementPage = () => {
     setDateFilter({ startDate: null, endDate: null });
   };
 
+
+  // Handle conversion to breakage
+  const handleConvertToBreak = (invoice: Invoice) => {
+    setInvoiceForBreak(invoice);
+  };
+
+  // Handle confirm breakage conversion
+  const handleConfirmBreakConversion = async (initialPayment: number, notes: string) => {
+    if (!invoiceForBreak) return;
+
+    try {
+      await markAsBreak.mutateAsync({
+        id: invoiceForBreak.id,
+        data: {
+          initialPayment,
+          notes
+        }
+      });
+
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم تحويل الفاتورة إلى فاتورة كسر بنجاح"
+      });
+
+      setInvoiceForBreak(null);
+    } catch (error) {
+      console.error("Error converting to breakage:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء تحويل الفاتورة إلى فاتورة كسر"
+      });
+    }
+  };
   if (isError) {
     return (
       <div className="min-h-screen flex items-center justify-center text-danger">
@@ -146,6 +185,7 @@ const InvoiceManagementPage = () => {
                   setSelectedInvoice(invoice);
                   setTargetStatus(status);
                 }}
+                onConvertToBreak={handleConvertToBreak}
               />
             </motion.div>
           </div>
@@ -162,6 +202,16 @@ const InvoiceManagementPage = () => {
               setTargetStatus(null);
             }}
             targetStatus={targetStatus}
+          />
+        )}
+
+
+        {invoiceForBreak && (
+          <BreakageConversionModal
+            invoice={invoiceForBreak}
+            onClose={() => setInvoiceForBreak(null)}
+            onConfirm={handleConfirmBreakConversion}
+            isProcessing={markAsBreak.isPending}
           />
         )}
       </AnimatePresence>

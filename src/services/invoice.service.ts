@@ -108,6 +108,18 @@ export class InvoiceService {
     return response;
   };
 
+
+  static markInvoiceAsBreakage = async (id: string | number, data: {
+    "initialPayment": number,
+    "notes": string
+  }) => {
+    const response = await apiClient.post(
+      `/invoices/${id}/convert-to-break`,
+      data
+    );
+    return response;
+  };
+
   // New method for updating invoices
   static updateInvoice = async (id: number, data: UpdateInvoiceDTO) => {
     const response = await apiClient.put(`/invoices/${id}`, data);

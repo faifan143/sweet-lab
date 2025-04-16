@@ -220,3 +220,44 @@ export const useMarkInvoiceAsDebt = () => {
     },
   });
 };
+
+
+export const useMarkInvoiceAsBreak = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: {
+      id: string | number; data: {
+        "initialPayment": number,
+        "notes": string
+      }
+    }) =>
+      InvoiceService.markInvoiceAsBreakage(id, data),
+    onMutate: async ({ id }) => {
+      // Cancel outgoing queries for ["invoices"]
+      await queryClient.cancelQueries({ queryKey: ["invoices"] });
+
+      // Snapshot current cache
+      const previousInvoices = queryClient.getQueryData<Invoice[]>([
+        "invoices",
+      ]);
+
+      // Optimistically update the cache
+      queryClient.setQueryData<Invoice[]>(["invoices"], (old) =>
+        old?.map((invoice) =>
+          invoice.id === id ? { ...invoice, status: "debt" } : invoice
+        )
+      );
+
+      return { previousInvoices };
+    },
+    onError: (error, variables, context) => {
+      // Roll back to the previous cache state
+      queryClient.setQueryData(["invoices"], context?.previousInvoices);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+    },
+  });
+};

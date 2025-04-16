@@ -74,7 +74,8 @@ interface FormData {
   discount: number;
   paidStatus: boolean;
   notes?: string;
-  advanceId?: number; // Added for tracking selected advance
+  advanceId?: number;
+  additionalAmount: number;
 }
 
 interface FormItem {
@@ -137,6 +138,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     firstPayment: 0,
     discount: 0,
     paidStatus: true,
+    additionalAmount: 0,
   });
 
   // Selected advance state
@@ -480,6 +482,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               formData.paymentType === "breakage"
                 ? formData.firstPayment
                 : undefined,
+            additionalAmount: formData.additionalAmount, // Add the additional amount
           } as IncomeProductsDTO);
         } else {
           await createExpenseProducts.mutateAsync(
@@ -1139,118 +1142,167 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
           {/* Group Selection */}
           {type == "products" && (
-            <div className="space-y-2">
-              <label className="block text-slate-200">التصنيف</label>
-              <select
-                value={selectedGroupId}
-                onChange={(e) => {
-                  setSelectedGroupId(Number(e.target.value));
-                  setSelectedItem(0); // Reset selected item when group changes
-                }}
-                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-              >
-                <option value={0}>اختر التصنيف</option>
+            <div className="space-y-4">
+              <label className="block text-slate-200 mb-2">التصنيف</label>
+
+              {/* Category Clouds Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {mode == "expense"
                   ? itemGroups
                     ?.filter((itemGroup) => itemGroup.type == "raw")
                     .map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
+                      <div
+                        key={group.id}
+                        onClick={() => {
+                          setSelectedGroupId(group.id);
+                          setSelectedItem(0); // Reset selected item when group changes
+                        }}
+                        className={`
+                  rounded-lg shadow-md p-4 text-center cursor-pointer transition-all duration-200
+                  border-2 transform hover:scale-105 hover:shadow-lg
+                  ${selectedGroupId === group.id
+                            ? "bg-blue-500/30 border-blue-500/70 text-blue-200"
+                            : "bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-700/50"
+                          }
+                `}
+                      >
+                        <div className="font-medium text-lg">{group.name}</div>
+                      </div>
                     ))
                   : itemGroups
                     ?.filter((itemGroup) => itemGroup.type == "production")
                     .map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name}
-                      </option>
+                      <div
+                        key={group.id}
+                        onClick={() => {
+                          setSelectedGroupId(group.id);
+                          setSelectedItem(0); // Reset selected item when group changes
+                        }}
+                        className={`
+                  rounded-lg shadow-md p-4 text-center cursor-pointer transition-all duration-200
+                  border-2 transform hover:scale-105 hover:shadow-lg
+                  ${selectedGroupId === group.id
+                            ? "bg-blue-500/30 border-blue-500/70 text-blue-200"
+                            : "bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-700/50"
+                          }
+                `}
+                      >
+                        <div className="font-medium text-lg">{group.name}</div>
+                      </div>
                     ))}
-              </select>
+              </div>
             </div>
           )}
 
           {/* Item Selection */}
           {(selectedGroupId > 0 || isPurchaseInvoice) && (
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* Product Selection */}
-              <div className="space-y-2 md:col-span-full">
-                <label className="block text-slate-200">المنتج</label>
-                <select
-                  value={selectedItem}
-                  onChange={(e) => handleItemSelect(Number(e.target.value))}
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                >
-                  <option value={0}>اختر المنتج</option>
+            <>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="text-slate-200 font-medium">اختيار المنتج</div>
+                  {selectedItem > 0 && (
+                    <button
+                      onClick={() => setSelectedItem(0)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                    >
+                      إلغاء الاختيار
+                    </button>
+                  )}
+                </div>
+
+                {/* Products Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {items
-                    ?.filter(
-                      (item) => item.groupId == selectedGroupId
-                      // isPurchaseInvoice ? item.type === "raw" : true
-                    )
+                    ?.filter((item) => item.groupId == selectedGroupId)
                     .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
+                      <div
+                        key={item.id}
+                        onClick={() => handleItemSelect(Number(item.id))}
+                        className={`
+                rounded-lg shadow-md p-4 cursor-pointer transition-all duration-200
+                border-2 transform hover:scale-105 hover:shadow-lg
+                ${selectedItem === item.id
+                            ? "bg-emerald-500/30 border-emerald-500/70 text-emerald-200"
+                            : "bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-700/50"
+                          }
+              `}
+                      >
+                        <div className="font-medium text-center">{item.name}</div>
+                      </div>
                     ))}
-                </select>
+                </div>
               </div>
 
               {selectedItem > 0 && (
-                <>
-                  {/* Unit Selection */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="block text-slate-200">الوحدة</label>
-                    <select
-                      value={selectedUnitIndex}
-                      onChange={handleUnitChange}
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    >
-                      {items
-                        ?.find((item) => item.id === selectedItem)
-                        ?.units?.map((unit, index) => (
-                          <option key={index} value={index}>
-                            {unit.unit}
-                          </option>
-                        ))}
-                    </select>
+                <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {/* Unit Selection */}
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="block text-slate-200">الوحدة</label>
+                      <select
+                        value={selectedUnitIndex}
+                        onChange={handleUnitChange}
+                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                      >
+                        {items
+                          ?.find((item) => item.id === selectedItem)
+                          ?.units?.map((unit, index) => (
+                            <option key={index} value={index}>
+                              {unit.unit}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {/* Factor Input */}
+                    <div className="space-y-2">
+                      <label className="block text-slate-200">
+                        معامل التحويل
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedItemFactor}
+                        disabled
+                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-slate-200">الكمية</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(Number(e.target.value))}
+                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-slate-200">السعر</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={selectedItemPrice}
+                        onChange={(e) => setSelectedItemPrice(Number(e.target.value))}
+                        className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                      />
+                    </div>
                   </div>
 
-                  {/* Factor Input */}
-                  <div className="space-y-2">
-                    <label className="block text-slate-200">
-                      معامل التحويل
-                    </label>
-                    <input
-                      type="number"
-                      value={selectedItemFactor}
-                      disabled
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-slate-200">الكمية</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-slate-200">السعر</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={selectedItemPrice}
-                      onChange={(e) => setSelectedItemPrice(Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                    />
-                  </div>
-                </>
+                  {/* Add Item Button */}
+                  <button
+                    onClick={addItem}
+                    disabled={!selectedItem || selectedUnitIndex < 0}
+                    className="flex items-center gap-2 px-4 py-2 mt-4 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                  >
+                    <Plus className="h-5 w-5" />
+                    إضافة منتج
+                  </button>
+                </div>
               )}
-            </div>
+            </>
           )}
+
 
           {/* Add Item Button */}
           <button
@@ -1305,26 +1357,48 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
           {/* Trays Count */}
           {type === "products" && mode === "income" && (
-            <div className="space-y-2">
-              <label className="block text-slate-200">عدد الفوارغ</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="0"
-                  value={trayCount === undefined ? "" : trayCount}
-                  onChange={(e) => {
-                    const value = e.target.value === ""
-                      ? undefined
-                      : Number(e.target.value);
-                    setTrayCount(value);
-                  }}
-                  className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                />
-                {trayCount === undefined && (
-                  <div className="text-red-400 text-sm mt-1">
-                    يجب إدخال عدد الفوارغ
-                  </div>
-                )}
+            <div>
+              <div className="space-y-2">
+                <label className="block text-slate-200">عدد الفوارغ</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    value={trayCount === undefined ? "" : trayCount}
+                    onChange={(e) => {
+                      const value = e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value);
+                      setTrayCount(value);
+                    }}
+                    className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                  />
+                  {trayCount === undefined && (
+                    <div className="text-red-400 text-sm mt-1">
+                      يجب إدخال عدد الفوارغ
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 mt-4  ">
+                <label className="block text-slate-200">
+                  المبلغ الإضافي
+                </label>
+                <div className="relative">
+                  <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type="number"
+                    name="additionalAmount"
+                    value={formData.additionalAmount}
+                    onChange={handleChange}
+                    min="0"
+                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                    placeholder="قيمة المبلغ الإضافي"
+                  />
+                </div>
+                <p className="text-xs text-slate-400">
+                  يمكنك إضافة مبلغ إضافي على الفاتورة مثل قيمة التوصيل أو رسوم إضافية
+                </p>
               </div>
             </div>
           )}
@@ -1360,7 +1434,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             </div>
           )}
 
-          {/* Discount Field */}
+          {/* Discount and Additional Amount Fields */}
           {!isPurchaseInvoice && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1381,14 +1455,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
               <div className="space-y-2">
                 <label className="block text-slate-200">
-                  الإجمالي بعد الخصم
+                  الإجمالي بعد الخصم والإضافات
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
                     type="text"
                     readOnly
-                    value={formData.totalAmount - formData.discount}
+                    value={formData.totalAmount - formData.discount + (formData.additionalAmount || 0)}
                     className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                   />
                 </div>
@@ -1409,7 +1483,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   readOnly
                   value={(
                     formData.totalAmount -
-                    formData.discount -
+                    formData.discount +
+                    (formData.additionalAmount || 0) -
                     formData.firstPayment
                   ).toFixed(2)}
                   className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
@@ -1417,6 +1492,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               </div>
             </div>
           )}
+
 
           {/* Notes */}
           <div className="space-y-2">

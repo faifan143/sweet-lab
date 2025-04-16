@@ -5,6 +5,7 @@ import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import ShiftSummaryModal from "@/components/common/ShiftSummaryModal";
 import SplineBackground from "@/components/common/SplineBackground";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
 import {
   useFetchShiftSummary,
   useShiftInvoices,
@@ -43,6 +44,13 @@ const Shifts = () => {
   const [invoicesModalType, setInvoicesModalType] = useState<
     "boothInvoices" | "universityInvoices" | "generalInvoices" | null
   >(null);
+
+  // State for viewing invoice details
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<any | null>(null);
+  const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<any | null>(null);
+
+  // Access the snackbar for notifications
+  const { setSnackbarConfig } = useMokkBar();
 
   const itemsPerPage = 10;
   const { data: shifts, isLoading } = useShifts();
@@ -87,6 +95,42 @@ const Shifts = () => {
   const handleCloseInvoiceModal = () => {
     setSelectedInvoicesShift(null);
     setInvoicesModalType(null);
+  };
+
+  // Handle invoice actions
+  const handleViewInvoice = (invoice: any) => {
+    setSelectedInvoiceForView(invoice);
+    // You could open a separate modal here to view invoice details
+    setSnackbarConfig({
+      open: true,
+      severity: "info",
+      message: `عرض تفاصيل الفاتورة رقم ${invoice.id}`,
+    });
+    console.log("View invoice:", invoice);
+  };
+
+  const handleEditInvoice = (invoice: any) => {
+    setSelectedInvoiceForEdit(invoice);
+    // You could open an edit form modal here
+    setSnackbarConfig({
+      open: true,
+      severity: "info",
+      message: `تعديل الفاتورة رقم ${invoice.id}`,
+    });
+    console.log("Edit invoice:", invoice);
+  };
+
+  const handleDeleteInvoice = (invoice: any) => {
+    // Show confirmation dialog or directly handle deletion
+    if (window.confirm(`هل أنت متأكد من رغبتك في حذف الفاتورة رقم ${invoice.id}؟`)) {
+      // Implement actual deletion logic here
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: `تم حذف الفاتورة رقم ${invoice.id} بنجاح`,
+      });
+      console.log("Delete invoice:", invoice);
+    }
   };
 
   // Filter and search logic

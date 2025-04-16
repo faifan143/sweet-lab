@@ -670,7 +670,6 @@ export default function Page() {
               renderShiftControls()}
 
             {/* Fund balances are now shown inside the transfer modal */}
-
             {theShiftIsOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
