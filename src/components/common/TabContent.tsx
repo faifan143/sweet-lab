@@ -71,8 +71,6 @@ const TabContent: React.FC<TabContentProps> = ({
   }
 
   const filteredData = tableData.filter((invoice) => {
-    // First filter by invoice type
-    if (invoice.invoiceType !== activeType) return false;
     // Then apply date filter
     if (dateFilter) {
       const invoiceDate = new Date(invoice.createdAt)

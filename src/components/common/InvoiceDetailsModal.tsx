@@ -70,19 +70,14 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="text-slate-400">نوع الفاتورة</p>
-                <p className="text-slate-200">
-                  {invoice.invoiceType === "income" ? "دخل" : "مصروف"}
-                </p>
-              </div>
-              <div className="space-y-2">
                 <p className="text-slate-400">التصنيف</p>
                 <p className="text-slate-200">
                   {invoice.invoiceCategory === "products"
                     ? "منتجات"
                     : invoice.invoiceCategory === "direct"
                       ? "مباشر"
-                      : "دين"}
+                      : invoice.invoiceCategory === "advance"
+                        ? "سلفة" : "دين"}
                 </p>
               </div>
             </div>

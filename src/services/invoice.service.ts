@@ -40,7 +40,7 @@ export class InvoiceService {
 
   static async fetchFundInvoices(fundId: string): Promise<Invoice[]> {
     const response = await apiClient.get<Invoice[]>(
-      "/invoices?fundid=" + fundId
+      "/invoices?fundId=" + fundId
     );
     return response;
   }

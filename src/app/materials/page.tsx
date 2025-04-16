@@ -5,13 +5,14 @@ import MaterialTable from "@/components/common/MaterialTable";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useDeleteItem, useItems } from "@/hooks/items/useItems";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 import { Item, ItemType } from "@/types/items.type";
 import { motion } from "framer-motion";
 import { Plus, Search, Filter } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 const MaterialsPage = () => {
   // States
@@ -28,13 +29,24 @@ const MaterialsPage = () => {
     isOpen: false,
     itemId: null,
   });
-
+  const { setSnackbarConfig } = useMokkBar()
   const { hasAnyRole } = useRoles();
 
   // Queries
   const { data: items, isLoading: isLoadingItems } = useItems();
   const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
   const deleteItem = useDeleteItem();
+
+
+  useEffect(() => {
+    if (deleteItem.isError) {
+      setSnackbarConfig({
+        open: true,
+        message: deleteItem.error?.message || "حدث خطأ أثناء الحذف",
+        severity: "error"
+      });
+    }
+  }, [deleteItem.isError]);
 
   // Helper function to get the default unit price for display
   const getDefaultUnitPrice = (item: Item): number => {

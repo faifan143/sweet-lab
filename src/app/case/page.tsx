@@ -290,8 +290,8 @@ const Case = () => {
               <button
                 onClick={() => setActiveTab("invoices")}
                 className={`px-4 py-3 font-medium transition-colors ${activeTab === "invoices"
-                    ? "text-blue-400 border-b-2 border-blue-400"
-                    : "text-white hover:text-blue-200"
+                  ? "text-blue-400 border-b-2 border-blue-400"
+                  : "text-white hover:text-blue-200"
                   }`}
               >
                 فواتير الخزينة
@@ -299,8 +299,8 @@ const Case = () => {
               <button
                 onClick={() => setActiveTab("transfers")}
                 className={`px-4 py-3 font-medium transition-colors ${activeTab === "transfers"
-                    ? "text-blue-400 border-b-2 border-blue-400"
-                    : "text-white hover:text-blue-200"
+                  ? "text-blue-400 border-b-2 border-blue-400"
+                  : "text-white hover:text-blue-200"
                   }`}
               >
                 سجل التحويلات
@@ -672,8 +672,8 @@ const Case = () => {
                                 <td className="p-4 text-slate-300">
                                   <div
                                     className={`font-medium ${transaction.invoiceType === "income"
-                                        ? "text-emerald-400"
-                                        : "text-red-400"
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
                                       }`}
                                   >
                                     {transaction.totalAmount} ليرة
@@ -756,8 +756,8 @@ const Case = () => {
                   <button
                     onClick={() => setTransferStatus("pending")}
                     className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "pending"
-                        ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                        : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
+                      ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                      : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
                       }`}
                   >
                     <Clock className="h-4 w-4 inline-block mx-2" />
@@ -766,8 +766,8 @@ const Case = () => {
                   <button
                     onClick={() => setTransferStatus("confirmed")}
                     className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "confirmed"
-                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                        : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                      : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
                       }`}
                   >
                     <CheckCircle className="h-4 w-4 inline-block mx-2" />
@@ -776,8 +776,8 @@ const Case = () => {
                   <button
                     onClick={() => setTransferStatus("rejected")}
                     className={`px-4 py-2 rounded-lg transition-colors ${transferStatus === "rejected"
-                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                        : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
+                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                      : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
                       }`}
                   >
                     <XCircle className="h-4 w-4 inline-block mx-2" />
