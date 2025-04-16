@@ -10,6 +10,7 @@ import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useDeleteItem, useItems } from "@/hooks/items/useItems";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 import { Item, ItemType } from "@/types/items.type";
+import { AxiosError } from "axios";
 import { motion } from "framer-motion";
 import { Plus, Search, Filter } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -37,13 +38,21 @@ const MaterialsPage = () => {
   const { data: itemGroups, isLoading: isLoadingGroups } = useItemGroups();
   const deleteItem = useDeleteItem();
 
-
   useEffect(() => {
     if (deleteItem.isError) {
+      const error = deleteItem.error as AxiosError<{ message: string }>;
+
+      console.log("[Snackbar Message] [Delete Item] :", error);
+
+      const arabicError =
+        error.response?.data.message ||
+        error.message ||
+        "حدث خطأ أثناء الحذف";
+
       setSnackbarConfig({
         open: true,
-        message: deleteItem.error?.message || "حدث خطأ أثناء الحذف",
-        severity: "error"
+        message: arabicError,
+        severity: "error",
       });
     }
   }, [deleteItem.isError]);
