@@ -41,7 +41,7 @@ export const useFundInvoices = (fundId: string) => {
 };
 
 export const useCurrentInvoices = (isShiftOpen: boolean) => {
-  return useQuery<ShiftData | null, Error>({
+  return useQuery<ShiftData | false, Error>({
     queryKey: ["currentInvoices"],
     queryFn: InvoiceService.fetchCurrentInvoices,
     enabled: isShiftOpen,

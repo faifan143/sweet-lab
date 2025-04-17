@@ -34,9 +34,10 @@ import { FundType, InvoiceType, ShiftType } from "@/types/types";
 
 // Utils
 import PageSpinner from "@/components/common/PageSpinner";
-import { useFunds, useTransferToMain } from "@/hooks/funds/useFunds";
+import { useFunds } from "@/hooks/funds/useFunds";
 import {
-  useTransferAnyToGeneral
+  useTransferAnyToGeneral,
+  useTransferAnyToMain
 } from "@/hooks/invoices/useTransfers";
 import { Role, useRoles } from "@/hooks/users/useRoles";
 import { setLoading } from "@/redux/reducers/wrapper.slice";
@@ -275,7 +276,9 @@ export default function Page() {
     0
   );
   const lastShift = shifts?.find((item) => item.id === lastShiftId);
-  const theShiftIsOpen = !lastShift?.closeTime && isShiftsSuccess;
+  console.log("last shift is : ", lastShift)
+  const theShiftIsOpen = shifts?.length! > 0 && (!lastShift?.closeTime && isShiftsSuccess);
+
   const {
     data: currentInvoices,
     isLoading: isCurrentInvoicesLoading,
@@ -330,9 +333,27 @@ export default function Page() {
       },
     });
 
+
   // Updated transfer to main mutation using the new hook
   const { mutateAsync: transferToMain, isPending: isTransferringToMain } =
-    useTransferToMain();
+    useTransferAnyToMain({
+      onSuccess: () => {
+        setShowTransferToMainModal(false);
+        setSnackbarConfig({
+          open: true,
+          severity: "success",
+          message: "تم تحويل المبلغ بنجاح إلى الخزينة ",
+        });
+        queryClient.invalidateQueries({ queryKey: ["funds"] });
+      },
+      onError: (error) => {
+        setSnackbarConfig({
+          open: true,
+          severity: "error",
+          message: error?.response?.data?.message || "فشل في تحويل المبلغ",
+        });
+      },
+    });
 
   const {
     data: shiftSummary,
@@ -446,7 +467,7 @@ export default function Page() {
     notes: string;
   }) => {
     try {
-      await transferToMain({ amount: data.amount });
+      await transferToMain({ amount: data.amount, sourceId: getFundId(activeTab), notes: data.notes });
     } catch (error) {
       console.error("Failed to transfer to main:", error);
     }

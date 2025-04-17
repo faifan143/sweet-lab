@@ -19,7 +19,7 @@ export const useTransferAnyToGeneral = (options?: {
   });
 };
 
-export const useTransferGeneralToMain = (options?: {
+export const useTransferAnyToMain = (options?: {
   onSuccess: () => void;
   onError: (error: any) => void;
 }) => {

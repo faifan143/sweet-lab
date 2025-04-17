@@ -12,7 +12,7 @@ import {
 import { useItemGroups } from "@/hooks/items/useItemGroups";
 import { useItems } from "@/hooks/items/useItems";
 import { Advance } from "@/types/advances.type";
-import { CustomerType } from "@/types/customers.type";
+import { CreateCustomerRequest, CustomerType } from "@/types/customers.type";
 import {
   DirectDebtDTO,
   ExpenseProductsDTO,
@@ -39,6 +39,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import Select, { GroupBase, StylesConfig } from 'react-select';
 import { useMokkBar } from "../providers/MokkBarContext";
+// Import at the top of InvoiceForm.tsx
+import { useFetchCategories } from "@/hooks/customers/useCustomersCategories";
+import { Tag } from "lucide-react";
 
 // Define interfaces for select options
 interface CustomerOption {
@@ -95,6 +98,7 @@ interface CustomerFormData {
   name: string;
   phone: string;
   notes: string;
+  categoryId: number
 }
 
 const InvoiceForm: React.FC<InvoiceFormProps> = ({
@@ -116,11 +120,12 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [showAddCustomer, setShowAddCustomer] = useState(false);
 
   // Setup React Hook Form
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<CustomerFormData>({
+  const { control, handleSubmit, reset, formState: { errors }, watch } = useForm<CustomerFormData>({
     defaultValues: {
       name: "",
       phone: "",
-      notes: ""
+      notes: "",
+      categoryId: 0
     }
   });
 
@@ -171,6 +176,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [selectedItemUnit, setSelectedItemUnit] = useState<string>("");
   const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState<number>(-1);
+
+  // Inside the InvoiceForm component, add categories data
+  const { data: categories } = useFetchCategories();
 
   // Mutations with success/error handling
   const createIncomeProducts = useCreateIncomeProducts({
@@ -588,12 +596,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     };
 
     // Form submission handler for adding a new customer
-    const onSubmitNewCustomer: SubmitHandler<CustomerFormData> = async (data) => {
+    const onSubmitNewCustomer: SubmitHandler<CustomerFormData> = async (data: CreateCustomerRequest) => {
       try {
         const response = await createCustomer.mutateAsync({
           name: data.name,
           phone: data.phone,
-          notes: data.notes || null
+          notes: data.notes || null,
+          categoryId: data.categoryId || null
         });
 
         // Set the newly created customer as selected
@@ -899,6 +908,46 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   )}
                 </div>
 
+                {/* Category Field */}
+                <div className="space-y-2">
+                  <label htmlFor="categoryId" className="block text-slate-200">التصنيف</label>
+                  {categories && categories.length > 0 ? (
+                    <Controller
+                      name="categoryId"
+                      control={control}
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          id="categoryId"
+                          className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">بدون تصنيف</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    />
+                  ) : (
+                    <div className="text-sm text-slate-400">
+                      لا توجد تصنيفات متاحة. يمكنك <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('add-category'))} className="text-purple-400 hover:underline">إضافة تصنيف جديد</button> أولاً.
+                    </div>
+                  )}
+
+                  {watch("categoryId") && categories && (
+                    <div className="mt-2 flex">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <Tag className="h-3 w-3" />
+                        {categories.find(c => c.id === Number(watch("categoryId")))?.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Notes Field */}
                 <div className="space-y-2">
                   <label htmlFor="notes" className="block text-slate-200">ملاحظات (اختياري)</label>
@@ -919,7 +968,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={createCustomer.isPending}
+                  disabled={createCustomer.isPending || (categories && categories.length === 0)}
                   className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg w-full mt-2 transition-colors disabled:opacity-50"
                 >
                   {createCustomer.isPending ? (

@@ -72,13 +72,13 @@ export class TransferService {
     data: GeneralToMainBody
   ): Promise<GeneralToMainResponse> {
     const res = await apiClient.post<GeneralToMainResponse>(
-      "/invoices/transfer/to-main/request",
+      `/invoices/transfer/from/${data.sourceId}/to-main/request`,
       data
     );
     return res;
   }
 
-  static async generalToMainConfirmation() {}
+  static async generalToMainConfirmation() { }
 
   static async getTransfers(status: string): Promise<TransferRequest> {
     const res = await apiClient.get<TransferRequest>(

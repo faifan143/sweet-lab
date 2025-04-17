@@ -145,6 +145,7 @@ export const useShifts = () => {
     queryKey: ["shifts"],
     queryFn: async () => {
       const response = (await apiClient.get("shifts")) as QueryShiftType[];
+
       return response;
     },
     // enabled: false,

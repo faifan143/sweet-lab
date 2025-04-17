@@ -45,9 +45,14 @@ export class InvoiceService {
     return response;
   }
 
-  static async fetchCurrentInvoices(): Promise<ShiftData> {
-    const response = await apiClient.get<ShiftData>("/invoices/current-shift");
-    return response;
+  static async fetchCurrentInvoices(): Promise<ShiftData | false> {
+
+    try {
+      const response = await apiClient.get<ShiftData>("/invoices/current-shift");
+      return response;
+    } catch (error) {
+      return false;
+    }
   }
 
   static async fetchInvoiceById(

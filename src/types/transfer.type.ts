@@ -4,7 +4,7 @@ export interface AnyToGeneralBody {
   notes: string;
 }
 
-export type GeneralToMainBody = Omit<AnyToGeneralBody, "sourceId">;
+export type GeneralToMainBody = AnyToGeneralBody;
 
 export interface AnyToGeneralResponse {
   success: boolean;
