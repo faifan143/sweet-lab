@@ -49,7 +49,7 @@ export class TransferService {
   }
 
   static async generalToNextShift(
-    data: GeneralToMainBody
+    data: Omit<GeneralToMainBody, "sourceId">
   ): Promise<GeneralToNextShift> {
     const res = await apiClient.post<GeneralToNextShift>(
       "/funds/transfer-for-next-shift",

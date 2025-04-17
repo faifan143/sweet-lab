@@ -389,8 +389,8 @@ const Page = () => {
                                 );
                               }}
                               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedRoles.includes(role.value as Role)
-                                  ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50"
-                                  : "bg-slate-700/50 text-slate-300 border-2 border-transparent hover:border-slate-600/50"
+                                ? "bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500/50"
+                                : "bg-slate-700/50 text-slate-300 border-2 border-transparent hover:border-slate-600/50"
                                 }`}
                             >
                               {role.label}
@@ -455,10 +455,10 @@ const Page = () => {
                                   <span
                                     key={index}
                                     className={`text-xs px-2 py-1 rounded-full ${role === "ADMIN"
-                                        ? "bg-red-400/10 text-red-400"
-                                        : role === "MANAGER"
-                                          ? "bg-blue-400/10 text-blue-400"
-                                          : "bg-emerald-400/10 text-emerald-400"
+                                      ? "bg-red-400/10 text-red-400"
+                                      : role === "MANAGER"
+                                        ? "bg-blue-400/10 text-blue-400"
+                                        : "bg-emerald-400/10 text-emerald-400"
                                       }`}
                                   >
                                     {role === "ADMIN"
@@ -656,10 +656,10 @@ const Page = () => {
                             </div>
                             <p
                               className={`font-semibold ${transaction.type === "deposit"
-                                  ? "text-emerald-400"
-                                  : transaction.type === "withdrawal"
-                                    ? "text-red-400"
-                                    : "text-blue-400"
+                                ? "text-emerald-400"
+                                : transaction.type === "withdrawal"
+                                  ? "text-red-400"
+                                  : "text-blue-400"
                                 }`}
                             >
                               {transaction.type === "withdrawal" ? "-" : ""}$
