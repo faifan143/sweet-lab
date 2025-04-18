@@ -110,6 +110,7 @@ export interface IncomeProductsDTO extends BaseInvoiceDTO {
   // New fields for breakage type
   isBreak?: boolean;
   firstPayment?: number;
+  additionalAmount: number
 }
 
 // Expense Products Invoice DTO

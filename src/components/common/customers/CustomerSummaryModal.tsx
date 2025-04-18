@@ -523,7 +523,7 @@ const CustomerSummaryModal = ({
                                                                                 المبلغ
                                                                             </th>
                                                                             <th className="text-right text-slate-200 p-3 text-sm">
-                                                                                الخصم
+                                                                                نوع الفاتورة
                                                                             </th>
                                                                             <th className="text-right text-slate-200 p-3 text-sm">
                                                                                 الحالة
@@ -550,9 +550,7 @@ const CustomerSummaryModal = ({
                                                                                         ل.س
                                                                                     </td>
                                                                                     <td className="p-3 text-slate-300">
-                                                                                        {formatCurrency(invoice.discount)}{" "}
-                                                                                        ل.س
-                                                                                    </td>
+                                                                                        {invoice.paidStatus ? "مدفوعة" : "غير مدفوعة"}                                                                                    </td>
                                                                                     <td className="p-3">
                                                                                         <div className="flex items-center gap-2">
                                                                                             {getStatusIcon(invoice)}

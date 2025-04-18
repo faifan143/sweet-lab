@@ -270,7 +270,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === "totalAmount" || name === "discount" || name === "firstPayment"
+        name === "totalAmount" ||
+          name === "discount" ||
+          name === "firstPayment" ||
+          name === "additionalAmount"
           ? Number(value)
           : value,
     }));
@@ -333,6 +336,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       setSelectedItemFactor(unitInfo.factor);
     }
   };
+
+
+  const calculateTotal = () => {
+    const totalAmount = Number(formData.totalAmount) || 0;
+    const discount = Number(formData.discount) || 0;
+    const additionalAmount = Number(formData.additionalAmount) || 0;
+    return totalAmount - discount + additionalAmount;
+  };
+
+
 
   const getTitle = () => {
     switch (type) {
@@ -471,7 +484,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           invoiceCategory: "products" as const,
           paidStatus: formData.paymentType == "paid",
           isBreak: formData.paymentType == "breakage",
-          totalAmount: formData.totalAmount,
+          totalAmount: calculateTotal(),
           trayCount: mode == "income" ? trayCount : 0,
           items: formItems.map((item) => ({
             quantity: item.quantity,
@@ -490,7 +503,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               formData.paymentType === "breakage"
                 ? formData.firstPayment
                 : undefined,
-            additionalAmount: formData.additionalAmount, // Add the additional amount
+            additionalAmount: Number(formData.additionalAmount) || 0,
           } as IncomeProductsDTO);
         } else {
           await createExpenseProducts.mutateAsync(
@@ -1511,7 +1524,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   <input
                     type="text"
                     readOnly
-                    value={formData.totalAmount - formData.discount + (formData.additionalAmount || 0)}
+                    value={calculateTotal()}
                     className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
                   />
                 </div>
