@@ -10,6 +10,7 @@ import {
   Clock,
   CreditCardIcon,
   LayoutDashboard,
+  ListOrdered,
   LogOut,
   Menu,
   Package,
@@ -215,6 +216,12 @@ const Navbar = () => {
         Role.TrayManager,
       ], // Only Admin can access management
       items: [
+        {
+          name: "الطلبيات",
+          icon: ListOrdered,
+          href: "/orders",
+          roles: [Role.ADMIN, Role.MANAGER],
+        },
         {
           name: "الورديات",
           icon: Clock,

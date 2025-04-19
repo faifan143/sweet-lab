@@ -20,6 +20,7 @@ export interface AdvanceInvoiceResponse extends Invoice {
     name: string;
     phone: string;
     notes: string;
+    categoryId: string;
     createdAt: string;
     updatedAt: string;
   };

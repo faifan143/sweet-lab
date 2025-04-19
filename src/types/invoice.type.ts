@@ -12,8 +12,7 @@ export interface Invoice {
     name: string;
     phone: string;
     notes: string | null;
-    createdAt: string;
-    updatedAt: string;
+    categoryId: string;
   };
   totalAmount: number;
   discount: number;
