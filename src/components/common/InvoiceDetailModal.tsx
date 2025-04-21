@@ -152,10 +152,10 @@ const InvoiceDetailModal = ({
                   <span>المجموع الكلي:</span>
                   <span>{formatCurrency(invoice.totalAmount)}</span>
                 </div>
-                <div className="flex justify-between text-slate-300">
+                {invoice.invoiceCategory == "products" && invoice.invoiceType == "income" && <div className="flex justify-between text-slate-300">
                   <span>الفوارغ:</span>
                   <span>{invoice.trayCount}</span>
-                </div>
+                </div>}
                 <div className="flex justify-between text-slate-300">
                   <span>الخصم:</span>
                   <span>{formatCurrency(invoice.discount)}</span>

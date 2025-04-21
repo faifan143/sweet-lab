@@ -101,6 +101,7 @@ export interface OrderCategory {
     description?: string;
     createdAt?: Date;
     updatedAt?: Date;
+    customers?: AllCustomerType[]
 }
 
 export interface OrderResponseDto {

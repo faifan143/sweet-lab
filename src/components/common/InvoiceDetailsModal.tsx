@@ -158,7 +158,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({
               </div>
             </div>
           )}
-          {invoice.invoiceCategory == "products" && (
+          {invoice.invoiceCategory == "products" && invoice.invoiceType == "income" && (
             <div className="bg-slate-700/30 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-slate-200 mb-4">
                 عدد الفوارغ

@@ -1,12 +1,13 @@
 import { useFetchCustomers } from '@/hooks/customers/useCustomers';
 import { useItems } from '@/hooks/items/useItems';
-import { useCreateOrder, useOrderCategories } from '@/hooks/useOrders';
+import { useOrderCategories, useUpdateOrder } from '@/hooks/useOrders';
 import { formatCurrency } from '@/utils/formatters';
 import {
     AlertCircle,
     Calendar,
     CreditCard,
     DollarSign,
+    Edit,
     FileText,
     Package,
     Plus,
@@ -18,6 +19,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { OrderResponseDto, UpdateOrder } from '@/types/orders.type';
 
 interface ItemUnit {
     unit: string;
@@ -33,6 +35,7 @@ interface Item {
 }
 
 interface OrderItem {
+    id?: number;
     itemId: string | number;
     quantity: number | string;
     unitPrice: number | string;
@@ -55,27 +58,20 @@ interface OrderErrors {
     [key: string]: string | undefined;
 }
 
-interface CreateOrderModalProps {
+interface EditOrderModalProps {
+    order: OrderResponseDto | null;
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
 }
 
-const INITIAL_FORM_DATA: OrderFormData = {
-    customerId: '',
-    categoryId: '',
-    notes: '',
-    paidStatus: false,
-    isForToday: false,
-    items: [{ itemId: '', quantity: '1', unitPrice: '0', unit: '', notes: '' }]
-};
-
-const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
+const EditOrderModal: React.FC<EditOrderModalProps> = ({
+    order,
     isOpen,
     onClose,
     onSuccess
 }) => {
-    // Query hooks with proper error handling
+    // Query hooks
     const {
         data: customers = [],
         isLoading: isLoadingCustomers,
@@ -95,19 +91,71 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     } = useItems();
 
     const {
-        mutate: createOrder,
+        mutate: updateOrder,
         isPending,
-        error: createOrderError
-    } = useCreateOrder();
+        error: updateOrderError
+    } = useUpdateOrder();
 
-    // State management
-    const [formData, setFormData] = useState<OrderFormData>({ ...INITIAL_FORM_DATA });
+    // State for form data
+    const [formData, setFormData] = useState<OrderFormData>({
+        customerId: '',
+        categoryId: '',
+        notes: '',
+        paidStatus: false,
+        isForToday: false, // Default to false
+        items: [{ itemId: '', quantity: '1', unitPrice: '0', unit: '', notes: '' }]
+    });
+
     const [totalAmount, setTotalAmount] = useState<number>(0);
     const [errors, setErrors] = useState<OrderErrors>({});
     const [activeItemIndex, setActiveItemIndex] = useState<number>(0);
     const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
+    const [customerSearchTerm, setCustomerSearchTerm] = useState<string>('');
+    const [itemSearchTerm, setItemSearchTerm] = useState<string>('');
 
-    // Display errors to console for debugging
+    // Initialize form with order data when available
+    useEffect(() => {
+        if (order && isOpen) {
+            const isToday = checkIfToday(order.scheduledFor);
+
+            setFormData({
+                customerId: order.customerId,
+                categoryId: order.categoryId,
+                notes: order.notes || '',
+                paidStatus: order.paidStatus || false,
+                isForToday: isToday,
+                items: order.items.map(item => ({
+                    id: item.id,
+                    itemId: item.itemId,
+                    quantity: item.quantity.toString(),
+                    unitPrice: item.unitPrice.toString(),
+                    unit: item.unit,
+                    notes: item.notes || ''
+                }))
+            });
+
+            setTotalAmount(order.totalAmount);
+            setActiveItemIndex(0);
+            setErrors({});
+            setIsEditingNotes(false);
+            setCustomerSearchTerm('');
+            setItemSearchTerm('');
+        }
+    }, [order, isOpen]);
+
+    // Helper function to check if a date is today
+    const checkIfToday = (dateString?: string): boolean => {
+        if (!dateString) return false;
+
+        const date = new Date(dateString);
+        const today = new Date();
+
+        return date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+    };
+
+    // Log errors to console
     useEffect(() => {
         if (customersError) {
             console.error('Customers fetch error:', customersError);
@@ -121,10 +169,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             console.error('Items fetch error:', itemsError);
         }
 
-        if (createOrderError) {
-            console.error('Create order error:', createOrderError);
+        if (updateOrderError) {
+            console.error('Update order error:', updateOrderError);
         }
-    }, [customersError, categoriesError, itemsError, createOrderError]);
+    }, [customersError, categoriesError, itemsError, updateOrderError]);
 
     // Calculate total amount
     useEffect(() => {
@@ -140,21 +188,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             setTotalAmount(0);
         }
     }, [formData.items]);
-
-    // Reset form when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            resetForm();
-        }
-    }, [isOpen]);
-
-    // Reset form
-    const resetForm = useCallback(() => {
-        setFormData({ ...INITIAL_FORM_DATA });
-        setActiveItemIndex(0);
-        setErrors({});
-        setIsEditingNotes(false);
-    }, []);
 
     // Handle input changes
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -185,15 +218,9 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
                 // If item changes, update unit and price if possible
                 if (field === 'itemId' && items && value) {
-                    // Find the selected item
                     const selectedItem = items.find(item => item.id === parseInt(value as string));
-
-                    // Only proceed if the item exists and has units
                     if (selectedItem && selectedItem.units && selectedItem.units.length > 0) {
-                        // Find the default unit or use the first one
                         const defaultUnit = selectedItem.units.find(u => u.unit === selectedItem.defaultUnit) || selectedItem.units[0];
-
-                        // Update the unit and price
                         if (defaultUnit) {
                             updatedItems[index].unit = defaultUnit.unit;
                             updatedItems[index].unitPrice = defaultUnit.price.toString();
@@ -212,7 +239,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             console.error('Error handling item change:', error);
         }
     }, [errors, items]);
-
 
     // Add a new item
     const addItem = useCallback(() => {
@@ -304,6 +330,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
+        if (!order || !order.id) {
+            console.error('No order ID available for update');
+            return;
+        }
+
         try {
             if (!validateForm()) {
                 // Scroll to first error
@@ -314,15 +345,16 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 return;
             }
 
-            // Prepare order data
-            const orderData = {
+            // Prepare order data for update
+            const updateData: UpdateOrder = {
                 customerId: parseInt(formData.customerId as string),
                 categoryId: parseInt(formData.categoryId as string),
                 totalAmount,
                 paidStatus: formData.paidStatus,
                 notes: formData.notes,
-                isForToday: formData.isForToday,
+                // Use existing items structure but with updated values
                 items: formData.items.map(item => ({
+                    id: item.id, // Keep original ID if exists
                     itemId: parseInt(item.itemId as string),
                     quantity: parseFloat(item.quantity as string),
                     unitPrice: parseFloat(item.unitPrice as string),
@@ -331,56 +363,72 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 }))
             };
 
-            // Submit order
-            createOrder(orderData, {
-                onSuccess: () => {
-                    console.log('Order created successfully');
-                    onClose();
-                    resetForm();
-                    if (onSuccess) onSuccess();
+            // Submit update
+            updateOrder(
+                {
+                    orderId: order.id as number,
+                    data: updateData
                 },
-                onError: (error) => {
-                    console.error('Error creating order:', error);
+                {
+                    onSuccess: () => {
+                        console.log('Order updated successfully');
+                        onClose();
+                        if (onSuccess) onSuccess();
+                    },
+                    onError: (error) => {
+                        console.error('Error updating order:', error);
+                    }
                 }
-            });
+            );
         } catch (error) {
             console.error('Error submitting form:', error);
         }
-    }, [formData, totalAmount, validateForm, createOrder, onClose, resetForm, onSuccess]);
+    }, [formData, totalAmount, validateForm, updateOrder, onClose, onSuccess, order]);
 
+    // Filter customers based on search term
+    const filteredCustomers = useMemo(() => {
+        if (!customerSearchTerm.trim()) return customers;
 
+        return customers.filter(customer =>
+            customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+            (customer.phone && customer.phone.includes(customerSearchTerm))
+        );
+    }, [customers, customerSearchTerm]);
 
+    // Filter items based on search term for the active item
+    const filteredItems = useMemo(() => {
+        if (!itemSearchTerm.trim()) return items;
 
+        return items.filter(item =>
+            item.name.toLowerCase().includes(itemSearchTerm.toLowerCase())
+        );
+    }, [items, itemSearchTerm]);
 
-    // Get customer name helper
+    // Helper functions for display
     const getCustomerName = useCallback((): string => {
         if (!customers || !formData.customerId) return '';
         const customer = customers.find(c => c.id === parseInt(formData.customerId as string));
         return customer ? customer.name : '';
     }, [customers, formData.customerId]);
 
-    // Get category name helper
     const getCategoryName = useCallback((): string => {
         if (!categories || !formData.categoryId) return '';
         const category = categories.find(c => c.id === parseInt(formData.categoryId as string));
         return category ? category.name : '';
     }, [categories, formData.categoryId]);
 
-    // Get item units helper
     const getItemUnits = useCallback((itemId: string | number) => {
         if (!items || !itemId) return [];
         const item = items.find(i => i.id === parseInt(itemId as string));
         return item?.units || [];
     }, [items]);
 
-    // Get item name helper
     const getItemName = useCallback((itemId: string | number): string => {
         if (!items || !itemId) return '';
         const item = items.find(i => i.id === parseInt(itemId as string));
         return item ? item.name : '';
     }, [items]);
 
-    // Format item title helper
     const formatItemTitle = useCallback((index: number, item: OrderItem): string => {
         const itemName = getItemName(item.itemId);
         const quantity = parseFloat(item.quantity as string) || 0;
@@ -391,11 +439,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         return `${itemName} - ${formatCurrency(amount)}`;
     }, [getItemName]);
 
-    // Determine if there are data loading errors
+    // Flag for loading/error states
     const hasDataLoadingErrors = Boolean(customersError || categoriesError || itemsError);
 
-    // Early return if modal is closed
-    if (!isOpen) return null;
+    // Early return if modal is closed or no order
+    if (!isOpen || !order) return null;
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -405,8 +453,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             >
                 <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900 sticky top-0 z-10">
                     <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                        <Plus className="h-5 w-5 text-primary" />
-                        إضافة طلب جديد
+                        <Edit className="h-5 w-5 text-primary" />
+                        تعديل الطلب #{order.orderNumber}
                     </h3>
                     <button
                         onClick={onClose}
@@ -439,6 +487,20 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                     العميل *
                                 </label>
 
+                                {/* Search box for customers */}
+                                <div className="relative mb-2">
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <Search className="h-4 w-4 text-slate-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="بحث عن عميل..."
+                                        value={customerSearchTerm}
+                                        onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                                        className="w-full bg-slate-700/30 border border-slate-600 rounded-lg py-2 pr-10 pl-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                    />
+                                </div>
+
                                 <div className="relative">
                                     <select
                                         id="customerId"
@@ -449,7 +511,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                         disabled={isLoadingCustomers || !!customersError}
                                     >
                                         <option value="">اختر العميل</option>
-                                        {customers.map(customer => (
+                                        {filteredCustomers.map(customer => (
                                             <option key={customer.id} value={customer.id}>
                                                 {customer.name} {customer.phone ? `- ${customer.phone}` : ''}
                                             </option>
@@ -592,6 +654,20 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                         المنتج *
                                     </label>
 
+                                    {/* Search box for items */}
+                                    <div className="relative mb-2">
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <Search className="h-4 w-4 text-slate-400" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="بحث عن منتج..."
+                                            value={itemSearchTerm}
+                                            onChange={(e) => setItemSearchTerm(e.target.value)}
+                                            className="w-full bg-slate-700/30 border border-slate-600 rounded-lg py-2 pr-10 pl-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                        />
+                                    </div>
+
                                     <div className="relative">
                                         <select
                                             value={formData.items[activeItemIndex]?.itemId || ''}
@@ -600,7 +676,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                             disabled={isLoadingItems || !!itemsError}
                                         >
                                             <option value="">اختر المنتج</option>
-                                            {items.map(i => (
+                                            {filteredItems.map(i => (
                                                 <option key={i.id} value={i.id}>
                                                     {i.name}
                                                 </option>
@@ -849,7 +925,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                 ) : (
                                     <>
                                         <Save className="h-4 w-4" />
-                                        حفظ الطلب
+                                        حفظ التعديلات
                                     </>
                                 )}
                             </button>
@@ -861,4 +937,4 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     );
 };
 
-export default CreateOrderModal;
+export default EditOrderModal;

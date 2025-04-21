@@ -19,6 +19,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  BellDot,
   Calendar,
   Check,
   CheckCircle,
@@ -30,7 +31,7 @@ import {
   Plus,
   Search,
   X,
-  XCircle,
+  XCircle
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -331,12 +332,15 @@ const Case = () => {
               </button>
               <button
                 onClick={() => setActiveTab("transfers")}
-                className={`px-4 py-3 font-medium transition-colors ${activeTab === "transfers"
+                className={`px-4 py-3 flex items-center gap-5 font-medium transition-colors ${activeTab === "transfers"
                   ? "text-blue-400 border-b-2 border-blue-400"
                   : "text-white hover:text-blue-200"
                   }`}
               >
                 سجل التحويلات
+                {
+                  Array.isArray(pendingTransfers) &&
+                  pendingTransfers.length > 0 && <div className="text-red-500 p-1  bg-red-500/20 rounded-full" >{pendingTransfers.length}</div>}
               </button>
             </div>
 
