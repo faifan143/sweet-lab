@@ -264,7 +264,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                     {isUpdating ? "يتم إلغاء الطلب" : "إلغاء الطلب"}
                                 </button>
                             )}
-                            {!order.paidStatus && (
+                            {!order.paidStatus && !order.isBreak && (
                                 <button
                                     onClick={handleConvertToInvoiceClick}
                                     className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors"

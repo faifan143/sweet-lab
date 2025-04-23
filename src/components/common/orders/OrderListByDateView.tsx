@@ -205,7 +205,7 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                             : 'bg-red-500/20 text-red-400'
                                                                             }`}
                                                                     >
-                                                                        {order.paidStatus ? 'مدفوع' : 'غير مدفوع'}
+                                                                        {order.paidStatus ? 'مدفوع' : (order.isBreak ? "كسر" : 'غير مدفوع')}
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-3">

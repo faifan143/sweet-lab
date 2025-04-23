@@ -127,6 +127,7 @@ export interface OrderResponseDto {
     category?: OrderCategory;
     employee?: Employee;
     items: OrderItem[];
+    isBreak: boolean
 }
 
 export interface UpdateOrder {
