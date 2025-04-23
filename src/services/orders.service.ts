@@ -10,7 +10,8 @@ import {
     OrderWithInvoice,
     OrdersSummary,
     UpdateOrder,
-    FilterOrders
+    FilterOrders,
+    OrderCategoryUpdateDto
 } from "@/types/orders.type";
 
 export interface UpdateOrderStatusRequest {
@@ -19,8 +20,12 @@ export interface UpdateOrderStatusRequest {
 }
 
 export interface ConvertToInvoiceRequest {
-    fundId?: number;
     notes?: string;
+    trayCount?: number;
+    discount?: number;
+    additionalAmount?: number;
+    initialPayment?: number;
+    isBreak?: boolean
 }
 
 export class OrdersService {
@@ -64,6 +69,15 @@ export class OrdersService {
         return response;
     };
 
+    static updateOrderCategory = async (orderCategoryId: number, data: OrderCategoryUpdateDto) => {
+        const response = await apiClient.patch<OrdersCategoriesCreateResponseDto>(`/order-categories/${orderCategoryId}`, data);
+        return response;
+    };
+
+    static deleteOrderCategory = async (orderCategoryId: number): Promise<void> => {
+        await apiClient.delete(`/order-categories/${orderCategoryId}`);
+    };
+
     static updateOrderStatus = async (orderId: number, status: OrderStatus, notes?: string): Promise<OrderResponseDto> => {
         const data = notes ? { notes } : undefined;
         const response = await apiClient.patch<OrderResponseDto>(`/orders/${orderId}/status/${status}`, data);
@@ -78,6 +92,8 @@ export class OrdersService {
     static deleteOrder = async (orderId: number): Promise<void> => {
         await apiClient.delete(`/orders/${orderId}`);
     };
+
+
 
     // Additional helper methods for filtering orders
     static getOrders = async (params?: FilterOrders): Promise<OrderResponseDto[]> => {

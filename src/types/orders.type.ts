@@ -40,6 +40,10 @@ export interface OrdersCreateDto {
 }
 
 
+export interface OrderCategoryUpdateDto {
+    "name": string;
+    "description": string;
+}
 // orders.service.ts interfaces
 
 export enum OrderStatus {
@@ -119,7 +123,7 @@ export interface OrderResponseDto {
     invoiceId?: number | null;
     employeeId?: number;
     isForToday?: boolean;
-    customer?: Customer;
+    customer?: AllCustomerType;
     category?: OrderCategory;
     employee?: Employee;
     items: OrderItem[];

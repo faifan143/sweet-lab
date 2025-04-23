@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { formatCurrency } from '@/utils/formatters';
+import { useDeleteOrder, useUpdateOrderStatus } from '@/hooks/useOrders';
 import { OrderResponseDto, OrderStatus } from '@/types/orders.type';
-import { AlertCircle, CheckCircle, Clock, RefreshCcw, ShoppingBag, Truck, CreditCard, Trash2, X, Edit } from 'lucide-react';
-import { useConvertOrderToInvoice, useDeleteOrder, useUpdateOrderStatus } from '@/hooks/useOrders';
+import { formatCurrency } from '@/utils/formatters';
+import { AlertCircle, CheckCircle, Clock, CreditCard, Edit, RefreshCcw, ShoppingBag, Trash2, Truck, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import EditOrderModal from './EditOrderModal';
 
 interface OrderDetailsModalProps {
@@ -10,16 +10,14 @@ interface OrderDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
     onOrderUpdated?: () => void;
-
+    onConvertToInvoice?: (order: OrderResponseDto) => void;
 }
 
-const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, onClose, onOrderUpdated }) => {
+const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, onClose, onOrderUpdated, onConvertToInvoice }) => {
     const [notes, setNotes] = useState<string>('');
-    const { mutate: updateStatus, isPending: isUpdating } = useUpdateOrderStatus();
-    const { mutate: convertToInvoice, isPending: isConverting } = useConvertOrderToInvoice();
-    const { mutate: deleteOrder, isPending: isDeleting } = useDeleteOrder();
+    const { mutate: updateStatus, isPending: isUpdating, isSuccess: isUpdated } = useUpdateOrderStatus();
+    const { mutate: deleteOrder, isPending: isDeleting, isSuccess: isDeleted } = useDeleteOrder();
     const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
-
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     if (!isOpen) return null;
@@ -35,7 +33,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
         }
     };
 
-
     const handleUpdateStatus = (status: OrderStatus) => {
         updateStatus({
             orderId: order.id!,
@@ -44,14 +41,18 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
         });
     };
 
-    const handleConvertToInvoice = () => {
-        convertToInvoice({
-            orderId: order.id!,
-            data: {
-                notes: notes.trim() ? notes : undefined
-            }
-        });
-        onClose();
+
+    useEffect(() => {
+        if (isUpdated || isDeleted) {
+            onClose()
+        }
+    }, [isUpdated, isDeleted])
+
+    const handleConvertToInvoiceClick = () => {
+        if (onConvertToInvoice) {
+            onConvertToInvoice(order);
+        }
+        // Removed onClose() to prevent immediate closing
     };
 
     const handleDeleteOrder = () => {
@@ -143,9 +144,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-
                     </div>
-                    <div className="overflow-y-auto no-scrollbar  p-4 max-h-[calc(90vh-120px)]">
+                    <div className="overflow-y-auto no-scrollbar p-4 max-h-[calc(90vh-120px)]">
                         {/* Order Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="bg-slate-700/30 p-4 rounded-lg">
@@ -264,21 +264,19 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                     {isUpdating ? "يتم إلغاء الطلب" : "إلغاء الطلب"}
                                 </button>
                             )}
-                            {!order.invoiceId && (
+                            {!order.paidStatus && (
                                 <button
-                                    onClick={handleConvertToInvoice}
-                                    disabled={isConverting}
-                                    className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                    onClick={handleConvertToInvoiceClick}
+                                    className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors"
                                 >
                                     <CreditCard className="h-4 w-4" />
-                                    {isConverting ? "يتم التحويل" : "تحويل لفاتورة"}
+                                    تحويل لفاتورة
                                 </button>
                             )}
                             <button
                                 onClick={handleDeleteOrder}
                                 disabled={isDeleting}
-                                className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${isConfirmingDelete ? 'bg-red-600' : ''
-                                    }`}
+                                className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${isConfirmingDelete ? 'bg-red-600' : ''}`}
                             >
                                 <Trash2 className="h-4 w-4" />
                                 {isConfirmingDelete ? 'تأكيد الحذف' : 'حذف الطلب'}
@@ -295,7 +293,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                 onClose={() => setIsEditModalOpen(false)}
                 onSuccess={handleEditSuccess}
             />
-        </ >
+        </>
     );
 };
 

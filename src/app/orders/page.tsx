@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import Navbar from "@/components/common/Navbar";
-import CategoryModal from "@/components/common/orders/CategoryModal";
+import CategoryManagementModal from "@/components/common/orders/CategoryManagmentModal";
+import CategorySection from "@/components/common/orders/CategorySection";
 import CreateOrderModal from "@/components/common/orders/CreateOrderModal";
+import CustomerOrderCard from "@/components/common/orders/CustomerOrderCard";
+import InvoiceOrderConversionModal from "@/components/common/orders/InvoiceOrderConversionModal";
 import OrderDetailsModal from "@/components/common/orders/OrderDetailsModal";
+import OrderListByDateView from "@/components/common/orders/OrderListByDateView";
+import OrdersSummaryComponent from "@/components/common/orders/OrdersSummary";
+import OrdersTabs, { OrderTabType } from "@/components/common/orders/OrdersTabs";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
 import {
@@ -13,13 +18,16 @@ import {
     useOrdersSummary
 } from "@/hooks/useOrders";
 import { AllCustomerType } from "@/types/customers.type";
-import { FilterOrders, OrderCategory, OrderResponseDto } from "@/types/orders.type";
-import { Plus, ShoppingBag, User, X } from "lucide-react";
-import OrdersTabs, { OrderTabType } from "@/components/common/orders/OrdersTabs";
-import OrdersSummaryComponent from "@/components/common/orders/OrdersSummary";
-import SearchBar from "@/components/common/orders/SearchBar";
-import CustomerOrderCard from "@/components/common/orders/CustomerOrderCard";
-import CategorySection from "@/components/common/orders/CategorySection";
+import { FilterOrders, OrderResponseDto } from "@/types/orders.type";
+import {
+    CalendarDays,
+    Plus,
+    ShoppingBag,
+    Tags,
+    User,
+    X
+} from "lucide-react";
+import React, { useMemo, useState } from "react";
 
 // Customer Orders Modal Component
 interface CustomerOrdersModalProps {
@@ -101,7 +109,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({
 const OrdersPage: React.FC = () => {
     // State
     const [searchTerm, setSearchTerm] = useState<string>("");
-    const [activeTab, setActiveTab] = useState<OrderTabType>("all");
+    const [activeTab, setActiveTab] = useState<OrderTabType>("forToday");
     const [selectedCustomer, setSelectedCustomer] = useState<AllCustomerType | null>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -110,30 +118,38 @@ const OrdersPage: React.FC = () => {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState<boolean>(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+    const [isInvoiceConversionModalOpen, setIsInvoiceConversionModalOpen] = useState<boolean>(false);
+    const [viewMode, setViewMode] = useState<'byDate' | 'byCategory'>('byDate');
 
-    // Filter parameters based on active tab
-    const getFilterParams = (): FilterOrders | undefined => {
-        switch (activeTab) {
-            case "forToday":
-                return { forToday: true };
-            case "forTomorrow":
-                return { forTomorrow: true };
-            default:
-                return undefined;
-        }
+    // Filter parameters for all orders
+    const getAllFilters = (): FilterOrders | undefined => {
+        return undefined; // Get all orders without filtering
     };
 
-    // Query hooks
-    const { data: summary, isLoading: isSummaryLoading } = useOrdersSummary();
-    const { data: allOrders, isLoading: isOrdersLoading } = useOrders(getFilterParams());
-    const { data: categories, isLoading: isCategoriesLoading } = useOrderCategories();
+    // Filter parameters for today's orders
+    const getTodayFilters = (): FilterOrders | undefined => {
+        return { forToday: true };
+    };
 
-    const isLoading = isSummaryLoading || isOrdersLoading || isCategoriesLoading;
+    // Filter parameters for tomorrow's orders
+    const getTomorrowFilters = (): FilterOrders | undefined => {
+        return { forTomorrow: true };
+    };
+
+    // Query hooks with appropriate filters
+    const { data: summary, isLoading: isSummaryLoading } = useOrdersSummary();
+    const { data: allOrders = [], isLoading: isAllOrdersLoading } = useOrders(getAllFilters());
+    const { data: todayOrders = [], isLoading: isTodayOrdersLoading } = useOrders(getTodayFilters());
+    const { data: tomorrowOrders = [], isLoading: isTomorrowOrdersLoading } = useOrders(getTomorrowFilters());
+    const { data: categories = [], isLoading: isCategoriesLoading } = useOrderCategories();
+
+    // Combined loading state
+    const isLoading = isSummaryLoading || isAllOrdersLoading || isTodayOrdersLoading ||
+        isTomorrowOrdersLoading || isCategoriesLoading;
 
     // Filter orders based on search term
-    const filteredOrders = React.useMemo(() => {
+    const filteredAllOrders = useMemo(() => {
         if (!allOrders) return [];
-
         if (!searchTerm) return allOrders;
 
         const searchLower = searchTerm.toLowerCase();
@@ -144,6 +160,32 @@ const OrdersPage: React.FC = () => {
             order.category?.name?.toLowerCase().includes(searchLower)
         );
     }, [allOrders, searchTerm]);
+
+    const filteredTodayOrders = useMemo(() => {
+        if (!todayOrders) return [];
+        if (!searchTerm) return todayOrders;
+
+        const searchLower = searchTerm.toLowerCase();
+        return todayOrders.filter(order =>
+            order.customer?.name?.toLowerCase().includes(searchLower) ||
+            order.orderNumber?.toLowerCase().includes(searchLower) ||
+            order.notes?.toLowerCase().includes(searchLower) ||
+            order.category?.name?.toLowerCase().includes(searchLower)
+        );
+    }, [todayOrders, searchTerm]);
+
+    const filteredTomorrowOrders = useMemo(() => {
+        if (!tomorrowOrders) return [];
+        if (!searchTerm) return tomorrowOrders;
+
+        const searchLower = searchTerm.toLowerCase();
+        return tomorrowOrders.filter(order =>
+            order.customer?.name?.toLowerCase().includes(searchLower) ||
+            order.orderNumber?.toLowerCase().includes(searchLower) ||
+            order.notes?.toLowerCase().includes(searchLower) ||
+            order.category?.name?.toLowerCase().includes(searchLower)
+        );
+    }, [tomorrowOrders, searchTerm]);
 
     // Handle customer selection to show orders in modal
     const handleSelectCustomer = (customer: AllCustomerType, categoryId: number) => {
@@ -159,6 +201,13 @@ const OrdersPage: React.FC = () => {
         setIsDetailsModalOpen(true);
     };
 
+    // Handle order conversion to invoice
+    const handleConvertToInvoice = (order: OrderResponseDto) => {
+        setSelectedOrder(order);
+        setIsInvoiceConversionModalOpen(true);
+        // Do not close OrderDetailsModal here
+    };
+
     // Create order handler
     const handleCreateOrder = () => {
         setIsCreateModalOpen(true);
@@ -167,6 +216,13 @@ const OrdersPage: React.FC = () => {
     // Create category handler
     const handleCreateCategory = () => {
         setIsCategoryModalOpen(true);
+    };
+
+    // Handler to close both modals
+    const closeAllModals = () => {
+        setIsInvoiceConversionModalOpen(false);
+        setIsDetailsModalOpen(false);
+        setSelectedOrder(null);
     };
 
     return (
@@ -192,7 +248,7 @@ const OrdersPage: React.FC = () => {
                                     className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    <span>إضافة تصنيف</span>
+                                    <span>إدارة التصنيفات</span>
                                 </button>
                                 <button
                                     onClick={handleCreateOrder}
@@ -207,12 +263,30 @@ const OrdersPage: React.FC = () => {
                         {/* Summary Cards */}
                         <OrdersSummaryComponent />
 
-                        {/* Search Bar */}
-                        <div className="mb-6">
-                            <SearchBar
-                                searchTerm={searchTerm}
-                                onSearchChange={setSearchTerm}
-                            />
+                        {/* View Toggle */}
+                        <div className="mb-6 flex justify-end" dir="rtl">
+                            <div className="bg-slate-800/50 p-1 rounded-lg flex">
+                                <button
+                                    onClick={() => setViewMode('byDate')}
+                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'byDate'
+                                        ? 'bg-slate-700 text-white'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                >
+                                    <CalendarDays className="h-4 w-4" />
+                                    <span>عرض حسب الطلبيات</span>
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('byCategory')}
+                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'byCategory'
+                                        ? 'bg-slate-700 text-white'
+                                        : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                >
+                                    <Tags className="h-4 w-4" />
+                                    <span>عرض حسب الزبون</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Tabs */}
@@ -224,34 +298,58 @@ const OrdersPage: React.FC = () => {
 
                         {/* Content */}
                         <div dir="rtl">
-                            {/* Categories with Customers */}
-                            {categories && categories.length > 0 ? (
-                                <div>
-                                    {categories.map(category => (
-                                        <CategorySection
-                                            key={category.id}
-                                            category={category}
-                                            orders={filteredOrders}
-                                            onSelectCustomer={(customer) => handleSelectCustomer(customer, category.id)}
-                                            selectedCustomerId={selectedCustomerId}
-                                        />
-                                    ))}
-
-                                    {/* Show a message if no customers with orders are found */}
-                                    {!categories.some(category =>
-                                        category.customers?.some(customer =>
-                                            filteredOrders.some(order => order.customerId === customer.id)
-                                        )
-                                    ) && (
-                                            <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
-                                                لا توجد طلبات متاحة في هذا التصنيف
-                                            </div>
-                                        )}
-                                </div>
+                            {viewMode === 'byDate' ? (
+                                /* Orders by Date View */
+                                <OrderListByDateView
+                                    todayOrders={filteredTodayOrders}
+                                    tomorrowOrders={filteredTomorrowOrders}
+                                    allOrders={filteredAllOrders}
+                                    isLoading={isLoading}
+                                    activeTab={activeTab}
+                                    onViewOrderDetails={handleViewOrderDetails}
+                                    onSearchChange={setSearchTerm}
+                                    searchTerm={searchTerm}
+                                />
                             ) : (
-                                <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
-                                    لا توجد تصنيفات متاحة حاليًا
-                                </div>
+                                /* Categories with Customers */
+                                categories && categories.length > 0 ? (
+                                    <div>
+                                        {categories.map(category => (
+                                            <CategorySection
+                                                key={category.id}
+                                                category={category}
+                                                orders={
+                                                    activeTab === 'forToday'
+                                                        ? filteredTodayOrders
+                                                        : activeTab === 'forTomorrow'
+                                                            ? filteredTomorrowOrders
+                                                            : filteredAllOrders
+                                                }
+                                                onSelectCustomer={(customer) => handleSelectCustomer(customer, category.id)}
+                                                selectedCustomerId={selectedCustomerId}
+                                            />
+                                        ))}
+
+                                        {/* Show a message if no customers with orders are found */}
+                                        {!categories.some(category =>
+                                            category.customers?.some(customer =>
+                                                (activeTab === 'forToday'
+                                                    ? filteredTodayOrders
+                                                    : activeTab === 'forTomorrow'
+                                                        ? filteredTomorrowOrders
+                                                        : filteredAllOrders).some(order => order.customerId === customer.id)
+                                            )
+                                        ) && (
+                                                <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
+                                                    لا توجد طلبات متاحة في هذا التصنيف
+                                                </div>
+                                            )}
+                                    </div>
+                                ) : (
+                                    <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
+                                        لا توجد تصنيفات متاحة حاليًا
+                                    </div>
+                                )
                             )}
                         </div>
                     </div>
@@ -282,7 +380,27 @@ const OrdersPage: React.FC = () => {
                     onClose={() => {
                         setIsDetailsModalOpen(false);
                         setSelectedOrder(null);
+                        setIsInvoiceConversionModalOpen(false); // Ensure conversion modal closes too
                     }}
+                    onOrderUpdated={() => {
+                        // Refetch data when order is updated
+                    }}
+                    onConvertToInvoice={handleConvertToInvoice}
+                />
+            )}
+
+            {/* Invoice Conversion Modal */}
+            {selectedOrder && (
+                <InvoiceOrderConversionModal
+                    order={selectedOrder}
+                    isOpen={isInvoiceConversionModalOpen}
+                    onClose={() => {
+                        setIsInvoiceConversionModalOpen(false);
+                        // Optionally keep OrderDetailsModal open; close it if desired
+                        // setIsDetailsModalOpen(false);
+                        // setSelectedOrder(null);
+                    }}
+                    onSuccess={closeAllModals} // Close both modals on successful conversion
                 />
             )}
 
@@ -290,12 +408,16 @@ const OrdersPage: React.FC = () => {
             <CreateOrderModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {
+                    // Refetch data when order is created
+                }}
             />
 
             {/* Create Category Modal */}
-            <CategoryModal
+            <CategoryManagementModal
                 isOpen={isCategoryModalOpen}
                 onClose={() => setIsCategoryModalOpen(false)}
+
             />
         </div>
     );

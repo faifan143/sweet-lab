@@ -1,24 +1,26 @@
-import { useFetchCustomers } from '@/hooks/customers/useCustomers';
-import { useItems } from '@/hooks/items/useItems';
-import { useCreateOrder, useOrderCategories } from '@/hooks/useOrders';
-import { formatCurrency } from '@/utils/formatters';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    AlertCircle,
+    AlertTriangle,
+    Calculator,
     Calendar,
     CreditCard,
     DollarSign,
     FileText,
+    Loader2,
     Package,
     Plus,
-    Save,
-    Tag,
-    User,
+    ShoppingBag,
+    Trash2,
     X,
-    Search,
-    AlertTriangle
+    ChevronDown
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { useFetchCustomers } from '@/hooks/customers/useCustomers';
+import { useItems } from '@/hooks/items/useItems';
+import { useItemGroups } from '@/hooks/items/useItemGroups';
+import { useCreateOrder, useOrderCategories } from '@/hooks/useOrders';
 
+// Type Definitions
 interface ItemUnit {
     unit: string;
     price: number;
@@ -28,11 +30,15 @@ interface ItemUnit {
 interface Item {
     id: number;
     name: string;
+    type: string;
     units: ItemUnit[];
     defaultUnit: string;
+    description: string;
+    groupId: number;
 }
 
 interface OrderItem {
+    id?: number;
     itemId: string | number;
     quantity: number | string;
     unitPrice: number | string;
@@ -47,11 +53,18 @@ interface OrderFormData {
     paidStatus: boolean;
     isForToday: boolean;
     items: OrderItem[];
+    discount: number;
+    additionalAmount: number;
+    trayCount: number;
+    paymentType: 'paid' | 'unpaid' | 'breakage';
+    firstPayment: number;
 }
 
 interface OrderErrors {
     customerId?: string;
     categoryId?: string;
+    trayCount?: string;
+    firstPayment?: string;
     [key: string]: string | undefined;
 }
 
@@ -59,6 +72,7 @@ interface CreateOrderModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    presetCustomerId?: number;
 }
 
 const INITIAL_FORM_DATA: OrderFormData = {
@@ -67,15 +81,22 @@ const INITIAL_FORM_DATA: OrderFormData = {
     notes: '',
     paidStatus: false,
     isForToday: false,
-    items: [{ itemId: '', quantity: '1', unitPrice: '0', unit: '', notes: '' }]
+    paymentType: 'paid',
+    items: [],
+    discount: 0,
+    additionalAmount: 0,
+    trayCount: 0,
+    firstPayment: 0
 };
 
+// Component Definition
 const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     isOpen,
     onClose,
-    onSuccess
+    onSuccess,
+    presetCustomerId
 }) => {
-    // Query hooks with proper error handling
+    // Hooks for fetching data
     const {
         data: customers = [],
         isLoading: isLoadingCustomers,
@@ -95,68 +116,95 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     } = useItems();
 
     const {
+        data: itemGroups = [],
+        isLoading: isLoadingItemGroups,
+        error: itemGroupsError
+    } = useItemGroups();
+
+    const {
         mutate: createOrder,
         isPending,
         error: createOrderError
     } = useCreateOrder();
 
-    // State management
+    // State Management
     const [formData, setFormData] = useState<OrderFormData>({ ...INITIAL_FORM_DATA });
     const [totalAmount, setTotalAmount] = useState<number>(0);
     const [errors, setErrors] = useState<OrderErrors>({});
-    const [activeItemIndex, setActiveItemIndex] = useState<number>(0);
-    const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
+    const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
+    const [selectedItem, setSelectedItem] = useState<number>(0);
+    const [selectedUnitIndex, setSelectedUnitIndex] = useState<number>(-1);
+    const [itemSearchTerm, setItemSearchTerm] = useState<string>('');
+    const [quantity, setQuantity] = useState<number>(1);
+    const [selectedItemPrice, setSelectedItemPrice] = useState<number>(0);
+    const [selectedItemUnit, setSelectedItemUnit] = useState<string>('');
+    const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1);
 
-    // Display errors to console for debugging
+    // Effects
     useEffect(() => {
-        if (customersError) {
-            console.error('Customers fetch error:', customersError);
+        if (presetCustomerId && customers.length > 0) {
+            const customer = customers.find(c => c.id === presetCustomerId);
+            if (customer) {
+                setFormData(prev => ({
+                    ...prev,
+                    customerId: customer.id
+                }));
+            }
         }
+    }, [presetCustomerId, customers]);
 
-        if (categoriesError) {
-            console.error('Categories fetch error:', categoriesError);
-        }
+    useEffect(() => {
+        const errorsToLog = [
+            { error: customersError, message: 'Customers fetch error' },
+            { error: categoriesError, message: 'Categories fetch error' },
+            { error: itemsError, message: 'Items fetch error' },
+            { error: itemGroupsError, message: 'Item groups fetch error' },
+            { error: createOrderError, message: 'Create order error' }
+        ];
 
-        if (itemsError) {
-            console.error('Items fetch error:', itemsError);
-        }
+        errorsToLog.forEach(({ error, message }) => {
+            if (error) console.error(`${message}:`, error);
+        });
+    }, [customersError, categoriesError, itemsError, itemGroupsError, createOrderError]);
 
-        if (createOrderError) {
-            console.error('Create order error:', createOrderError);
-        }
-    }, [customersError, categoriesError, itemsError, createOrderError]);
-
-    // Calculate total amount
     useEffect(() => {
         try {
-            const total = formData.items.reduce((sum, item) => {
+            let total = formData.items.reduce((sum, item) => {
                 const quantity = parseFloat(item.quantity as string) || 0;
                 const unitPrice = parseFloat(item.unitPrice as string) || 0;
                 return sum + (quantity * unitPrice);
             }, 0);
+
+            total = total - (formData.discount || 0) + (formData.additionalAmount || 0);
             setTotalAmount(total);
         } catch (error) {
             console.error('Error calculating total amount:', error);
             setTotalAmount(0);
         }
-    }, [formData.items]);
+    }, [formData.items, formData.discount, formData.additionalAmount]);
 
-    // Reset form when modal opens
     useEffect(() => {
         if (isOpen) {
             resetForm();
         }
     }, [isOpen]);
 
-    // Reset form
+    // Form Handlers
     const resetForm = useCallback(() => {
         setFormData({ ...INITIAL_FORM_DATA });
-        setActiveItemIndex(0);
+        if (presetCustomerId) {
+            setFormData(prev => ({
+                ...INITIAL_FORM_DATA,
+                customerId: presetCustomerId
+            }));
+        }
         setErrors({});
-        setIsEditingNotes(false);
-    }, []);
+        setSelectedGroupId(0);
+        setSelectedItem(0);
+        setSelectedUnitIndex(-1);
+        setItemSearchTerm('');
+    }, [presetCustomerId]);
 
-    // Handle input changes
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         try {
             const { name, value, type } = e.target;
@@ -164,10 +212,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
             setFormData(prev => ({
                 ...prev,
-                [name]: type === 'checkbox' ? checked : value
+                [name]: type === 'checkbox' ? checked :
+                    (name === 'discount' || name === 'additionalAmount' || name === 'trayCount' || name === 'firstPayment')
+                        ? parseFloat(value) || 0 : value
             }));
 
-            // Clear error when field is filled
             if (errors[name]) {
                 setErrors(prev => ({ ...prev, [name]: undefined }));
             }
@@ -176,24 +225,25 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
     }, [errors]);
 
-    // Handle item changes
+    const handlePaymentTypeChange = (type: 'paid' | 'unpaid' | 'breakage') => {
+        setFormData(prev => ({
+            ...prev,
+            paymentType: type,
+            paidStatus: type === 'paid',
+            firstPayment: type === 'breakage' ? prev.firstPayment : 0
+        }));
+    };
+
     const handleItemChange = useCallback((index: number, field: keyof OrderItem, value: string | number) => {
         try {
             setFormData(prev => {
                 const updatedItems = [...prev.items];
                 updatedItems[index] = { ...updatedItems[index], [field]: value };
 
-                // If item changes, update unit and price if possible
                 if (field === 'itemId' && items && value) {
-                    // Find the selected item
                     const selectedItem = items.find(item => item.id === parseInt(value as string));
-
-                    // Only proceed if the item exists and has units
                     if (selectedItem && selectedItem.units && selectedItem.units.length > 0) {
-                        // Find the default unit or use the first one
                         const defaultUnit = selectedItem.units.find(u => u.unit === selectedItem.defaultUnit) || selectedItem.units[0];
-
-                        // Update the unit and price
                         if (defaultUnit) {
                             updatedItems[index].unit = defaultUnit.unit;
                             updatedItems[index].unitPrice = defaultUnit.price.toString();
@@ -204,7 +254,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 return { ...prev, items: updatedItems };
             });
 
-            // Clear error when field is filled
             if (errors[`${field}-${index}`]) {
                 setErrors(prev => ({ ...prev, [`${field}-${index}`]: undefined }));
             }
@@ -213,50 +262,107 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
     }, [errors, items]);
 
-
-    // Add a new item
     const addItem = useCallback(() => {
         try {
+            if (selectedItem > 0) {
+                const selectedItemObj = items?.find(item => item.id === selectedItem);
+                if (!selectedItemObj || quantity <= 0 || selectedUnitIndex < 0) return;
+
+                const newItem: OrderItem = {
+                    itemId: selectedItem,
+                    quantity: quantity,
+                    unitPrice: selectedItemPrice,
+                    unit: selectedItemUnit,
+                    notes: ''
+                };
+
+                setFormData(prev => ({
+                    ...prev,
+                    items: [...prev.items, newItem]
+                }));
+
+                setSelectedItem(0);
+                setQuantity(1);
+                setSelectedUnitIndex(-1);
+                setSelectedItemPrice(0);
+                setSelectedItemUnit('');
+                setSelectedItemFactor(1);
+
+                return;
+            }
+
             setFormData(prev => ({
                 ...prev,
                 items: [...prev.items, { itemId: '', quantity: '1', unitPrice: '0', unit: '', notes: '' }]
             }));
-            setActiveItemIndex(formData.items.length);
         } catch (error) {
             console.error('Error adding item:', error);
         }
-    }, [formData.items.length]);
+    }, [selectedItem, items, quantity, selectedItemPrice, selectedItemUnit, selectedUnitIndex]);
 
-    // Remove an item
     const removeItem = useCallback((index: number) => {
         try {
-            if (formData.items.length > 1) {
-                setFormData(prev => ({
-                    ...prev,
-                    items: prev.items.filter((_, i) => i !== index)
-                }));
-
-                // Adjust active index if needed
-                if (activeItemIndex >= index && activeItemIndex > 0) {
-                    setActiveItemIndex(activeItemIndex - 1);
-                } else if (activeItemIndex >= formData.items.length - 1) {
-                    setActiveItemIndex(formData.items.length - 2);
-                }
-            } else {
-                console.error('Cannot remove the last item');
-            }
+            const removedItem = formData.items[index];
+            const removedSubTotal = (parseFloat(removedItem.quantity as string) || 0) * (parseFloat(removedItem.unitPrice as string) || 0);
+            setFormData(prev => ({
+                ...prev,
+                items: prev.items.filter((_, i) => i !== index)
+            }));
+            setTotalAmount(prev => prev - removedSubTotal);
         } catch (error) {
             console.error('Error removing item:', error);
         }
-    }, [formData.items.length, activeItemIndex]);
+    }, [formData.items]);
 
-    // Validate form
+    const handleItemSelect = (itemId: number) => {
+        setSelectedItem(itemId);
+        const selectedProduct = items?.find((item) => item.id === itemId);
+
+        if (selectedProduct) {
+            if (selectedProduct.units && selectedProduct.units.length > 0) {
+                const defaultUnitIndex = selectedProduct.units.findIndex(
+                    (u) => u.unit === selectedProduct.defaultUnit
+                );
+
+                const unitIndex = defaultUnitIndex >= 0 ? defaultUnitIndex : 0;
+                const unitInfo = selectedProduct.units[unitIndex];
+
+                setSelectedUnitIndex(unitIndex);
+                setSelectedItemUnit(unitInfo.unit);
+                setSelectedItemPrice(unitInfo.price);
+                setSelectedItemFactor(unitInfo.factor);
+            } else {
+                setSelectedUnitIndex(-1);
+                setSelectedItemUnit("");
+                setSelectedItemPrice(0);
+                setSelectedItemFactor(1);
+            }
+        }
+    };
+
+    const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const unitIndex = parseInt(e.target.value);
+        setSelectedUnitIndex(unitIndex);
+
+        const selectedProduct = items?.find((item) => item.id === selectedItem);
+        if (
+            selectedProduct &&
+            selectedProduct.units &&
+            unitIndex >= 0 &&
+            unitIndex < selectedProduct.units.length
+        ) {
+            const unitInfo = selectedProduct.units[unitIndex];
+            setSelectedItemUnit(unitInfo.unit);
+            setSelectedItemPrice(unitInfo.price);
+            setSelectedItemFactor(unitInfo.factor);
+        }
+    };
+
     const validateForm = useCallback((): boolean => {
         try {
             const newErrors: OrderErrors = {};
             let isValid = true;
 
-            // Validate basic fields
             if (!formData.customerId) {
                 newErrors.customerId = 'الرجاء اختيار العميل';
                 isValid = false;
@@ -267,7 +373,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 isValid = false;
             }
 
-            // Validate items
             formData.items.forEach((item, index) => {
                 if (!item.itemId) {
                     newErrors[`item-${index}`] = 'الرجاء اختيار المنتج';
@@ -292,21 +397,34 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 }
             });
 
+            if (formData.trayCount < 0) {
+                newErrors.trayCount = 'لا يمكن أن يكون عدد الفوارغ أقل من صفر';
+                isValid = false;
+            }
+
+            if (formData.paymentType === 'breakage') {
+                if (formData.firstPayment <= 0) {
+                    newErrors.firstPayment = 'يجب إدخال دفعة أولى أكبر من صفر';
+                    isValid = false;
+                } else if (formData.firstPayment >= (totalAmount - formData.discount)) {
+                    newErrors.firstPayment = 'يجب أن تكون الدفعة الأولى أقل من المبلغ الإجمالي بعد الخصم';
+                    isValid = false;
+                }
+            }
+
             setErrors(newErrors);
             return isValid;
         } catch (error) {
             console.error('Error validating form:', error);
             return false;
         }
-    }, [formData]);
+    }, [formData, totalAmount]);
 
-    // Handle form submission
     const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         try {
             if (!validateForm()) {
-                // Scroll to first error
                 const firstError = document.querySelector('.border-red-500');
                 if (firstError) {
                     firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -314,14 +432,18 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 return;
             }
 
-            // Prepare order data
             const orderData = {
                 customerId: parseInt(formData.customerId as string),
                 categoryId: parseInt(formData.categoryId as string),
                 totalAmount,
-                paidStatus: formData.paidStatus,
+                paidStatus: formData.paymentType === 'paid',
+                isBreak: formData.paymentType === 'breakage',
                 notes: formData.notes,
                 isForToday: formData.isForToday,
+                discount: formData.discount,
+                additionalAmount: formData.additionalAmount,
+                trayCount: formData.trayCount,
+                initialPayment: formData.paymentType === 'breakage' ? formData.firstPayment : undefined,
                 items: formData.items.map(item => ({
                     itemId: parseInt(item.itemId as string),
                     quantity: parseFloat(item.quantity as string),
@@ -331,7 +453,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 }))
             };
 
-            // Submit order
             createOrder(orderData, {
                 onSuccess: () => {
                     console.log('Order created successfully');
@@ -348,516 +469,484 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
     }, [formData, totalAmount, validateForm, createOrder, onClose, resetForm, onSuccess]);
 
-
-
-
-
-    // Get customer name helper
+    // Utility Functions
     const getCustomerName = useCallback((): string => {
         if (!customers || !formData.customerId) return '';
         const customer = customers.find(c => c.id === parseInt(formData.customerId as string));
         return customer ? customer.name : '';
     }, [customers, formData.customerId]);
 
-    // Get category name helper
     const getCategoryName = useCallback((): string => {
         if (!categories || !formData.categoryId) return '';
         const category = categories.find(c => c.id === parseInt(formData.categoryId as string));
         return category ? category.name : '';
     }, [categories, formData.categoryId]);
 
-    // Get item units helper
     const getItemUnits = useCallback((itemId: string | number) => {
         if (!items || !itemId) return [];
         const item = items.find(i => i.id === parseInt(itemId as string));
         return item?.units || [];
     }, [items]);
 
-    // Get item name helper
     const getItemName = useCallback((itemId: string | number): string => {
         if (!items || !itemId) return '';
         const item = items.find(i => i.id === parseInt(itemId as string));
         return item ? item.name : '';
     }, [items]);
 
-    // Format item title helper
-    const formatItemTitle = useCallback((index: number, item: OrderItem): string => {
-        const itemName = getItemName(item.itemId);
-        const quantity = parseFloat(item.quantity as string) || 0;
-        const unitPrice = parseFloat(item.unitPrice as string) || 0;
-        const amount = quantity * unitPrice;
+    const filteredItems = useMemo(() => {
+        let filtered = items || [];
 
-        if (!itemName) return `العنصر #${index + 1}`;
-        return `${itemName} - ${formatCurrency(amount)}`;
-    }, [getItemName]);
+        if (selectedGroupId > 0) {
+            filtered = filtered.filter(item => item.groupId === selectedGroupId);
+        }
 
-    // Determine if there are data loading errors
-    const hasDataLoadingErrors = Boolean(customersError || categoriesError || itemsError);
+        if (itemSearchTerm.trim()) {
+            filtered = filtered.filter(item =>
+                item.name.toLowerCase().includes(itemSearchTerm.toLowerCase())
+            );
+        }
 
-    // Early return if modal is closed
+        return filtered;
+    }, [items, selectedGroupId, itemSearchTerm]);
+
+    const hasDataLoadingErrors = Boolean(
+        customersError || categoriesError || itemsError || itemGroupsError
+    );
+
+    // Render
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div
-                className="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden my-4"
-                dir="rtl"
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto no-scrollbar"
+                onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900 sticky top-0 z-10">
-                    <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                        <Plus className="h-5 w-5 text-primary" />
-                        إضافة طلب جديد
-                    </h3>
+                <div className="flex justify-between items-center mb-6">
                     <button
                         onClick={onClose}
-                        className="text-slate-400 hover:text-slate-200 transition-colors rounded-full hover:bg-slate-700/50 p-1"
-                        aria-label="إغلاق"
-                        type="button"
+                        className="text-slate-400 hover:text-slate-300 transition-colors"
                     >
-                        <X className="h-5 w-5" />
+                        <X className="h-6 w-6" />
                     </button>
+                    <h2 className="text-xl font-bold text-slate-100">إضافة طلب جديد</h2>
                 </div>
 
-                {hasDataLoadingErrors && (
-                    <div className="m-4 p-3 bg-red-900/20 border border-red-700 rounded-lg text-red-200 flex items-start gap-2">
-                        <AlertTriangle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                            <p className="font-medium mb-1">حدث خطأ أثناء تحميل البيانات</p>
-                            <p className="text-sm">يرجى تحديث الصفحة والمحاولة مرة أخرى. إذا استمرت المشكلة، تواصل مع الدعم الفني.</p>
+                <div className="space-y-6" dir="rtl">
+                    <div className="space-y-4">
+                        <label className="block text-slate-200">العميل<span className="text-red-400 mx-1">*</span></label>
+                        <div className="relative">
+                            <select
+                                id="customerId"
+                                name="customerId"
+                                value={formData.customerId}
+                                onChange={handleInputChange}
+                                className={`w-full bg-slate-700/50 border ${errors.categoryId ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg pl-4 pr-10 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer hover:border-slate-500/50`}
+                                disabled={isLoadingCustomers || !!customersError}
+                            >
+                                <option value="">اختر العميل</option>
+                                {customers.map(customer => (
+                                    <option key={customer.id} value={customer.id}>
+                                        {customer.name} {customer.phone ? `- ${customer.phone}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
                         </div>
+                        {errors.customerId && (
+                            <div className="text-red-400 text-sm mt-1">
+                                {errors.customerId}
+                            </div>
+                        )}
+                        {formData.customerId && (
+                            <div className="bg-blue-500/10 text-blue-400 rounded-lg py-2 px-4 w-fit">
+                                {getCustomerName()}
+                            </div>
+                        )}
                     </div>
-                )}
 
-                <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-64px)]">
-                    {/* Customer and Category Section */}
-                    <div className="bg-slate-850/60 p-4 border-b border-slate-700/50">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                            {/* Customer Selection */}
-                            <div>
-                                <label htmlFor="customerId" className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                    <User className="h-4 w-4 text-primary" />
-                                    العميل *
-                                </label>
-
-                                <div className="relative">
-                                    <select
-                                        id="customerId"
-                                        name="customerId"
-                                        value={formData.customerId}
-                                        onChange={handleInputChange}
-                                        className={`w-full bg-slate-700/40 border ${errors.customerId ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none`}
-                                        disabled={isLoadingCustomers || !!customersError}
-                                    >
-                                        <option value="">اختر العميل</option>
-                                        {customers.map(customer => (
-                                            <option key={customer.id} value={customer.id}>
-                                                {customer.name} {customer.phone ? `- ${customer.phone}` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
-                                        <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                {errors.customerId &&
-                                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                        <AlertCircle className="h-3 w-3" />
-                                        {errors.customerId}
-                                    </p>
-                                }
-                                {formData.customerId && (
-                                    <p className="text-primary text-xs mt-1">
-                                        {getCustomerName()}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Category Selection */}
-                            <div>
-                                <label htmlFor="categoryId" className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                    <Tag className="h-4 w-4 text-primary" />
-                                    التصنيف *
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        id="categoryId"
-                                        name="categoryId"
-                                        value={formData.categoryId}
-                                        onChange={handleInputChange}
-                                        className={`w-full bg-slate-700/40 border ${errors.categoryId ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none`}
-                                        disabled={isLoadingCategories || !!categoriesError}
-                                    >
-                                        <option value="">اختر التصنيف</option>
-                                        {categories.map(category => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
-                                        <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                {errors.categoryId &&
-                                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                        <AlertCircle className="h-3 w-3" />
-                                        {errors.categoryId}
-                                    </p>
-                                }
-                                {formData.categoryId && (
-                                    <p className="text-primary text-xs mt-1">
-                                        {getCategoryName()}
-                                    </p>
-                                )}
-                            </div>
+                    <div className="space-y-2">
+                        <label className="block text-slate-200">التصنيف<span className="text-red-400 mx-1">*</span></label>
+                        <div className="relative">
+                            <select
+                                id="categoryId"
+                                name="categoryId"
+                                value={formData.categoryId}
+                                onChange={handleInputChange}
+                                className={`w-full bg-slate-700/50 border ${errors.categoryId ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg pl-4 pr-10 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer hover:border-slate-500/50`}
+                                disabled={isLoadingCategories || !!categoriesError}
+                            >
+                                <option value="">اختر التصنيف</option>
+                                {categories.map(category => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
                         </div>
+                        {errors.categoryId && (
+                            <div className="text-red-400 text-sm mt-1">
+                                {errors.categoryId}
+                            </div>
+                        )}
+                    </div>
 
-                        {/* Delivery Option */}
-                        <div className="flex items-center gap-2 mt-4 p-2 bg-slate-700/20 rounded-lg border border-slate-700/30 hover:border-primary/30 transition-colors cursor-pointer">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
                             <input
                                 type="checkbox"
                                 id="isForToday"
                                 name="isForToday"
                                 checked={formData.isForToday}
                                 onChange={handleInputChange}
-                                className="rounded bg-slate-700/30 border-slate-600 text-primary focus:ring-primary/30"
+                                className="rounded bg-slate-700/50 border-slate-600/50 text-blue-500 focus:ring-blue-500/30"
                             />
-                            <label htmlFor="isForToday" className="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer w-full">
-                                <Calendar className="h-4 w-4 text-warning" />
+                            <label htmlFor="isForToday" className="text-slate-200 flex items-center gap-2">
+                                <Calendar className="h-5 w-5" />
                                 تسليم اليوم
-                                <span className="text-xs text-slate-400 mr-2">(إذا لم يتم التحديد، سيتم جدولة التسليم للغد)</span>
                             </label>
                         </div>
+                        <p className="text-xs text-slate-400">
+                            إذا لم يتم التحديد، سيتم جدولة التسليم للغد
+                        </p>
                     </div>
 
-                    {/* Items Section */}
-                    <div className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-slate-300 font-medium flex items-center gap-2">
-                                <Package className="h-4 w-4 text-primary" />
-                                عناصر الطلب *
-                            </h4>
-                        </div>
-
-                        {/* Items Tabs */}
-                        <div className="flex mb-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                            {formData.items.map((item, index) => (
-                                <button
-                                    key={index}
-                                    type="button"
-                                    onClick={() => setActiveItemIndex(index)}
-                                    className={`px-3 py-1.5 mr-2 rounded-lg text-sm whitespace-nowrap flex items-center gap-1 transition-all ${activeItemIndex === index
-                                        ? 'bg-primary text-white shadow-md'
-                                        : 'bg-slate-700/40 text-slate-300 hover:bg-slate-700/60'
-                                        }`}
-                                >
-                                    {formatItemTitle(index, item)}
-                                    {formData.items.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeItem(index);
-                                            }}
-                                            className="ml-2 p-0.5 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
-                                            aria-label="حذف العنصر"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    )}
-                                </button>
-                            ))}
+                    <div className="space-y-2">
+                        <label className="block text-slate-200">حالة الدفع</label>
+                        <div className="flex gap-4">
                             <button
                                 type="button"
-                                onClick={addItem}
-                                className="px-3 py-1.5 rounded-lg text-sm whitespace-nowrap flex items-center gap-1 bg-slate-700/20 text-slate-300 hover:bg-slate-700/40 transition-colors"
-                                disabled={isLoadingItems || !!itemsError}
+                                onClick={() => handlePaymentTypeChange('paid')}
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === 'paid'
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                                    }`}
                             >
-                                <Plus className="h-4 w-4" />
-                                إضافة عنصر
+                                <CreditCard className="h-5 w-5" />
+                                دفعة كاملة
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePaymentTypeChange('unpaid')}
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === 'unpaid'
+                                    ? 'bg-yellow-500/20 text-yellow-400'
+                                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                                    }`}
+                            >
+                                <Calendar className="h-5 w-5" />
+                                غير مدفوع
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePaymentTypeChange('breakage')}
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.paymentType === 'breakage'
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                                    }`}
+                            >
+                                <AlertTriangle className="h-5 w-5" />
+                                كسر
                             </button>
                         </div>
+                    </div>
 
-                        {/* Active Item Form */}
-                        <div className="bg-slate-700/20 p-4 rounded-lg mb-4 border border-slate-700/50 transition-all">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                {/* Item Selection */}
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                        <Package className="h-4 w-4 text-primary" />
-                                        المنتج *
-                                    </label>
-
-                                    <div className="relative">
-                                        <select
-                                            value={formData.items[activeItemIndex]?.itemId || ''}
-                                            onChange={(e) => handleItemChange(activeItemIndex, 'itemId', e.target.value)}
-                                            className={`w-full bg-slate-700/40 border ${errors[`item-${activeItemIndex}`] ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none`}
-                                            disabled={isLoadingItems || !!itemsError}
-                                        >
-                                            <option value="">اختر المنتج</option>
-                                            {items.map(i => (
-                                                <option key={i.id} value={i.id}>
-                                                    {i.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
-                                            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    {errors[`item-${activeItemIndex}`] &&
-                                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors[`item-${activeItemIndex}`]}
-                                        </p>
-                                    }
-                                    {formData.items[activeItemIndex]?.itemId && (
-                                        <p className="text-primary text-xs mt-1">
-                                            {getItemName(formData.items[activeItemIndex].itemId)}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Unit Selection */}
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                        <Tag className="h-4 w-4 text-primary" />
-                                        الوحدة *
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={formData.items[activeItemIndex]?.unit || ''}
-                                            onChange={(e) => {
-                                                try {
-                                                    const selectedUnit = getItemUnits(formData.items[activeItemIndex].itemId)
-                                                        .find(u => u.unit === e.target.value);
-
-                                                    handleItemChange(activeItemIndex, 'unit', e.target.value);
-
-                                                    if (selectedUnit) {
-                                                        handleItemChange(activeItemIndex, 'unitPrice', selectedUnit.price.toString());
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Error handling unit change:', error);
-                                                }
-                                            }}
-                                            className={`w-full bg-slate-700/40 border ${errors[`unit-${activeItemIndex}`] ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none`}
-                                            disabled={!formData.items[activeItemIndex]?.itemId || isLoadingItems || !!itemsError}
-                                        >
-                                            <option value="">اختر الوحدة</option>
-                                            {getItemUnits(formData.items[activeItemIndex]?.itemId || '').map((unit, i) => (
-                                                <option key={i} value={unit.unit}>
-                                                    {unit.unit} - {formatCurrency(unit.price)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-slate-400">
-                                            <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    {errors[`unit-${activeItemIndex}`] &&
-                                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors[`unit-${activeItemIndex}`]}
-                                        </p>
-                                    }
-                                    {formData.items[activeItemIndex]?.unit && (
-                                        <p className="text-primary text-xs mt-1">
-                                            {formData.items[activeItemIndex].unit}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                                {/* Quantity */}
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                        <Package className="h-4 w-4 text-primary" />
-                                        الكمية *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={formData.items[activeItemIndex]?.quantity || ''}
-                                        onChange={(e) => handleItemChange(activeItemIndex, 'quantity', e.target.value)}
-                                        onBlur={(e) => {
-                                            // Ensure quantity is never less than 0.01
-                                            const value = parseFloat(e.target.value);
-                                            if (!value || value <= 0) {
-                                                handleItemChange(activeItemIndex, 'quantity', '0.01');
-                                            }
-                                        }}
-                                        className={`w-full bg-slate-700/40 border ${errors[`quantity-${activeItemIndex}`] ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all`}
-                                        min="0.01"
-                                        step="0.01"
-                                    />
-                                    {errors[`quantity-${activeItemIndex}`] &&
-                                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors[`quantity-${activeItemIndex}`]}
-                                        </p>
-                                    }
-                                </div>
-
-                                {/* Unit Price */}
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                        <DollarSign className="h-4 w-4 text-primary" />
-                                        سعر الوحدة *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={formData.items[activeItemIndex]?.unitPrice || ''}
-                                        onChange={(e) => handleItemChange(activeItemIndex, 'unitPrice', e.target.value)}
-                                        onBlur={(e) => {
-                                            // Ensure price is never less than 0.01
-                                            const value = parseFloat(e.target.value);
-                                            if (!value || value <= 0) {
-                                                handleItemChange(activeItemIndex, 'unitPrice', '0.01');
-                                            }
-                                        }}
-                                        className={`w-full bg-slate-700/40 border ${errors[`price-${activeItemIndex}`] ? 'border-red-500' : 'border-slate-600'} rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all`}
-                                        min="0.01"
-                                        step="0.01"
-                                    />
-                                    {errors[`price-${activeItemIndex}`] &&
-                                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors[`price-${activeItemIndex}`]}
-                                        </p>
-                                    }
-                                </div>
-                            </div>
-
-                            {/* Item Notes */}
-                            <div>
-                                <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-2">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    ملاحظات العنصر
-                                </label>
+                    {formData.paymentType === 'breakage' && (
+                        <div className="space-y-2">
+                            <label className="block text-slate-200">الدفعة الأولى</label>
+                            <div className="relative">
+                                <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
-                                    type="text"
-                                    value={formData.items[activeItemIndex]?.notes || ''}
-                                    onChange={(e) => handleItemChange(activeItemIndex, 'notes', e.target.value)}
-                                    className="w-full bg-slate-700/40 border border-slate-600 rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                    placeholder="أضف ملاحظات لهذا العنصر (اختياري)"
+                                    type="number"
+                                    name="firstPayment"
+                                    value={formData.firstPayment}
+                                    onChange={handleInputChange}
+                                    className={`w-full pl-4 pr-12 py-2 bg-slate-700/50 border ${errors.firstPayment ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                                    placeholder="أدخل قيمة الدفعة الأولى"
                                 />
                             </div>
-
-                            {/* Item Total */}
-                            <div className="mt-3 p-2 bg-slate-700/30 rounded-lg flex items-center justify-between">
-                                <span className="text-sm text-slate-300">إجمالي العنصر:</span>
-                                <span className="font-bold text-primary">
-                                    {formatCurrency(
-                                        (parseFloat(formData.items[activeItemIndex]?.unitPrice as string) || 0) *
-                                        (parseFloat(formData.items[activeItemIndex]?.quantity as string) || 0)
-                                    )}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Order Notes and Payment Section */}
-                    <div className="p-4 border-t border-slate-700/30 bg-slate-900/20">
-                        {/* Notes Toggle */}
-                        <div className="mb-4">
-                            <button
-                                type="button"
-                                onClick={() => setIsEditingNotes(!isEditingNotes)}
-                                className="flex items-center justify-between w-full p-2 bg-slate-700/20 rounded-lg hover:bg-slate-700/30 transition-colors"
-                            >
-                                <span className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    ملاحظات الطلب
-                                </span>
-                                <span className="text-xs text-slate-400">
-                                    {isEditingNotes ? 'إغلاق' : formData.notes ? 'تعديل الملاحظات' : 'إضافة ملاحظات'}
-                                </span>
-                            </button>
-
-                            {isEditingNotes && (
-                                <div className="mt-2">
-                                    <textarea
-                                        id="notes"
-                                        name="notes"
-                                        rows={3}
-                                        value={formData.notes}
-                                        onChange={handleInputChange}
-                                        className="w-full bg-slate-700/40 border border-slate-600 rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                        placeholder="أضف ملاحظات للطلب (اختياري)"
-                                    />
+                            {formData.firstPayment <= 0 && (
+                                <div className="text-red-400 text-sm">
+                                    يجب إدخال قيمة أكبر من صفر
+                                </div>
+                            )}
+                            {formData.firstPayment >= totalAmount - formData.discount && totalAmount > 0 && (
+                                <div className="text-red-400 text-sm">
+                                    يجب أن تكون الدفعة الأولى أقل من المبلغ الإجمالي بعد الخصم
                                 </div>
                             )}
                         </div>
+                    )}
 
-                        {/* Payment Status */}
-                        <div className="flex items-center gap-2 p-3 bg-slate-700/20 rounded-lg border border-slate-700/30 hover:border-primary/30 transition-colors cursor-pointer mb-4">
-                            <input
-                                type="checkbox"
-                                id="paidStatus"
-                                name="paidStatus"
-                                checked={formData.paidStatus}
-                                onChange={handleInputChange}
-                                className="rounded bg-slate-700/30 border-slate-600 text-primary focus:ring-primary/30"
-                            />
-                            <label htmlFor="paidStatus" className="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer w-full">
-                                <CreditCard className="h-4 w-4 text-primary" />
-                                تم الدفع
-                            </label>
-                        </div>
-
-                        {/* Order Total */}
-                        <div className="bg-slate-700/40 p-4 rounded-lg mb-4 border border-slate-700/50 shadow-inner">
-                            <div className="flex justify-between items-center">
-                                <h4 className="text-slate-300 font-medium flex items-center gap-2">
-                                    <DollarSign className="h-4 w-4 text-primary" />
-                                    إجمالي الطلب:
-                                </h4>
-                                <p className="text-xl font-bold text-primary">{formatCurrency(totalAmount)}</p>
-                            </div>
-                        </div>
-
-                        {/* Form Buttons */}
-                        <div className="flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
-                            >
-                                <X className="h-4 w-4" />
-                                إلغاء
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isPending || hasDataLoadingErrors}
-                                className="bg-primary hover:bg-primary-dark text-white px-6 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isPending ? (
-                                    <>
-                                        <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                                        جاري الحفظ...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="h-4 w-4" />
-                                        حفظ الطلب
-                                    </>
-                                )}
-                            </button>
+                    <div className="space-y-4">
+                        <label className="block text-slate-200 mb-2">التصنيف</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {itemGroups?.map(group => (
+                                <div
+                                    key={group.id}
+                                    onClick={() => {
+                                        setSelectedGroupId(group.id);
+                                        setSelectedItem(0);
+                                    }}
+                                    className={`
+                                        rounded-lg shadow-md p-4 text-center cursor-pointer transition-all duration-200
+                                        border-2 transform hover:scale-105 hover:shadow-lg
+                                        ${selectedGroupId === group.id
+                                            ? 'bg-blue-500/30 border-blue-500/70 text-blue-200'
+                                            : 'bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-700/50'
+                                        }
+                                    `}
+                                >
+                                    <div className="font-medium text-lg">{group.name}</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
+
+                    {selectedGroupId > 0 && (
+                        <>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="text-slate-200 font-medium">اختيار المنتج</div>
+                                    {selectedItem > 0 && (
+                                        <button
+                                            onClick={() => setSelectedItem(0)}
+                                            className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                                        >
+                                            إلغاء الاختيار
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {filteredItems.map(item => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleItemSelect(item.id)}
+                                            className={`
+                                                rounded-lg shadow-md p-4 cursor-pointer transition-all duration-200
+                                                border-2 transform hover:scale-105 hover:shadow-lg
+                                                ${selectedItem === item.id
+                                                    ? 'bg-emerald-500/30 border-emerald-500/70 text-emerald-200'
+                                                    : 'bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-700/50'
+                                                }
+                                            `}
+                                        >
+                                            <div className="font-medium text-center">{item.name}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {selectedItem > 0 && (
+                                <div className="bg-slate-700/30 rounded-lg p-4 mt-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                        <div className="space-y-2 md:col-span-2">
+                                            <label className="block text-slate-200">الوحدة</label>
+                                            <select
+                                                value={selectedUnitIndex}
+                                                onChange={handleUnitChange}
+                                                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                            >
+                                                {items
+                                                    ?.find((item) => item.id === selectedItem)
+                                                    ?.units?.map((unit, index) => (
+                                                        <option key={index} value={index}>
+                                                            {unit.unit}
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="block text-slate-200">معامل التحويل</label>
+                                            <input
+                                                type="number"
+                                                value={selectedItemFactor}
+                                                disabled
+                                                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="block text-slate-200">الكمية</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={quantity}
+                                                onChange={(e) => setQuantity(Number(e.target.value))}
+                                                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="block text-slate-200">السعر</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={selectedItemPrice}
+                                                onChange={(e) => setSelectedItemPrice(Number(e.target.value))}
+                                                className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={addItem}
+                                        disabled={!selectedItem || selectedUnitIndex < 0}
+                                        className="flex items-center gap-2 px-4 py-2 mt-4 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        إضافة منتج
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {formData.items.length > 0 && (
+                        <div className="bg-slate-700/30 rounded-lg overflow-hidden">
+                            <table className="w-full"><thead className="bg-slate-700/50"><tr><th className="text-right text-slate-200 p-3">المنتج</th><th className="text-right text-slate-200 p-3">الكمية</th><th className="text-right text-slate-200 p-3">الوحدة</th><th className="text-right text-slate-200 p-3">السعر</th><th className="text-right text-slate-200 p-3">معامل التحويل</th><th className="text-right text-slate-200 p-3">المجموع</th><th className="text-right text-slate-200 p-3"></th></tr></thead><tbody>{formData.items.map((item, index) => (<tr key={index} className="border-t border-slate-600/30"><td className="p-3 text-slate-300">{getItemName(item.itemId)}</td><td className="p-3 text-slate-300">{item.quantity}</td><td className="p-3 text-slate-300">{item.unit}</td><td className="p-3 text-slate-300">{item.unitPrice}</td><td className="p-3 text-slate-300">{selectedItemFactor}</td><td className="p-3 text-slate-300">{(parseFloat(item.quantity as string) || 0) * (parseFloat(item.unitPrice as string) || 0)}</td><td className="p-3"><button onClick={() => removeItem(index)} className="text-red-400 hover:text-red-300 transition-colors"><Trash2 className="h-5 w-5" /></button></td></tr>))}</tbody></table>
+                        </div>
+                    )}
+
+                    <div>
+                        <div className="space-y-2">
+                            <label className="block text-slate-200">عدد الفوارغ</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    name="trayCount"
+                                    value={formData.trayCount}
+                                    onChange={handleInputChange}
+                                    className={`w-full px-4 py-2 bg-slate-700/50 border ${errors.trayCount ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200`}
+                                    placeholder="عدد الفوارغ"
+                                />
+                                {errors.trayCount && (
+                                    <div className="text-red-400 text-sm mt-1">
+                                        {errors.trayCount}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="space-y-2 mt-4">
+                            <label className="block text-slate-200">المبلغ الإضافي</label>
+                            <div className="relative">
+                                <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                <input
+                                    type="number"
+                                    name="additionalAmount"
+                                    value={formData.additionalAmount}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                    placeholder="قيمة المبلغ الإضافي"
+                                />
+                            </div>
+                            <p className="text-xs text-slate-400">
+                                يمكنك إضافة مبلغ إضافي على الطلب مثل قيمة التوصيل أو رسوم إضافية
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="block text-slate-200">الخصم</label>
+                            <div className="relative">
+                                <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                <input
+                                    type="number"
+                                    name="discount"
+                                    value={formData.discount}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                    placeholder="قيمة الخصم"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-slate-200">الإجمالي بعد الخصم والإضافات</label>
+                            <div className="relative">
+                                <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={totalAmount}
+                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="block text-slate-200">ملاحظات</label>
+                        <div className="relative">
+                            <FileText className="absolute right-3 top-4 h-5 w-5 text-slate-400" />
+                            <textarea
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleInputChange}
+                                className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                placeholder="أدخل أي ملاحظات إضافية حول الطلب..."
+                            />
+                        </div>
+                    </div>
+
+                    {hasDataLoadingErrors && (
+                        <div className="bg-red-500/10 text-red-400 rounded-lg p-4 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5" />
+                            حدث خطأ أثناء تحميل البيانات. يرجى المحاولة مرة أخرى لاحقًا.
+                        </div>
+                    )}
+
+                    {createOrderError && (
+                        <div className="bg-red-500/10 text-red-400 rounded-lg p-4 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5" />
+                            حدث خطأ أثناء إنشاء الطلب: {createOrderError.message}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-6 py-2 bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
+                        >
+                            إلغاء
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isPending || hasDataLoadingErrors}
+                            onClick={(e) => handleSubmit(e as any)}
+                            className="px-6 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors disabled:opacity-50 flex items-center gap-2"
+                        >
+                            {isPending ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    جاري الإنشاء...
+                                </>
+                            ) : (
+                                <>
+                                    <ShoppingBag className="h-5 w-5" />
+                                    إنشاء الطلب
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        </motion.div>
     );
 };
 
