@@ -275,13 +275,12 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                     htmlFor="phone"
                     className="block text-sm font-medium text-slate-300 mb-1"
                   >
-                    رقم الهاتف <span className="text-red-400">*</span>
+                    رقم الهاتف
                   </label>
                   <input
                     type="tel"
                     id="phone"
                     {...register("phone", {
-                      required: "رقم الهاتف مطلوب",
                       pattern: {
                         value: /^[0-9]{9,10}$/,
                         message: "رقم هاتف غير صالح",

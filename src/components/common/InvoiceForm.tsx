@@ -904,7 +904,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   <Controller
                     name="phone"
                     control={control}
-                    rules={{ required: "رقم الهاتف مطلوب" }}
                     render={({ field }) => (
                       <input
                         {...field}

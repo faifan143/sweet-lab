@@ -86,12 +86,12 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                 case "paidStatusText":
                     aValue = a.paidStatus
                         ? "مدفوع"
-                        : a.invoice?.isBreak
+                        : a.invoice
                             ? "كسر"
                             : "غير مدفوع";
                     bValue = b.paidStatus
                         ? "مدفوع"
-                        : b.invoice?.isBreak
+                        : b.invoice
                             ? "كسر"
                             : "غير مدفوع";
                     break;
@@ -275,12 +275,14 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus
                                                                         ? "bg-green-500/20 text-green-400"
-                                                                        : "bg-red-500/20 text-red-400"
+                                                                        : order.invoice
+                                                                            ? "bg-amber-500/20 text-amber-400"
+                                                                            : "bg-red-500/20 text-red-400"
                                                                         }`}
                                                                 >
                                                                     {order.paidStatus
                                                                         ? "مدفوع"
-                                                                        : order.invoice?.isBreak
+                                                                        : order.invoice
                                                                             ? "كسر"
                                                                             : "غير مدفوع"}
                                                                 </span>
@@ -437,12 +439,14 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus
                                                                         ? "bg-green-500/20 text-green-400"
-                                                                        : "bg-red-500/20 text-red-400"
+                                                                        : order.invoice
+                                                                            ? "bg-amber-500/20 text-amber-400"
+                                                                            : "bg-red-500/20 text-red-400"
                                                                         }`}
                                                                 >
                                                                     {order.paidStatus
                                                                         ? "مدفوع"
-                                                                        : order.invoice?.isBreak
+                                                                        : order.invoice
                                                                             ? "كسر"
                                                                             : "غير مدفوع"}
                                                                 </span>
@@ -599,12 +603,14 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus
                                                                         ? "bg-green-500/20 text-green-400"
-                                                                        : "bg-red-500/20 text-red-400"
+                                                                        : order.invoice
+                                                                            ? "bg-amber-500/20 text-amber-400"
+                                                                            : "bg-red-500/20 text-red-400"
                                                                         }`}
                                                                 >
                                                                     {order.paidStatus
                                                                         ? "مدفوع"
-                                                                        : order.invoice?.isBreak
+                                                                        : order.invoice
                                                                             ? "كسر"
                                                                             : "غير مدفوع"}
                                                                 </span>

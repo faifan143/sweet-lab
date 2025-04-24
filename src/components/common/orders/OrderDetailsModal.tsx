@@ -236,35 +236,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                         <div className="flex flex-wrap gap-2 mb-2">
                             {order.status === OrderStatus.pending && (
                                 <button
-                                    onClick={() => handleUpdateStatus(OrderStatus.processing)}
-                                    disabled={isUpdating}
-                                    className="bg-orange-400 hover:bg-orange-400/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                                >
-                                    <CheckCircle className="h-4 w-4" />
-                                    {isUpdating ? "يتم التحديث" : "البدء بالطلبية"}
-                                </button>
-                            )}
-                            {order.status === OrderStatus.processing && (
-                                <button
                                     onClick={() => handleUpdateStatus(OrderStatus.delivered)}
                                     disabled={isUpdating}
                                     className="bg-success hover:bg-success/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
                                 >
                                     <Truck className="h-4 w-4" />
-                                    {isUpdating ? "يتم التحديث" : "تعيين كمسلم"}
+                                    {isUpdating ? "يتم التحديث" : "تم تسليم الطلبية"}
                                 </button>
                             )}
-                            {(order.status === OrderStatus.pending || order.status === OrderStatus.processing) && (
-                                <button
-                                    onClick={() => handleUpdateStatus(OrderStatus.cancelled)}
-                                    disabled={isUpdating}
-                                    className="bg-danger hover:bg-danger/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                                >
-                                    <AlertCircle className="h-4 w-4" />
-                                    {isUpdating ? "يتم التحديث الطلب" : "إلغاء الطلب"}
-                                </button>
-                            )}
-                            {!order.paidStatus && order.status != OrderStatus.cancelled && (
+                            {!order.paidStatus && (
                                 <button
                                     onClick={handleConvertToInvoiceClick}
                                     className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors"

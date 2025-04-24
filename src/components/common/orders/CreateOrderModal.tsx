@@ -494,7 +494,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 customerId: parseInt(formData.customerId as string),
                 categoryId: parseInt(formData.categoryId as string),
                 totalAmount,
-                paidStatus: formData.paymentType === 'paid',
+                paidStatus: formData.paymentType != 'unpaid',
                 status: order?.status as OrderStatus | undefined, // Ensure status is OrderStatus | undefined
                 items: formData.items.map(item => ({
                     id: item.id,
@@ -556,18 +556,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         const customer = customers.find(c => c.id === parseInt(formData.customerId as string));
         return customer ? customer.name : '';
     }, [customers, formData.customerId]);
-
-    const getCategoryName = useCallback((): string => {
-        if (!categories || !formData.categoryId) return '';
-        const category = categories.find(c => c.id === parseInt(formData.categoryId as string));
-        return category ? category.name : '';
-    }, [categories, formData.categoryId]);
-
-    const getItemUnits = useCallback((itemId: string | number) => {
-        if (!items || !itemId) return [];
-        const item = items.find(i => i.id === parseInt(itemId as string));
-        return item?.units || [];
-    }, [items]);
 
     const getItemName = useCallback((itemId: string | number): string => {
         if (!items || !itemId) return '';

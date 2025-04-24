@@ -127,8 +127,9 @@ const OrdersPage: React.FC = () => {
     const [isInvoiceConversionModalOpen, setIsInvoiceConversionModalOpen] = useState<boolean>(false);
     const [viewMode, setViewMode] = useState<"byDate" | "byCategory">("byDate");
     const [selectedDate, setSelectedDate] = useState<string>(""); // State for selected date
+    const [paymentStatus, setPaymentStatus] = useState<"all" | "paid" | "unpaid" | "break">("all"); // State for payment status
 
-    // Filter parameters
+    // Filter parameters (unchanged, as filtering is done client-side)
     const getAllFilters = (): FilterOrders | undefined => {
         if (selectedDate) {
             return { endDate: selectedDate };
@@ -165,48 +166,93 @@ const OrdersPage: React.FC = () => {
         isTomorrowOrdersLoading ||
         isCategoriesLoading;
 
-    // Filter orders based on search term
+    // Filter orders based on search term and payment status
     const filteredAllOrders = useMemo(() => {
         if (!allOrders) return [];
-        if (!searchTerm) return allOrders;
+        let filtered = allOrders;
 
-        const searchLower = searchTerm.toLowerCase();
-        return allOrders.filter(
-            (order) =>
-                order.customer?.name?.toLowerCase().includes(searchLower) ||
-                order.orderNumber?.toLowerCase().includes(searchLower) ||
-                order.notes?.toLowerCase().includes(searchLower) ||
-                order.category?.name?.toLowerCase().includes(searchLower)
-        );
-    }, [allOrders, searchTerm]);
+        // Apply search term filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = filtered.filter(
+                (order) =>
+                    order.customer?.name?.toLowerCase().includes(searchLower) ||
+                    order.orderNumber?.toLowerCase().includes(searchLower) ||
+                    order.notes?.toLowerCase().includes(searchLower) ||
+                    order.category?.name?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply payment status filter
+        if (paymentStatus !== "all") {
+            filtered = filtered.filter((order) => {
+                if (paymentStatus === "paid") return order.paidStatus === true;
+                if (paymentStatus === "unpaid") return order.paidStatus === false && !order.invoice?.isBreak;
+                if (paymentStatus === "break") return order.paidStatus == false && order.invoice;
+                return true;
+            });
+        }
+
+        return filtered;
+    }, [allOrders, searchTerm, paymentStatus]);
 
     const filteredTodayOrders = useMemo(() => {
         if (!todayOrders) return [];
-        if (!searchTerm) return todayOrders;
+        let filtered = todayOrders;
 
-        const searchLower = searchTerm.toLowerCase();
-        return todayOrders.filter(
-            (order) =>
-                order.customer?.name?.toLowerCase().includes(searchLower) ||
-                order.orderNumber?.toLowerCase().includes(searchLower) ||
-                order.notes?.toLowerCase().includes(searchLower) ||
-                order.category?.name?.toLowerCase().includes(searchLower)
-        );
-    }, [todayOrders, searchTerm]);
+        // Apply search term filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = filtered.filter(
+                (order) =>
+                    order.customer?.name?.toLowerCase().includes(searchLower) ||
+                    order.orderNumber?.toLowerCase().includes(searchLower) ||
+                    order.notes?.toLowerCase().includes(searchLower) ||
+                    order.category?.name?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply payment status filter
+        if (paymentStatus !== "all") {
+            filtered = filtered.filter((order) => {
+                if (paymentStatus === "paid") return order.paidStatus === true;
+                if (paymentStatus === "unpaid") return order.paidStatus === false && !order.invoice?.isBreak;
+                if (paymentStatus === "break") return order.paidStatus == false && order.invoice;
+                return true;
+            });
+        }
+
+        return filtered;
+    }, [todayOrders, searchTerm, paymentStatus]);
 
     const filteredTomorrowOrders = useMemo(() => {
         if (!tomorrowOrders) return [];
-        if (!searchTerm) return tomorrowOrders;
+        let filtered = tomorrowOrders;
 
-        const searchLower = searchTerm.toLowerCase();
-        return tomorrowOrders.filter(
-            (order) =>
-                order.customer?.name?.toLowerCase().includes(searchLower) ||
-                order.orderNumber?.toLowerCase().includes(searchLower) ||
-                order.notes?.toLowerCase().includes(searchLower) ||
-                order.category?.name?.toLowerCase().includes(searchLower)
-        );
-    }, [tomorrowOrders, searchTerm]);
+        // Apply search term filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = filtered.filter(
+                (order) =>
+                    order.customer?.name?.toLowerCase().includes(searchLower) ||
+                    order.orderNumber?.toLowerCase().includes(searchLower) ||
+                    order.notes?.toLowerCase().includes(searchLower) ||
+                    order.category?.name?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply payment status filter
+        if (paymentStatus !== "all") {
+            filtered = filtered.filter((order) => {
+                if (paymentStatus === "paid") return order.paidStatus === true;
+                if (paymentStatus === "unpaid") return order.paidStatus === false && !order.invoice?.isBreak;
+                if (paymentStatus === "break") return order.paidStatus == false && order.invoice;
+                return true;
+            });
+        }
+
+        return filtered;
+    }, [tomorrowOrders, searchTerm, paymentStatus]);
 
     // Handle customer selection
     const handleSelectCustomer = (customer: OrderCustomer, categoryId: number) => {
@@ -246,6 +292,16 @@ const OrdersPage: React.FC = () => {
     // Clear date filter
     const clearDateFilter = () => {
         setSelectedDate("");
+    };
+
+    // Handle payment status change
+    const handlePaymentStatusChange = (status: "all" | "paid" | "unpaid" | "break") => {
+        setPaymentStatus(status);
+    };
+
+    // Clear payment status filter
+    const clearPaymentStatusFilter = () => {
+        setPaymentStatus("all");
     };
 
     // Handler to close both modals
@@ -296,8 +352,8 @@ const OrdersPage: React.FC = () => {
                         {/* Summary Cards */}
                         <OrdersSummaryComponent />
 
-                        {/* View Toggle and Date Filter */}
-                        <div className="mb-6 flex justify-end items-center gap-4 flex-wrap" dir="rtl">
+                        {/* View Toggle and Filters */}
+                        <div className="mb-6 flex justify-start items-center gap-4 flex-wrap" dir="rtl">
                             <div className="bg-slate-800/50 p-1 rounded-lg flex">
                                 <button
                                     onClick={() => setViewMode("byDate")}
@@ -332,7 +388,32 @@ const OrdersPage: React.FC = () => {
                                     <button
                                         onClick={clearDateFilter}
                                         className="text-slate-400 hover:text-slate-200 transition-colors"
-                                        title="إزالة التصفية"
+                                        title="إزالة تصفية التاريخ"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+
+                                <select
+                                    id="payment-status-filter"
+                                    value={paymentStatus}
+                                    onChange={(e) =>
+                                        handlePaymentStatusChange(e.target.value as "all" | "paid" | "unpaid" | "break")
+                                    }
+                                    className="bg-slate-700 text-slate-200 px-3 py-1 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                >
+                                    <option value="all">الكل</option>
+                                    <option value="paid">مدفوع</option>
+                                    <option value="unpaid">غير مدفوع</option>
+                                    <option value="break">كسر</option>
+                                </select>
+                                {paymentStatus !== "all" && (
+                                    <button
+                                        onClick={clearPaymentStatusFilter}
+                                        className="text-slate-400 hover:text-slate-200 transition-colors"
+                                        title="إزالة تصفية حالة الدفع"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
