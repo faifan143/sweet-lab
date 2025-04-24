@@ -29,7 +29,7 @@ export const useCreateOrderCategory = () => {
     return useMutation({
         mutationFn: (data: OrdersCategoriesCreateDto) => OrdersService.createOrderCategory(data),
         onSuccess: () => {
-            // Invalidate only order categories
+            // Invalidate order categories to reflect the new category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
         },
     });
@@ -42,7 +42,7 @@ export const useUpdateOrderCategory = () => {
         mutationFn: ({ orderCategoryId, data }: { orderCategoryId: number, data: OrderCategoryUpdateDto }) =>
             OrdersService.updateOrderCategory(orderCategoryId, data),
         onSuccess: () => {
-            // Invalidate order categories since a category was updated
+            // Invalidate order categories to reflect the updated category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
         },
     });
@@ -54,13 +54,12 @@ export const useDeleteOrderCategory = () => {
     return useMutation({
         mutationFn: (orderCategoryId: number) => OrdersService.deleteOrderCategory(orderCategoryId),
         onSuccess: () => {
-            // Invalidate order categories since a category was deleted
+            // Invalidate order categories to reflect the deleted category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
-            // Invalidate orders-related queries as orders may be affected (e.g., if orders are reassigned or removed)
+            // Invalidate orders-related queries only if deleting a category affects orders
+            // (e.g., orders are reassigned or deleted). Adjust based on backend logic.
             queryClient.invalidateQueries({ queryKey: ["orders"] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
-            queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
-            queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
         },
     });
 };
@@ -108,7 +107,7 @@ export const useCreateOrder = () => {
     return useMutation({
         mutationFn: (data: OrdersCreateDto) => OrdersService.createOrder(data),
         onSuccess: () => {
-            // Invalidate queries related to orders
+            // Invalidate queries affected by a new order
             queryClient.invalidateQueries({ queryKey: ["orders"] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
@@ -123,11 +122,12 @@ export const useUpdateOrder = () => {
     return useMutation({
         mutationFn: ({ orderId, data }: { orderId: number, data: UpdateOrder }) =>
             OrdersService.updateOrder(orderId, data),
-        onSuccess: (_, variables) => {
-            // Invalidate queries related to the updated order
+        onSuccess: (_, { orderId }) => {
+            // Invalidate specific order and related lists
+            queryClient.invalidateQueries({ queryKey: ["order", orderId] });
             queryClient.invalidateQueries({ queryKey: ["orders"] });
-            queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
+            // Conditionally invalidate based on order changes (e.g., isForToday, status)
             queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
         },
@@ -147,13 +147,18 @@ export const useUpdateOrderStatus = () => {
             status: OrderStatus,
             notes?: string
         }) => OrdersService.updateOrderStatus(orderId, status, notes),
-        onSuccess: (_, variables) => {
-            // Invalidate queries related to the updated order
+        onSuccess: (_, { orderId, status }) => {
+            // Invalidate specific order and related lists
+            queryClient.invalidateQueries({ queryKey: ["order", orderId] });
             queryClient.invalidateQueries({ queryKey: ["orders"] });
-            queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
-            queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
-            queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
+            // Conditionally invalidate based on status
+            if (status === OrderStatus.ready || status === OrderStatus.processing) {
+                queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
+            }
+            if (status === OrderStatus.delivered) {
+                queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
+            }
         },
     });
 };
@@ -169,11 +174,12 @@ export const useConvertOrderToInvoice = () => {
             orderId: number,
             data?: ConvertToInvoiceRequest
         }) => OrdersService.convertOrderToInvoice(orderId, data),
-        onSuccess: (_, variables) => {
-            // Invalidate queries related to the converted order
+        onSuccess: (_, { orderId }) => {
+            // Invalidate specific order and related lists
+            queryClient.invalidateQueries({ queryKey: ["order", orderId] });
             queryClient.invalidateQueries({ queryKey: ["orders"] });
-            queryClient.invalidateQueries({ queryKey: ["order", variables.orderId] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
+            // Invalidate preparation/delivery lists if conversion affects them
             queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
         },
@@ -186,9 +192,9 @@ export const useDeleteOrder = () => {
     return useMutation({
         mutationFn: (orderId: number) => OrdersService.deleteOrder(orderId),
         onSuccess: (_, orderId) => {
-            // Invalidate queries related to the deleted order
-            queryClient.invalidateQueries({ queryKey: ["orders"] });
+            // Invalidate specific order and related lists
             queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });

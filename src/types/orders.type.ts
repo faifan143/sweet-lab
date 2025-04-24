@@ -1,4 +1,3 @@
-import { AllCustomerType } from "./customers.type";
 
 export interface OrdersCategoriesCreateDto {
     name: string;
@@ -19,7 +18,7 @@ export interface OrdersCategoriesFetchDto {
         orders: number
     },
     customersCount: number,
-    customers: AllCustomerType[]
+    customers: OrderCustomer[]
 }
 
 
@@ -84,7 +83,7 @@ export interface OrderItem {
     item?: Item;
 }
 
-export interface Customer {
+export interface OrderCustomer {
     id: number;
     name: string;
     phone: string;
@@ -105,30 +104,64 @@ export interface OrderCategory {
     description?: string;
     createdAt?: Date;
     updatedAt?: Date;
-    customers?: AllCustomerType[]
+    customers?: OrderCustomer[]
 }
 
+// start
+// src/types/order.type.ts
+
+
 export interface OrderResponseDto {
-    id?: number;
-    orderNumber?: string;
+    id: number;
+    orderNumber: string;
     customerId: number;
     totalAmount: number;
-    paidStatus?: boolean;
-    status?: OrderStatus;
-    createdAt?: Date;
-    scheduledFor?: string;
-    deliveryDate?: string | null;
-    notes?: string;
+    paidStatus: boolean;
+    status: OrderStatus;
+    createdAt: string; // Changed to string to match ISO date format
+    scheduledFor: string; // ISO date string
+    deliveryDate: string | null;
+    notes: string;
     categoryId: number;
-    invoiceId?: number | null;
-    employeeId?: number;
-    isForToday?: boolean;
-    customer?: AllCustomerType;
-    category?: OrderCategory;
-    employee?: Employee;
+    invoiceId: number | null;
+    employeeId: number;
+    customer: OrderCustomer;
+    category: OrderCategory;
+    employee: Employee;
     items: OrderItem[];
-    isBreak: boolean
+    invoice: Invoice; // Added to match the JSON structure
 }
+
+
+// Employee type
+export interface Employee {
+    username: string;
+}
+
+
+// Product item (item details within order item)
+export interface ProductItem {
+    id: number;
+    name: string;
+    type: 'raw' | 'production';
+    units: ItemUnit[];
+    defaultUnit: string;
+    cost: number;
+    price: number;
+    description: string;
+    groupId: number;
+}
+
+// Item unit configuration
+export interface ItemUnit {
+    unit: string;
+    price: number;
+    factor: number;
+}
+
+
+// end
+
 
 export interface UpdateOrder {
     customerId?: number;
@@ -184,6 +217,7 @@ export interface Invoice {
     createdAt: string;
     notes?: string;
     isBreak: boolean;
+    initialPayment?: number | null;
     fundId: number;
     shiftId: number;
     employeeId: number;
@@ -191,7 +225,7 @@ export interface Invoice {
     trayCount: number;
     relatedAdvanceId?: number | null;
     items: InvoiceItem[];
-    customer?: Customer;
+    customer?: OrderCustomer;
 }
 
 export interface OrderWithInvoice {

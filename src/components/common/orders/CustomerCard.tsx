@@ -1,12 +1,12 @@
 // components/orders/CustomerCard.tsx
 import React from "react";
 import { User } from "lucide-react";
-import { AllCustomerType } from "@/types/customers.type";
+import { OrderCustomer } from "@/types/orders.type";
 
 interface CustomerCardProps {
     count: number;
-    customer: AllCustomerType;
-    onSelect: (customer: AllCustomerType) => void;
+    customer: OrderCustomer;
+    onSelect: (customer: OrderCustomer) => void;
     isActive: boolean;
 }
 

@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import { useOrderCategories, useCreateOrderCategory, useUpdateOrderCategory, useDeleteOrderCategory } from '@/hooks/useOrders';
 import { OrdersCategoriesFetchDto, OrdersCategoriesCreateDto, OrderCategoryUpdateDto } from '@/types/orders.type';
+import { AxiosError } from 'axios';
 
 interface CategoryManagementModalProps {
     isOpen: boolean;
@@ -204,9 +205,16 @@ const CategoryManagementModal: React.FC<CategoryManagementModalProps> = ({
                     setSuccessMessage('');
                 }, 3000);
             },
-            onError: () => {
+            onError: (error) => {
+                let errorMessage = "حدث خطأ غير معروف";
+
+                // Check if the error is an AxiosError
+                if (error instanceof AxiosError) {
+                    // Safely access the message with optional chaining and fallback
+                    errorMessage = error.response?.data?.message ?? "لا يوجد رسالة خطأ";
+                }
                 setFormErrors({
-                    general: 'حدث خطأ أثناء حذف التصنيف'
+                    general: errorMessage
                 });
                 setIsConfirmingDelete(false);
             }

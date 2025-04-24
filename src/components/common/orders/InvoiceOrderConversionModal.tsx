@@ -262,18 +262,7 @@ const InvoiceOrderConversionModal: React.FC<InvoiceOrderConversionModalProps> = 
 
                     {/* Final Total */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="block text-slate-200">الخصم</label>
-                            <div className="relative">
-                                <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    type="number"
-                                    value={discount}
-                                    readOnly
-                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                                />
-                            </div>
-                        </div>
+
                         <div className="space-y-2">
                             <label className="block text-slate-200">الإجمالي بعد الخصم والإضافات</label>
                             <div className="relative">

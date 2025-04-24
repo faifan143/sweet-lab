@@ -18,7 +18,7 @@ import {
     useOrdersSummary
 } from "@/hooks/useOrders";
 import { AllCustomerType } from "@/types/customers.type";
-import { FilterOrders, OrderResponseDto } from "@/types/orders.type";
+import { FilterOrders, OrderCustomer, OrderResponseDto } from "@/types/orders.type";
 import {
     CalendarDays,
     Plus,
@@ -31,7 +31,7 @@ import React, { useMemo, useState } from "react";
 
 // Customer Orders Modal Component
 interface CustomerOrdersModalProps {
-    customer: AllCustomerType;
+    customer: OrderCustomer;
     categoryId: number | null;
     orders: OrderResponseDto[];
     isOpen: boolean;
@@ -47,6 +47,10 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({
     onClose,
     onViewOrderDetails
 }) => {
+    const { data: categories = [] } = useOrderCategories();
+
+    const category = categories.find((category) => category.id == categoryId)
+
     if (!isOpen) return null;
 
     // Filter orders by customer ID and category ID
@@ -58,7 +62,7 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({
     // Get category name from the categoryId
     const getCategoryName = () => {
         if (categoryId === null) return '';
-        return ` - ${customer.category?.name || `تصنيف #${categoryId}`}`;
+        return ` - ${category?.name || `تصنيف #${categoryId}`}`;
     };
 
     return (
@@ -110,7 +114,7 @@ const OrdersPage: React.FC = () => {
     // State
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [activeTab, setActiveTab] = useState<OrderTabType>("forToday");
-    const [selectedCustomer, setSelectedCustomer] = useState<AllCustomerType | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<OrderCustomer | null>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
     const [isCustomerOrdersModalOpen, setIsCustomerOrdersModalOpen] = useState<boolean>(false);
@@ -188,7 +192,7 @@ const OrdersPage: React.FC = () => {
     }, [tomorrowOrders, searchTerm]);
 
     // Handle customer selection to show orders in modal
-    const handleSelectCustomer = (customer: AllCustomerType, categoryId: number) => {
+    const handleSelectCustomer = (customer: OrderCustomer, categoryId: number) => {
         setSelectedCustomer(customer);
         setSelectedCustomerId(customer.id);
         setSelectedCategoryId(categoryId);

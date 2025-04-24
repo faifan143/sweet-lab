@@ -17,20 +17,6 @@ const OrdersTabs: React.FC<OrdersTabsProps> = ({ activeTab, onTabChange, summary
         <div className="border-b border-slate-700/50 mb-6 overflow-auto no-scrollbar" dir="rtl">
             <div className="flex">
                 <button
-                    onClick={() => onTabChange("all")}
-                    className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "all"
-                        ? "text-orange-400 border-b-2 border-orangetext-orange-400"
-                        : "text-muted-foreground hover:text-foreground"
-                        }`}
-                >
-                    <ShoppingBag className="h-4 w-4" />
-                    <span>جميع الطلبات</span>
-                    <span className="mx-2 bg-orange-400/10  text-orange-400 px-2 py-0.5 rounded-full text-xs">
-                        {summary?.total || 0}
-                    </span>
-                </button>
-
-                <button
                     onClick={() => onTabChange("forToday")}
                     className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "forToday"
                         ? "text-amber-400 border-b-2 border-amber-400"
@@ -43,7 +29,6 @@ const OrdersTabs: React.FC<OrdersTabsProps> = ({ activeTab, onTabChange, summary
                         {summary?.forToday || 0}
                     </span>
                 </button>
-
                 <button
                     onClick={() => onTabChange("forTomorrow")}
                     className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "forTomorrow"
@@ -57,6 +42,23 @@ const OrdersTabs: React.FC<OrdersTabsProps> = ({ activeTab, onTabChange, summary
                         {summary?.forTomorrow || 0}
                     </span>
                 </button>
+                <button
+                    onClick={() => onTabChange("all")}
+                    className={`px-4 py-2 -mb-px flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "all"
+                        ? "text-orange-400 border-b-2 border-orangetext-orange-400"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>جميع الطلبات</span>
+                    <span className="mx-2 bg-orange-400/10  text-orange-400 px-2 py-0.5 rounded-full text-xs">
+                        {summary?.total || 0}
+                    </span>
+                </button>
+
+
+
+
             </div>
         </div>
     );

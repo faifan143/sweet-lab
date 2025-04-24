@@ -1,9 +1,10 @@
 import { useDeleteOrder, useUpdateOrderStatus } from '@/hooks/useOrders';
 import { OrderResponseDto, OrderStatus } from '@/types/orders.type';
 import { formatCurrency } from '@/utils/formatters';
-import { AlertCircle, CheckCircle, Clock, CreditCard, Edit, RefreshCcw, ShoppingBag, Trash2, Truck, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, CreditCard, RefreshCcw, ShoppingBag, Trash2, Truck, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import EditOrderModal from './EditOrderModal';
+import CreateOrderModal from './CreateOrderModal';
+import { AxiosError } from 'axios';
 
 interface OrderDetailsModalProps {
     order: OrderResponseDto;
@@ -16,7 +17,7 @@ interface OrderDetailsModalProps {
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, onClose, onOrderUpdated, onConvertToInvoice }) => {
     const [notes, setNotes] = useState<string>('');
     const { mutate: updateStatus, isPending: isUpdating, isSuccess: isUpdated } = useUpdateOrderStatus();
-    const { mutate: deleteOrder, isPending: isDeleting, isSuccess: isDeleted } = useDeleteOrder();
+    const { mutate: deleteOrder, isPending: isDeleting, isSuccess: isDeleted, isError: isDeleteError, error: deleteError } = useDeleteOrder();
     const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -31,6 +32,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
         if (onOrderUpdated) {
             onOrderUpdated();
         }
+        onClose();
     };
 
     const handleUpdateStatus = (status: OrderStatus) => {
@@ -41,24 +43,21 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
         });
     };
 
-
     useEffect(() => {
         if (isUpdated || isDeleted) {
-            onClose()
+            onClose();
         }
-    }, [isUpdated, isDeleted])
+    }, [isUpdated, isDeleted, onClose]);
 
     const handleConvertToInvoiceClick = () => {
         if (onConvertToInvoice) {
             onConvertToInvoice(order);
         }
-        // Removed onClose() to prevent immediate closing
     };
 
     const handleDeleteOrder = () => {
         if (isConfirmingDelete) {
             deleteOrder(order.id!);
-            onClose();
         } else {
             setIsConfirmingDelete(true);
         }
@@ -130,11 +129,12 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                         <div className="flex gap-2">
                             <button
                                 onClick={handleEditClick}
-                                className="text-slate-400 hover:text-primary transition-colors rounded p-1 hover:bg-slate-700/50"
+                                className="text-slate-400 hover:text-blue-400 transition-colors  hover:bg-slate-700/50 flex items-center gap-2 border border-white/40 shadow-md rounded-full p-2"
                                 aria-label="تعديل الطلب"
                                 title="تعديل الطلب"
                             >
-                                <Edit className="h-5 w-5" />
+                                <ShoppingBag className="h-5 w-5" />
+                                تعديل الطلب
                             </button>
                             <button
                                 onClick={onClose}
@@ -174,7 +174,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                 <p className="text-slate-300 mb-1">
                                     <span className="text-slate-400">حالة الدفع:</span>
                                     <span className={`mr-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
-                                        {order.paidStatus ? 'مدفوع' : 'غير مدفوع'}
+                                        {order.paidStatus ? 'مدفوع' : order.invoice?.isBreak ? 'كسر' : 'غير مدفوع'}
                                     </span>
                                 </p>
                             </div>
@@ -234,24 +234,24 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                         </div>
                         {/* Actions */}
                         <div className="flex flex-wrap gap-2 mb-2">
-                            {order.status === OrderStatus.processing && (
+                            {order.status === OrderStatus.pending && (
                                 <button
-                                    onClick={() => handleUpdateStatus(OrderStatus.ready)}
+                                    onClick={() => handleUpdateStatus(OrderStatus.processing)}
                                     disabled={isUpdating}
-                                    className="bg-info hover:bg-info/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                    className="bg-orange-400 hover:bg-orange-400/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
                                 >
                                     <CheckCircle className="h-4 w-4" />
-                                    {isUpdating ? "يتم التعيين" : "تعيين كجاهز"}
+                                    {isUpdating ? "يتم التحديث" : "البدء بالطلبية"}
                                 </button>
                             )}
-                            {order.status === OrderStatus.ready && (
+                            {order.status === OrderStatus.processing && (
                                 <button
                                     onClick={() => handleUpdateStatus(OrderStatus.delivered)}
                                     disabled={isUpdating}
                                     className="bg-success hover:bg-success/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
                                 >
                                     <Truck className="h-4 w-4" />
-                                    {isUpdating ? "يتم التعيين" : "تعيين كمسلم"}
+                                    {isUpdating ? "يتم التحديث" : "تعيين كمسلم"}
                                 </button>
                             )}
                             {(order.status === OrderStatus.pending || order.status === OrderStatus.processing) && (
@@ -261,10 +261,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                     className="bg-danger hover:bg-danger/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
                                 >
                                     <AlertCircle className="h-4 w-4" />
-                                    {isUpdating ? "يتم إلغاء الطلب" : "إلغاء الطلب"}
+                                    {isUpdating ? "يتم التحديث الطلب" : "إلغاء الطلب"}
                                 </button>
                             )}
-                            {!order.paidStatus && !order.isBreak && (
+                            {!order.paidStatus && order.status != OrderStatus.cancelled && (
                                 <button
                                     onClick={handleConvertToInvoiceClick}
                                     className="bg-primary hover:bg-primary/80 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors"
@@ -279,19 +279,31 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                 className={`bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50 ${isConfirmingDelete ? 'bg-red-600' : ''}`}
                             >
                                 <Trash2 className="h-4 w-4" />
-                                {isConfirmingDelete ? 'تأكيد الحذف' : 'حذف الطلب'}
+                                {isConfirmingDelete ? 'اضغط مرة ثانية للتأكيد' : 'حذف الطلب'}
                             </button>
                         </div>
+                        {/* Error Message */}
+                        {(isDeleteError) && (
+                            <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5" />
+                                <span>
+                                    {deleteError instanceof AxiosError
+                                        ? deleteError.response?.data.message
+                                        : (deleteError as any)?.message || 'حدث خطأ أثناء حذف الطلبية'}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Edit Order Modal */}
-            <EditOrderModal
-                order={order}
+            <CreateOrderModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 onSuccess={handleEditSuccess}
+                order={order}
+                mode="edit"
             />
         </>
     );

@@ -18,7 +18,9 @@ import { motion } from 'framer-motion';
 import { useFetchCustomers } from '@/hooks/customers/useCustomers';
 import { useItems } from '@/hooks/items/useItems';
 import { useItemGroups } from '@/hooks/items/useItemGroups';
-import { useCreateOrder, useOrderCategories } from '@/hooks/useOrders';
+import { useCreateOrder, useOrderCategories, useUpdateOrder } from '@/hooks/useOrders';
+import { OrderResponseDto, OrderStatus } from '@/types/orders.type';
+import { AxiosError } from 'axios';
 
 // Type Definitions
 interface ItemUnit {
@@ -46,6 +48,15 @@ interface OrderItem {
     notes: string;
 }
 
+interface InvoiceData {
+    discount: number;
+    additionalAmount: number;
+    trayCount: number;
+    notes: string;
+    isBreak?: boolean;
+    initialPayment?: number;
+}
+
 interface OrderFormData {
     customerId: string | number;
     categoryId: string | number;
@@ -57,14 +68,15 @@ interface OrderFormData {
     additionalAmount: number;
     trayCount: number;
     paymentType: 'paid' | 'unpaid' | 'breakage';
-    firstPayment: number;
+    initialPayment: number;
+    invoiceNotes: string;
 }
 
 interface OrderErrors {
     customerId?: string;
     categoryId?: string;
     trayCount?: string;
-    firstPayment?: string;
+    initialPayment?: string;
     [key: string]: string | undefined;
 }
 
@@ -73,6 +85,8 @@ interface CreateOrderModalProps {
     onClose: () => void;
     onSuccess?: () => void;
     presetCustomerId?: number;
+    order?: OrderResponseDto;
+    mode?: 'create' | 'edit';
 }
 
 const INITIAL_FORM_DATA: OrderFormData = {
@@ -86,7 +100,8 @@ const INITIAL_FORM_DATA: OrderFormData = {
     discount: 0,
     additionalAmount: 0,
     trayCount: 0,
-    firstPayment: 0
+    initialPayment: 0,
+    invoiceNotes: ''
 };
 
 // Component Definition
@@ -94,7 +109,9 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     isOpen,
     onClose,
     onSuccess,
-    presetCustomerId
+    presetCustomerId,
+    order,
+    mode = 'create'
 }) => {
     // Hooks for fetching data
     const {
@@ -123,9 +140,15 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
     const {
         mutate: createOrder,
-        isPending,
+        isPending: isCreating,
         error: createOrderError
     } = useCreateOrder();
+
+    const {
+        mutate: updateOrder,
+        isPending: isUpdating,
+        error: updateOrderError
+    } = useUpdateOrder();
 
     // State Management
     const [formData, setFormData] = useState<OrderFormData>({ ...INITIAL_FORM_DATA });
@@ -140,9 +163,45 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     const [selectedItemUnit, setSelectedItemUnit] = useState<string>('');
     const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1);
 
+    // Initialize form data for editing
+    useEffect(() => {
+        if (isOpen && mode === 'edit' && order) {
+            setFormData({
+                customerId: order.customer?.id || '',
+                categoryId: order.categoryId || '',
+                notes: order.notes || '',
+                paidStatus: order.paidStatus,
+                isForToday: order.scheduledFor
+                    ? new Date(order.scheduledFor).toDateString() === new Date().toDateString()
+                    : false,
+                paymentType: order.paidStatus
+                    ? 'paid'
+                    : order.invoice?.isBreak
+                        ? 'breakage'
+                        : 'unpaid',
+                items: order.items.map(item => ({
+                    id: item.id,
+                    itemId: item.itemId,
+                    quantity: item.quantity.toString(),
+                    unitPrice: item.unitPrice.toString(),
+                    unit: item.unit,
+                    notes: item.notes || ''
+                })),
+                discount: order.invoice?.discount || 0,
+                additionalAmount: order.invoice?.additionalAmount || 0,
+                trayCount: order.invoice?.trayCount || 0,
+                initialPayment: order.invoice?.initialPayment || 0,
+                invoiceNotes: order.invoice?.notes || ''
+            });
+            setTotalAmount(order.totalAmount);
+        } else if (isOpen) {
+            resetForm();
+        }
+    }, [isOpen, mode, order]);
+
     // Effects
     useEffect(() => {
-        if (presetCustomerId && customers.length > 0) {
+        if (presetCustomerId && customers.length > 0 && mode !== 'edit') {
             const customer = customers.find(c => c.id === presetCustomerId);
             if (customer) {
                 setFormData(prev => ({
@@ -151,7 +210,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 }));
             }
         }
-    }, [presetCustomerId, customers]);
+    }, [presetCustomerId, customers, mode]);
 
     useEffect(() => {
         const errorsToLog = [
@@ -159,13 +218,14 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             { error: categoriesError, message: 'Categories fetch error' },
             { error: itemsError, message: 'Items fetch error' },
             { error: itemGroupsError, message: 'Item groups fetch error' },
-            { error: createOrderError, message: 'Create order error' }
+            { error: createOrderError, message: 'Create order error' },
+            { error: updateOrderError, message: 'Update order error' }
         ];
 
         errorsToLog.forEach(({ error, message }) => {
             if (error) console.error(`${message}:`, error);
         });
-    }, [customersError, categoriesError, itemsError, itemGroupsError, createOrderError]);
+    }, [customersError, categoriesError, itemsError, itemGroupsError, createOrderError, updateOrderError]);
 
     useEffect(() => {
         try {
@@ -183,12 +243,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
     }, [formData.items, formData.discount, formData.additionalAmount]);
 
-    useEffect(() => {
-        if (isOpen) {
-            resetForm();
-        }
-    }, [isOpen]);
-
     // Form Handlers
     const resetForm = useCallback(() => {
         setFormData({ ...INITIAL_FORM_DATA });
@@ -203,6 +257,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         setSelectedItem(0);
         setSelectedUnitIndex(-1);
         setItemSearchTerm('');
+        setQuantity(1);
+        setSelectedItemPrice(0);
+        setSelectedItemUnit('');
+        setSelectedItemFactor(1);
     }, [presetCustomerId]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -213,7 +271,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             setFormData(prev => ({
                 ...prev,
                 [name]: type === 'checkbox' ? checked :
-                    (name === 'discount' || name === 'additionalAmount' || name === 'trayCount' || name === 'firstPayment')
+                    (name === 'discount' || name === 'additionalAmount' || name === 'trayCount' || name === 'initialPayment')
                         ? parseFloat(value) || 0 : value
             }));
 
@@ -230,7 +288,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             ...prev,
             paymentType: type,
             paidStatus: type === 'paid',
-            firstPayment: type === 'breakage' ? prev.firstPayment : 0
+            initialPayment: type === 'breakage' ? prev.initialPayment : 0
         }));
     };
 
@@ -403,11 +461,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             }
 
             if (formData.paymentType === 'breakage') {
-                if (formData.firstPayment <= 0) {
-                    newErrors.firstPayment = 'يجب إدخال دفعة أولى أكبر من صفر';
+                if (formData.initialPayment <= 0) {
+                    newErrors.initialPayment = 'يجب إدخال دفعة أولى أكبر من صفر';
                     isValid = false;
-                } else if (formData.firstPayment >= (totalAmount - formData.discount)) {
-                    newErrors.firstPayment = 'يجب أن تكون الدفعة الأولى أقل من المبلغ الإجمالي بعد الخصم';
+                } else if (formData.initialPayment >= (totalAmount - formData.discount)) {
+                    newErrors.initialPayment = 'يجب أن تكون الدفعة الأولى أقل من المبلغ الإجمالي بعد الخصم';
                     isValid = false;
                 }
             }
@@ -437,37 +495,60 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 categoryId: parseInt(formData.categoryId as string),
                 totalAmount,
                 paidStatus: formData.paymentType === 'paid',
-                isBreak: formData.paymentType === 'breakage',
-                notes: formData.notes,
-                isForToday: formData.isForToday,
-                discount: formData.discount,
-                additionalAmount: formData.additionalAmount,
-                trayCount: formData.trayCount,
-                initialPayment: formData.paymentType === 'breakage' ? formData.firstPayment : undefined,
+                status: order?.status as OrderStatus | undefined, // Ensure status is OrderStatus | undefined
                 items: formData.items.map(item => ({
+                    id: item.id,
                     itemId: parseInt(item.itemId as string),
                     quantity: parseFloat(item.quantity as string),
                     unitPrice: parseFloat(item.unitPrice as string),
                     unit: item.unit,
-                    notes: item.notes
-                }))
+                    notes: item.notes || ''
+                })),
+                notes: formData.notes || '',
+                isForToday: formData.isForToday,
+                invoiceData: {
+                    discount: formData.discount,
+                    additionalAmount: formData.additionalAmount,
+                    trayCount: formData.trayCount,
+                    notes: formData.invoiceNotes || '',
+                    ...(formData.paymentType === 'breakage' && {
+                        isBreak: true,
+                        initialPayment: formData.initialPayment
+                    })
+                }
             };
 
-            createOrder(orderData, {
-                onSuccess: () => {
-                    console.log('Order created successfully');
-                    onClose();
-                    resetForm();
-                    if (onSuccess) onSuccess();
-                },
-                onError: (error) => {
-                    console.error('Error creating order:', error);
-                }
-            });
+            if (mode === 'edit' && order?.id) {
+                updateOrder(
+                    { orderId: order.id, data: orderData },
+                    {
+                        onSuccess: () => {
+                            console.log('Order updated successfully');
+                            onClose();
+                            if (onSuccess) onSuccess();
+                        },
+                        onError: (error) => {
+                            console.error('Error updating order:', error);
+                        }
+                    }
+                );
+            } else {
+                createOrder(orderData, {
+                    onSuccess: () => {
+                        console.log('Order created successfully');
+                        onClose();
+                        resetForm();
+                        if (onSuccess) onSuccess();
+                    },
+                    onError: (error) => {
+                        console.error('Error creating order:', error);
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error submitting form:', error);
         }
-    }, [formData, totalAmount, validateForm, createOrder, onClose, resetForm, onSuccess]);
+    }, [formData, totalAmount, validateForm, createOrder, updateOrder, onClose, resetForm, onSuccess, mode, order]);
 
     // Utility Functions
     const getCustomerName = useCallback((): string => {
@@ -539,10 +620,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                     >
                         <X className="h-6 w-6" />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-100">إضافة طلب جديد</h2>
+                    <h2 className="text-xl font-bold text-slate-100">
+                        {mode === 'edit' ? 'تعديل الطلب' : 'إضافة طلب جديد'}
+                    </h2>
                 </div>
 
-                <div className="space-y-6" dir="rtl">
+                <form onSubmit={handleSubmit} className="space-y-6" dir="rtl">
                     <div className="space-y-4">
                         <label className="block text-slate-200">العميل<span className="text-red-400 mx-1">*</span></label>
                         <div className="relative">
@@ -551,7 +634,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                 name="customerId"
                                 value={formData.customerId}
                                 onChange={handleInputChange}
-                                className={`w-full bg-slate-700/50 border ${errors.categoryId ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg pl-4 pr-10 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer hover:border-slate-500/50`}
+                                className={`w-full bg-slate-700/50 border ${errors.customerId ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg pl-4 pr-10 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer hover:border-slate-500/50`}
                                 disabled={isLoadingCustomers || !!customersError}
                             >
                                 <option value="">اختر العميل</option>
@@ -668,21 +751,16 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                 <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
                                     type="number"
-                                    name="firstPayment"
-                                    value={formData.firstPayment}
+                                    name="initialPayment"
+                                    value={formData.initialPayment}
                                     onChange={handleInputChange}
-                                    className={`w-full pl-4 pr-12 py-2 bg-slate-700/50 border ${errors.firstPayment ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                                    className={`w-full pl-4 pr-12 py-2 bg-slate-700/50 border ${errors.initialPayment ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
                                     placeholder="أدخل قيمة الدفعة الأولى"
                                 />
                             </div>
-                            {formData.firstPayment <= 0 && (
+                            {errors.initialPayment && (
                                 <div className="text-red-400 text-sm">
-                                    يجب إدخال قيمة أكبر من صفر
-                                </div>
-                            )}
-                            {formData.firstPayment >= totalAmount - formData.discount && totalAmount > 0 && (
-                                <div className="text-red-400 text-sm">
-                                    يجب أن تكون الدفعة الأولى أقل من المبلغ الإجمالي بعد الخصم
+                                    {errors.initialPayment}
                                 </div>
                             )}
                         </div>
@@ -801,6 +879,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                     </div>
 
                                     <button
+                                        type="button"
                                         onClick={addItem}
                                         disabled={!selectedItem || selectedUnitIndex < 0}
                                         className="flex items-center gap-2 px-4 py-2 mt-4 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
@@ -815,82 +894,133 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
                     {formData.items.length > 0 && (
                         <div className="bg-slate-700/30 rounded-lg overflow-hidden">
-                            <table className="w-full"><thead className="bg-slate-700/50"><tr><th className="text-right text-slate-200 p-3">المنتج</th><th className="text-right text-slate-200 p-3">الكمية</th><th className="text-right text-slate-200 p-3">الوحدة</th><th className="text-right text-slate-200 p-3">السعر</th><th className="text-right text-slate-200 p-3">معامل التحويل</th><th className="text-right text-slate-200 p-3">المجموع</th><th className="text-right text-slate-200 p-3"></th></tr></thead><tbody>{formData.items.map((item, index) => (<tr key={index} className="border-t border-slate-600/30"><td className="p-3 text-slate-300">{getItemName(item.itemId)}</td><td className="p-3 text-slate-300">{item.quantity}</td><td className="p-3 text-slate-300">{item.unit}</td><td className="p-3 text-slate-300">{item.unitPrice}</td><td className="p-3 text-slate-300">{selectedItemFactor}</td><td className="p-3 text-slate-300">{(parseFloat(item.quantity as string) || 0) * (parseFloat(item.unitPrice as string) || 0)}</td><td className="p-3"><button onClick={() => removeItem(index)} className="text-red-400 hover:text-red-300 transition-colors"><Trash2 className="h-5 w-5" /></button></td></tr>))}</tbody></table>
+                            <table className="w-full">
+                                <thead className="bg-slate-700/50">
+                                    <tr>
+                                        <th className="text-right text-slate-200 p-3">المنتج</th>
+                                        <th className="text-right text-slate-200 p-3">الكمية</th>
+                                        <th className="text-right text-slate-200 p-3">الوحدة</th>
+                                        <th className="text-right text-slate-200 p-3">السعر</th>
+                                        <th className="text-right text-slate-200 p-3">معامل التحويل</th>
+                                        <th className="text-right text-slate-200 p-3">المجموع</th>
+                                        <th className="text-right text-slate-200 p-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {formData.items.map((item, index) => (
+                                        <tr key={index} className="border-t border-slate-600/30">
+                                            <td className="p-3 text-slate-300">{getItemName(item.itemId)}</td>
+                                            <td className="p-3 text-slate-300">{item.quantity}</td>
+                                            <td className="p-3 text-slate-300">{item.unit}</td>
+                                            <td className="p-3 text-slate-300">{item.unitPrice}</td>
+                                            <td className="p-3 text-slate-300">{selectedItemFactor}</td>
+                                            <td className="p-3 text-slate-300">
+                                                {(parseFloat(item.quantity as string) || 0) * (parseFloat(item.unitPrice as string) || 0)}
+                                            </td>
+                                            <td className="p-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(index)}
+                                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                                >
+                                                    <Trash2 className="h-5 w-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
 
-                    <div>
-                        <div className="space-y-2">
-                            <label className="block text-slate-200">عدد الفوارغ</label>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    name="trayCount"
-                                    value={formData.trayCount}
-                                    onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 bg-slate-700/50 border ${errors.trayCount ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200`}
-                                    placeholder="عدد الفوارغ"
-                                />
-                                {errors.trayCount && (
-                                    <div className="text-red-400 text-sm mt-1">
-                                        {errors.trayCount}
+                    {(formData.paymentType === "paid" || formData.paymentType === "breakage") && (
+                        <div>
+                            <div className="space-y-2">
+                                <label className="block text-slate-200">عدد الفوارغ</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="trayCount"
+                                        value={formData.trayCount}
+                                        onChange={handleInputChange}
+                                        className={`w-full px-4 py-2 bg-slate-700/50 border ${errors.trayCount ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg text-slate-200`}
+                                        placeholder="عدد الفوارغ"
+                                    />
+                                    {errors.trayCount && (
+                                        <div className="text-red-400 text-sm mt-1">
+                                            {errors.trayCount}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-2 mt-4">
+                                <label className="block text-slate-200">المبلغ الإضافي</label>
+                                <div className="relative">
+                                    <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                    <input
+                                        type="number"
+                                        name="additionalAmount"
+                                        value={formData.additionalAmount}
+                                        onChange={handleInputChange}
+                                        min="0"
+                                        className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                        placeholder="قيمة المبلغ الإضافي"
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-400">
+                                    يمكنك إضافة مبلغ إضافي على الطلب مثل قيمة التوصيل أو رسوم إضافية
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div className="space-y-2">
+                                    <label className="block text-slate-200">الخصم</label>
+                                    <div className="relative">
+                                        <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                        <input
+                                            type="number"
+                                            name="discount"
+                                            value={formData.discount}
+                                            onChange={handleInputChange}
+                                            min="0"
+                                            className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                            placeholder="قيمة الخصم"
+                                        />
                                     </div>
-                                )}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-slate-200">الإجمالي بعد الخصم والإضافات</label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={totalAmount}
+                                            className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div className="space-y-2 mt-4">
-                            <label className="block text-slate-200">المبلغ الإضافي</label>
-                            <div className="relative">
-                                <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    type="number"
-                                    name="additionalAmount"
-                                    value={formData.additionalAmount}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                                    placeholder="قيمة المبلغ الإضافي"
-                                />
-                            </div>
-                            <p className="text-xs text-slate-400">
-                                يمكنك إضافة مبلغ إضافي على الطلب مثل قيمة التوصيل أو رسوم إضافية
-                            </p>
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="block text-slate-200">الخصم</label>
-                            <div className="relative">
-                                <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    type="number"
-                                    name="discount"
-                                    value={formData.discount}
-                                    onChange={handleInputChange}
-                                    min="0"
-                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                                    placeholder="قيمة الخصم"
-                                />
+                            <div className="space-y-2 mt-4">
+                                <label className="block text-slate-200">ملاحظات الفاتورة</label>
+                                <div className="relative">
+                                    <FileText className="absolute right-3 top-4 h-5 w-5 text-slate-400" />
+                                    <textarea
+                                        name="invoiceNotes"
+                                        value={formData.invoiceNotes}
+                                        onChange={handleInputChange}
+                                        className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                        placeholder="أدخل ملاحظات الفاتورة (مثال: تم الدفع نقداً)"
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="block text-slate-200">الإجمالي بعد الخصم والإضافات</label>
-                            <div className="relative">
-                                <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={totalAmount}
-                                    className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200"
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-2">
-                        <label className="block text-slate-200">ملاحظات</label>
+                    <div className="space-y-2 mt-4">
+                        <label className="block text-slate-200">ملاحظات الطلب</label>
                         <div className="relative">
                             <FileText className="absolute right-3 top-4 h-5 w-5 text-slate-400" />
                             <textarea
@@ -898,7 +1028,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                 value={formData.notes}
                                 onChange={handleInputChange}
                                 className="w-full pl-4 pr-12 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                                placeholder="أدخل أي ملاحظات إضافية حول الطلب..."
+                                placeholder="أدخل أي ملاحظات إضافية حول الطلب (مثال: توصيل إلى منطقة المزة)"
                             />
                         </div>
                     </div>
@@ -910,10 +1040,24 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                         </div>
                     )}
 
-                    {createOrderError && (
+                    {(createOrderError) && (
                         <div className="bg-red-500/10 text-red-400 rounded-lg p-4 flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5" />
-                            حدث خطأ أثناء إنشاء الطلب: {createOrderError.message}
+                            <span>
+                                {(createOrderError) instanceof AxiosError
+                                    ? createOrderError.response?.data.message
+                                    : (createOrderError as any)?.message || 'حدث خطأ أثناء إنشاء الطلبية'}
+                            </span>
+                        </div>
+                    )}
+                    {(updateOrderError) && (
+                        <div className="bg-red-500/10 text-red-400 rounded-lg p-4 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5" />
+                            <span>
+                                {(updateOrderError) instanceof AxiosError
+                                    ? updateOrderError.response?.data.message
+                                    : (updateOrderError as any)?.message || 'حدث خطأ أثناء تحديث الطلبية'}
+                            </span>
                         </div>
                     )}
 
@@ -927,24 +1071,23 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                         </button>
                         <button
                             type="submit"
-                            disabled={isPending || hasDataLoadingErrors}
-                            onClick={(e) => handleSubmit(e as any)}
+                            disabled={isCreating || isUpdating || hasDataLoadingErrors}
                             className="px-6 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
-                            {isPending ? (
+                            {(isCreating || isUpdating) ? (
                                 <>
                                     <Loader2 className="h-5 w-5 animate-spin" />
-                                    جاري الإنشاء...
+                                    جاري {mode === 'edit' ? 'التحديث' : 'الإنشاء'}...
                                 </>
                             ) : (
                                 <>
                                     <ShoppingBag className="h-5 w-5" />
-                                    إنشاء الطلب
+                                    {mode === 'edit' ? 'تحديث الطلب' : 'إنشاء الطلب'}
                                 </>
                             )}
                         </button>
                     </div>
-                </div>
+                </form>
             </motion.div>
         </motion.div>
     );

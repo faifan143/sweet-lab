@@ -1,19 +1,17 @@
-import React, { useState } from 'react';
-import {
-    Calendar,
-    Clock,
-    Search,
-    ShoppingBag,
-    ChevronDown,
-    ChevronUp,
-    Eye
-} from 'lucide-react';
-import { OrderResponseDto, OrderStatus } from '@/types/orders.type';
-import { AllCustomerType } from '@/types/customers.type';
-import CustomerOrderCard from './CustomerOrderCard';
-import SearchBar from './SearchBar';
+import { OrderResponseDto } from '@/types/orders.type';
 import { formatCurrency } from '@/utils/formatters';
 import { getStatusClass, getStatusText } from '@/utils/orderHelpers';
+import {
+    Calendar,
+    ChevronDown,
+    ChevronUp,
+    Eye,
+    ShoppingBag,
+    ArrowUpDown
+} from 'lucide-react';
+import React, { useState } from 'react';
+import CustomerOrderCard from './CustomerOrderCard';
+import SearchBar from './SearchBar';
 
 interface OrderListByDateViewProps {
     todayOrders: OrderResponseDto[];
@@ -43,26 +41,76 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
         all: true
     });
 
-    // Group orders by customer (for all orders section)
-    const groupOrdersByCustomer = (orders: OrderResponseDto[]) => {
-        const grouped: { [key: number]: { customer: AllCustomerType, orders: OrderResponseDto[] } } = {};
+    // State for sorting
+    const [sortConfig, setSortConfig] = useState<{
+        key: keyof OrderResponseDto | 'customerName' | 'paidStatusText' | 'statusText';
+        direction: 'asc' | 'desc' | null;
+    }>({
+        key: 'orderNumber',
+        direction: 'asc'
+    });
 
-        orders.forEach(order => {
-            if (order.customer && order.customerId) {
-                if (!grouped[order.customerId]) {
-                    grouped[order.customerId] = {
-                        customer: order.customer,
-                        orders: []
-                    };
-                }
-                grouped[order.customerId].orders.push(order);
-            }
-        });
-
-        return Object.values(grouped);
+    // Toggle section expansion
+    const toggleSection = (section: string) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
     };
 
-    // Group orders by category (for today and tomorrow sections)
+    // Handle column sort
+    const handleSort = (key: keyof OrderResponseDto | 'customerName' | 'paidStatusText' | 'statusText') => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    // Sort orders
+    const sortOrders = (orders: OrderResponseDto[]) => {
+        if (!sortConfig.direction) return orders;
+
+        return [...orders].sort((a, b) => {
+            let aValue: any;
+            let bValue: any;
+
+            switch (sortConfig.key) {
+                case 'orderNumber':
+                    aValue = a.orderNumber || '';
+                    bValue = b.orderNumber || '';
+                    break;
+                case 'createdAt':
+                case 'scheduledFor':
+                    aValue = a[sortConfig.key] ? new Date(a[sortConfig.key]).getTime() : 0;
+                    bValue = b[sortConfig.key] ? new Date(b[sortConfig.key]).getTime() : 0;
+                    break;
+                case 'customerName':
+                    aValue = a.customer?.name || '';
+                    bValue = b.customer?.name || '';
+                    break;
+                case 'totalAmount':
+                    aValue = a.totalAmount || 0;
+                    bValue = b.totalAmount || 0;
+                    break;
+                case 'paidStatusText':
+                    aValue = a.paidStatus ? 'مدفوع' : a.invoice?.isBreak ? 'كسر' : 'غير مدفوع';
+                    bValue = b.paidStatus ? 'مدفوع' : b.invoice?.isBreak ? 'كسر' : 'غير مدفوع';
+                    break;
+                case 'statusText':
+                    aValue = getStatusText(a.status!);
+                    bValue = getStatusText(b.status!);
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    // Group orders by category (for all sections)
     const groupOrdersByCategory = (orders: OrderResponseDto[]) => {
         const grouped: { [key: number]: { categoryName: string, orders: OrderResponseDto[] } } = {};
 
@@ -78,14 +126,9 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
             }
         });
 
-        return Object.values(grouped);
-    };
-
-    // Toggle section expansion
-    const toggleSection = (section: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
+        return Object.values(grouped).map(group => ({
+            ...group,
+            orders: sortOrders(group.orders)
         }));
     };
 
@@ -97,9 +140,9 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
             case 'forTomorrow':
                 return ['tomorrow'];
             case 'all':
-                return ['today', 'tomorrow', 'all'];
+                return ['all'];
             default:
-                return ['today', 'tomorrow', 'all'];
+                return ['all'];
         }
     };
 
@@ -127,26 +170,6 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
             {/* Today's Orders Section */}
             {visibleSections.includes('today') && (
                 <div className="bg-slate-800/40 rounded-lg border border-slate-700/50 overflow-hidden">
-                    <div
-                        className="flex justify-between items-center p-4 bg-slate-700/30 cursor-pointer"
-                        onClick={() => toggleSection('today')}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20 text-amber-400">
-                                <Clock className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-medium text-amber-400">طلبات اليوم</h3>
-                                <p className="text-sm text-slate-400">{todayOrders.length} طلب</p>
-                            </div>
-                        </div>
-                        {expandedSections.today ? (
-                            <ChevronUp className="h-5 w-5 text-slate-400" />
-                        ) : (
-                            <ChevronDown className="h-5 w-5 text-slate-400" />
-                        )}
-                    </div>
-
                     {expandedSections.today && (
                         <div className="p-4">
                             {todayOrders.length === 0 ? (
@@ -169,12 +192,60 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                 <table className="w-full text-sm text-right text-slate-200">
                                                     <thead>
                                                         <tr className="border-b border-slate-700/50 bg-slate-700/30">
-                                                            <th className="px-4 py-3">رقم الفاتورة</th>
-                                                            <th className="px-4 py-3">التاريخ</th>
-                                                            <th className="px-4 py-3">اسم العميل</th>
-                                                            <th className="px-4 py-3">المبلغ</th>
-                                                            <th className="px-4 py-3">حالة الدفع</th>
-                                                            <th className="px-4 py-3">حالة الطلب</th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('orderNumber')}
+                                                                >
+                                                                    رقم الفاتورة
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('createdAt')}
+                                                                >
+                                                                    التاريخ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('customerName')}
+                                                                >
+                                                                    اسم العميل
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('totalAmount')}
+                                                                >
+                                                                    المبلغ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('paidStatusText')}
+                                                                >
+                                                                    حالة الدفع
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('statusText')}
+                                                                >
+                                                                    حالة الطلب
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
                                                             <th className="px-4 py-3">الإجراءات</th>
                                                         </tr>
                                                     </thead>
@@ -185,7 +256,7 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                 className="border-b border-slate-700/50 hover:bg-slate-700/50 transition-colors"
                                                             >
                                                                 <td className="px-4 py-3">
-                                                                    {order.invoiceId ? `#${order.invoiceId}` : 'غير متوفر'}
+                                                                    {order.orderNumber ? `#${order.orderNumber}` : 'غير متوفر'}
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     {order.createdAt
@@ -205,12 +276,18 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                             : 'bg-red-500/20 text-red-400'
                                                                             }`}
                                                                     >
-                                                                        {order.paidStatus ? 'مدفوع' : (order.isBreak ? "كسر" : 'غير مدفوع')}
+                                                                        {order.paidStatus
+                                                                            ? 'مدفوع'
+                                                                            : order.invoice?.isBreak
+                                                                                ? 'كسر'
+                                                                                : 'غير مدفوع'}
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     <span
-                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}
+                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(
+                                                                            order.status!
+                                                                        )}`}
                                                                     >
                                                                         {getStatusText(order.status!)}
                                                                     </span>
@@ -253,26 +330,6 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
             {/* Tomorrow's Orders Section */}
             {visibleSections.includes('tomorrow') && (
                 <div className="bg-slate-800/40 rounded-lg border border-slate-700/50 overflow-hidden">
-                    <div
-                        className="flex justify-between items-center p-4 bg-slate-700/30 cursor-pointer"
-                        onClick={() => toggleSection('tomorrow')}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400">
-                                <Calendar className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-medium text-emerald-400">طلبات الغد</h3>
-                                <p className="text-sm text-slate-400">{tomorrowOrders.length} طلب</p>
-                            </div>
-                        </div>
-                        {expandedSections.tomorrow ? (
-                            <ChevronUp className="h-5 w-5 text-slate-400" />
-                        ) : (
-                            <ChevronDown className="h-5 w-5 text-slate-400" />
-                        )}
-                    </div>
-
                     {expandedSections.tomorrow && (
                         <div className="p-4">
                             {tomorrowOrders.length === 0 ? (
@@ -295,12 +352,60 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                 <table className="w-full text-sm text-right text-slate-200">
                                                     <thead>
                                                         <tr className="border-b border-slate-700/50 bg-slate-700/30">
-                                                            <th className="px-4 py-3">رقم الفاتورة</th>
-                                                            <th className="px-4 py-3">التاريخ</th>
-                                                            <th className="px-4 py-3">اسم العميل</th>
-                                                            <th className="px-4 py-3">المبلغ</th>
-                                                            <th className="px-4 py-3">حالة الدفع</th>
-                                                            <th className="px-4 py-3">حالة الطلب</th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('orderNumber')}
+                                                                >
+                                                                    رقم الفاتورة
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('scheduledFor')}
+                                                                >
+                                                                    التاريخ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('customerName')}
+                                                                >
+                                                                    اسم العميل
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('totalAmount')}
+                                                                >
+                                                                    المبلغ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('paidStatusText')}
+                                                                >
+                                                                    حالة الدفع
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('statusText')}
+                                                                >
+                                                                    حالة الطلب
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
                                                             <th className="px-4 py-3">الإجراءات</th>
                                                         </tr>
                                                     </thead>
@@ -311,7 +416,7 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                 className="border-b border-slate-700/50 hover:bg-slate-700/50 transition-colors"
                                                             >
                                                                 <td className="px-4 py-3">
-                                                                    {order.invoiceId ? `#${order.invoiceId}` : 'غير متوفر'}
+                                                                    {order.orderNumber ? `#${order.orderNumber}` : 'غير متوفر'}
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     {order.scheduledFor
@@ -331,12 +436,18 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                             : 'bg-red-500/20 text-red-400'
                                                                             }`}
                                                                     >
-                                                                        {order.paidStatus ? 'مدفوع' : 'غير مدفوع'}
+                                                                        {order.paidStatus
+                                                                            ? 'مدفوع'
+                                                                            : order.invoice?.isBreak
+                                                                                ? 'كسر'
+                                                                                : 'غير مدفوع'}
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     <span
-                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}
+                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(
+                                                                            order.status!
+                                                                        )}`}
                                                                     >
                                                                         {getStatusText(order.status!)}
                                                                     </span>
@@ -376,29 +487,9 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                 </div>
             )}
 
-            {/* All Orders Section (excluding today and tomorrow) */}
+            {/* All Orders Section */}
             {visibleSections.includes('all') && (
-                <div className="bg-slate-800/40 rounded-lg border border-slate-700/50 overflow-hidden">
-                    <div
-                        className="flex justify-between items-center p-4 bg-slate-700/30 cursor-pointer"
-                        onClick={() => toggleSection('all')}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20 text-blue-400">
-                                <ShoppingBag className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-medium text-blue-400">جميع الطلبات</h3>
-                                <p className="text-sm text-slate-400">{allOrders.length} طلب</p>
-                            </div>
-                        </div>
-                        {expandedSections.all ? (
-                            <ChevronUp className="h-5 w-5 text-slate-400" />
-                        ) : (
-                            <ChevronDown className="h-5 w-5 text-slate-400" />
-                        )}
-                    </div>
-
+                <div className="bg-slate-800/40 rounded-lg border borderboole-700/50 overflow-hidden">
                     {expandedSections.all && (
                         <div className="p-4">
                             {allOrders.length === 0 ? (
@@ -407,13 +498,13 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {groupOrdersByCustomer(allOrders).map((group, index) => (
-                                        <div key={index} className="border-b border-slate-700/30 pb-6 last:border-b-0 last:pb-0">
+                                    {groupOrdersByCategory(allOrders).map((category, index) => (
+                                        <div key={index}>
                                             <h4 className="text-slate-300 font-medium mb-3 flex items-center gap-2">
                                                 <ShoppingBag className="h-4 w-4 text-slate-400" />
-                                                {group.customer.name}
+                                                {category.categoryName}
                                                 <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full">
-                                                    {group.orders.length} طلب
+                                                    {category.orders.length} طلب
                                                 </span>
                                             </h4>
                                             {/* Desktop: Table View */}
@@ -421,23 +512,71 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                 <table className="w-full text-sm text-right text-slate-200">
                                                     <thead>
                                                         <tr className="border-b border-slate-700/50 bg-slate-700/30">
-                                                            <th className="px-4 py-3">رقم الفاتورة</th>
-                                                            <th className="px-4 py-3">التاريخ</th>
-                                                            <th className="px-4 py-3">اسم العميل</th>
-                                                            <th className="px-4 py-3">المبلغ</th>
-                                                            <th className="px-4 py-3">حالة الدفع</th>
-                                                            <th className="px-4 py-3">حالة الطلب</th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('orderNumber')}
+                                                                >
+                                                                    رقم الفاتورة
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('scheduledFor')}
+                                                                >
+                                                                    التاريخ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('customerName')}
+                                                                >
+                                                                    اسم العميل
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('totalAmount')}
+                                                                >
+                                                                    المبلغ
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('paidStatusText')}
+                                                                >
+                                                                    حالة الدفع
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
+                                                            <th className="px-4 py-3">
+                                                                <button
+                                                                    className="flex items-center gap-1 hover:text-blue-300"
+                                                                    onClick={() => handleSort('statusText')}
+                                                                >
+                                                                    حالة الطلب
+                                                                    <ArrowUpDown className="h-4 w-4" />
+                                                                </button>
+                                                            </th>
                                                             <th className="px-4 py-3">الإجراءات</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {group.orders.map(order => (
+                                                        {category.orders.map(order => (
                                                             <tr
                                                                 key={order.id}
                                                                 className="border-b border-slate-700/50 hover:bg-slate-700/50 transition-colors"
                                                             >
                                                                 <td className="px-4 py-3">
-                                                                    {order.invoiceId ? `#${order.invoiceId}` : 'غير متوفر'}
+                                                                    {order.orderNumber ? `#${order.orderNumber}` : 'غير متوفر'}
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     {order.scheduledFor
@@ -457,12 +596,18 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                                                             : 'bg-red-500/20 text-red-400'
                                                                             }`}
                                                                     >
-                                                                        {order.paidStatus ? 'مدفوع' : 'غير مدفوع'}
+                                                                        {order.paidStatus
+                                                                            ? 'مدفوع'
+                                                                            : order.invoice?.isBreak
+                                                                                ? 'كسر'
+                                                                                : 'غير مدفوع'}
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     <span
-                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}
+                                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(
+                                                                            order.status!
+                                                                        )}`}
                                                                     >
                                                                         {getStatusText(order.status!)}
                                                                     </span>
@@ -484,7 +629,7 @@ const OrderListByDateView: React.FC<OrderListByDateViewProps> = ({
                                             {/* Mobile: Cards Grid View */}
                                             <div className="block md:hidden">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    {group.orders.map(order => (
+                                                    {category.orders.map(order => (
                                                         <CustomerOrderCard
                                                             key={order.id}
                                                             order={order}

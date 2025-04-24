@@ -1,10 +1,9 @@
 // components/orders/CustomerOrders.tsx
-import React from "react";
-import { User } from "lucide-react";
-import { OrderResponseDto } from "@/types/orders.type";
 import { AllCustomerType } from "@/types/customers.type";
+import { OrderResponseDto } from "@/types/orders.type";
+import { User } from "lucide-react";
+import React from "react";
 import CustomerOrderCard from "./CustomerOrderCard";
-import OrderDetailsModal from "@/components/common/orders/OrderDetailsModal";
 
 interface CustomerOrdersProps {
     customer: AllCustomerType;

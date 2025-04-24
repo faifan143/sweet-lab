@@ -1,14 +1,13 @@
 // components/orders/CategorySection.tsx
+import { OrderCustomer, OrderResponseDto, OrdersCategoriesFetchDto } from "@/types/orders.type";
+import { ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
 import React, { useState } from "react";
-import { ShoppingBag, ChevronUp, ChevronDown } from "lucide-react";
-import { OrdersCategoriesFetchDto, OrderResponseDto } from "@/types/orders.type";
-import { AllCustomerType } from "@/types/customers.type";
 import CustomerCard from "./CustomerCard";
 
 interface CategorySectionProps {
     category: OrdersCategoriesFetchDto;
     orders: OrderResponseDto[];
-    onSelectCustomer: (customer: AllCustomerType) => void;
+    onSelectCustomer: (customer: OrderCustomer) => void;
     selectedCustomerId: number | null;
 }
 
