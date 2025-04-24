@@ -1,3 +1,4 @@
+// OrdersPage.tsx
 "use client";
 
 import Navbar from "@/components/common/Navbar";
@@ -15,9 +16,8 @@ import SplineBackground from "@/components/common/SplineBackground";
 import {
     useOrderCategories,
     useOrders,
-    useOrdersSummary
+    useOrdersSummary,
 } from "@/hooks/useOrders";
-import { AllCustomerType } from "@/types/customers.type";
 import { FilterOrders, OrderCustomer, OrderResponseDto } from "@/types/orders.type";
 import {
     CalendarDays,
@@ -25,11 +25,11 @@ import {
     ShoppingBag,
     Tags,
     User,
-    X
+    X,
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
-// Customer Orders Modal Component
+// Customer Orders Modal Component (unchanged)
 interface CustomerOrdersModalProps {
     customer: OrderCustomer;
     categoryId: number | null;
@@ -45,29 +45,30 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({
     orders,
     isOpen,
     onClose,
-    onViewOrderDetails
+    onViewOrderDetails,
 }) => {
     const { data: categories = [] } = useOrderCategories();
-
-    const category = categories.find((category) => category.id == categoryId)
+    const category = categories.find((category) => category.id == categoryId);
 
     if (!isOpen) return null;
 
-    // Filter orders by customer ID and category ID
-    const filteredOrders = orders.filter(order =>
-        order.customerId === customer.id &&
-        (categoryId !== null ? order.categoryId === categoryId : true)
+    const filteredOrders = orders.filter(
+        (order) =>
+            order.customerId === customer.id &&
+            (categoryId !== null ? order.categoryId === categoryId : true)
     );
 
-    // Get category name from the categoryId
     const getCategoryName = () => {
-        if (categoryId === null) return '';
+        if (categoryId === null) return "";
         return ` - ${category?.name || `تصنيف #${categoryId}`}`;
     };
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden" dir="rtl">
+            <div
+                className="bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                dir="rtl"
+            >
                 <div className="flex justify-between items-center p-4 border-b border-slate-700">
                     <div className="flex items-center gap-2">
                         <User className="h-5 w-5 text-primary" />
@@ -90,11 +91,12 @@ const CustomerOrdersModal: React.FC<CustomerOrdersModalProps> = ({
                 <div className="overflow-y-auto p-4 max-h-[calc(90vh-120px)]">
                     {filteredOrders.length === 0 ? (
                         <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
-                            لا توجد طلبات لهذا العميل{categoryId !== null ? ' في هذا التصنيف' : ''}
+                            لا توجد طلبات لهذا العميل
+                            {categoryId !== null ? " في هذا التصنيف" : ""}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredOrders.map(order => (
+                            {filteredOrders.map((order) => (
                                 <CustomerOrderCard
                                     key={order.id}
                                     order={order}
@@ -123,24 +125,32 @@ const OrdersPage: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
     const [isInvoiceConversionModalOpen, setIsInvoiceConversionModalOpen] = useState<boolean>(false);
-    const [viewMode, setViewMode] = useState<'byDate' | 'byCategory'>('byDate');
+    const [viewMode, setViewMode] = useState<"byDate" | "byCategory">("byDate");
+    const [selectedDate, setSelectedDate] = useState<string>(""); // State for selected date
 
-    // Filter parameters for all orders
+    // Filter parameters
     const getAllFilters = (): FilterOrders | undefined => {
+        if (selectedDate) {
+            return { endDate: selectedDate };
+        }
         return undefined; // Get all orders without filtering
     };
 
-    // Filter parameters for today's orders
     const getTodayFilters = (): FilterOrders | undefined => {
+        if (selectedDate) {
+            return { endDate: selectedDate };
+        }
         return { forToday: true };
     };
 
-    // Filter parameters for tomorrow's orders
     const getTomorrowFilters = (): FilterOrders | undefined => {
+        if (selectedDate) {
+            return { endDate: selectedDate };
+        }
         return { forTomorrow: true };
     };
 
-    // Query hooks with appropriate filters
+    // Query hooks
     const { data: summary, isLoading: isSummaryLoading } = useOrdersSummary();
     const { data: allOrders = [], isLoading: isAllOrdersLoading } = useOrders(getAllFilters());
     const { data: todayOrders = [], isLoading: isTodayOrdersLoading } = useOrders(getTodayFilters());
@@ -148,8 +158,12 @@ const OrdersPage: React.FC = () => {
     const { data: categories = [], isLoading: isCategoriesLoading } = useOrderCategories();
 
     // Combined loading state
-    const isLoading = isSummaryLoading || isAllOrdersLoading || isTodayOrdersLoading ||
-        isTomorrowOrdersLoading || isCategoriesLoading;
+    const isLoading =
+        isSummaryLoading ||
+        isAllOrdersLoading ||
+        isTodayOrdersLoading ||
+        isTomorrowOrdersLoading ||
+        isCategoriesLoading;
 
     // Filter orders based on search term
     const filteredAllOrders = useMemo(() => {
@@ -157,11 +171,12 @@ const OrdersPage: React.FC = () => {
         if (!searchTerm) return allOrders;
 
         const searchLower = searchTerm.toLowerCase();
-        return allOrders.filter(order =>
-            order.customer?.name?.toLowerCase().includes(searchLower) ||
-            order.orderNumber?.toLowerCase().includes(searchLower) ||
-            order.notes?.toLowerCase().includes(searchLower) ||
-            order.category?.name?.toLowerCase().includes(searchLower)
+        return allOrders.filter(
+            (order) =>
+                order.customer?.name?.toLowerCase().includes(searchLower) ||
+                order.orderNumber?.toLowerCase().includes(searchLower) ||
+                order.notes?.toLowerCase().includes(searchLower) ||
+                order.category?.name?.toLowerCase().includes(searchLower)
         );
     }, [allOrders, searchTerm]);
 
@@ -170,11 +185,12 @@ const OrdersPage: React.FC = () => {
         if (!searchTerm) return todayOrders;
 
         const searchLower = searchTerm.toLowerCase();
-        return todayOrders.filter(order =>
-            order.customer?.name?.toLowerCase().includes(searchLower) ||
-            order.orderNumber?.toLowerCase().includes(searchLower) ||
-            order.notes?.toLowerCase().includes(searchLower) ||
-            order.category?.name?.toLowerCase().includes(searchLower)
+        return todayOrders.filter(
+            (order) =>
+                order.customer?.name?.toLowerCase().includes(searchLower) ||
+                order.orderNumber?.toLowerCase().includes(searchLower) ||
+                order.notes?.toLowerCase().includes(searchLower) ||
+                order.category?.name?.toLowerCase().includes(searchLower)
         );
     }, [todayOrders, searchTerm]);
 
@@ -183,15 +199,16 @@ const OrdersPage: React.FC = () => {
         if (!searchTerm) return tomorrowOrders;
 
         const searchLower = searchTerm.toLowerCase();
-        return tomorrowOrders.filter(order =>
-            order.customer?.name?.toLowerCase().includes(searchLower) ||
-            order.orderNumber?.toLowerCase().includes(searchLower) ||
-            order.notes?.toLowerCase().includes(searchLower) ||
-            order.category?.name?.toLowerCase().includes(searchLower)
+        return tomorrowOrders.filter(
+            (order) =>
+                order.customer?.name?.toLowerCase().includes(searchLower) ||
+                order.orderNumber?.toLowerCase().includes(searchLower) ||
+                order.notes?.toLowerCase().includes(searchLower) ||
+                order.category?.name?.toLowerCase().includes(searchLower)
         );
     }, [tomorrowOrders, searchTerm]);
 
-    // Handle customer selection to show orders in modal
+    // Handle customer selection
     const handleSelectCustomer = (customer: OrderCustomer, categoryId: number) => {
         setSelectedCustomer(customer);
         setSelectedCustomerId(customer.id);
@@ -209,7 +226,6 @@ const OrdersPage: React.FC = () => {
     const handleConvertToInvoice = (order: OrderResponseDto) => {
         setSelectedOrder(order);
         setIsInvoiceConversionModalOpen(true);
-        // Do not close OrderDetailsModal here
     };
 
     // Create order handler
@@ -220,6 +236,16 @@ const OrdersPage: React.FC = () => {
     // Create category handler
     const handleCreateCategory = () => {
         setIsCategoryModalOpen(true);
+    };
+
+    // Handle date change
+    const handleDateChange = (date: string) => {
+        setSelectedDate(date);
+    };
+
+    // Clear date filter
+    const clearDateFilter = () => {
+        setSelectedDate("");
     };
 
     // Handler to close both modals
@@ -239,7 +265,10 @@ const OrdersPage: React.FC = () => {
                 <main className="pt-32 p-4">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         {/* Header */}
-                        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" dir="rtl">
+                        <div
+                            className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                            dir="rtl"
+                        >
                             <div className="flex items-center gap-3">
                                 <ShoppingBag className="h-6 w-6 text-slate-400" />
                                 <h1 className="text-2xl font-bold text-slate-200">
@@ -267,29 +296,47 @@ const OrdersPage: React.FC = () => {
                         {/* Summary Cards */}
                         <OrdersSummaryComponent />
 
-                        {/* View Toggle */}
-                        <div className="mb-6 flex justify-end" dir="rtl">
+                        {/* View Toggle and Date Filter */}
+                        <div className="mb-6 flex justify-end items-center gap-4 flex-wrap" dir="rtl">
                             <div className="bg-slate-800/50 p-1 rounded-lg flex">
                                 <button
-                                    onClick={() => setViewMode('byDate')}
-                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'byDate'
-                                        ? 'bg-slate-700 text-white'
-                                        : 'text-slate-400 hover:text-slate-200'
+                                    onClick={() => setViewMode("byDate")}
+                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === "byDate"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-400 hover:text-slate-200"
                                         }`}
                                 >
                                     <CalendarDays className="h-4 w-4" />
                                     <span>عرض حسب الطلبيات</span>
                                 </button>
                                 <button
-                                    onClick={() => setViewMode('byCategory')}
-                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === 'byCategory'
-                                        ? 'bg-slate-700 text-white'
-                                        : 'text-slate-400 hover:text-slate-200'
+                                    onClick={() => setViewMode("byCategory")}
+                                    className={`px-4 py-1.5 rounded-md text-sm flex items-center gap-1.5 transition-colors ${viewMode === "byCategory"
+                                        ? "bg-slate-700 text-white"
+                                        : "text-slate-400 hover:text-slate-200"
                                         }`}
                                 >
                                     <Tags className="h-4 w-4" />
                                     <span>عرض حسب الزبون</span>
                                 </button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    id="date-filter"
+                                    value={selectedDate}
+                                    onChange={(e) => handleDateChange(e.target.value)}
+                                    className="bg-slate-700 text-slate-200 px-3 py-1 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                />
+                                {selectedDate && (
+                                    <button
+                                        onClick={clearDateFilter}
+                                        className="text-slate-400 hover:text-slate-200 transition-colors"
+                                        title="إزالة التصفية"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -302,8 +349,7 @@ const OrdersPage: React.FC = () => {
 
                         {/* Content */}
                         <div dir="rtl">
-                            {viewMode === 'byDate' ? (
-                                /* Orders by Date View */
+                            {viewMode === "byDate" ? (
                                 <OrderListByDateView
                                     todayOrders={filteredTodayOrders}
                                     tomorrowOrders={filteredTomorrowOrders}
@@ -315,33 +361,34 @@ const OrdersPage: React.FC = () => {
                                     searchTerm={searchTerm}
                                 />
                             ) : (
-                                /* Categories with Customers */
                                 categories && categories.length > 0 ? (
                                     <div>
-                                        {categories.map(category => (
+                                        {categories.map((category) => (
                                             <CategorySection
                                                 key={category.id}
                                                 category={category}
                                                 orders={
-                                                    activeTab === 'forToday'
+                                                    activeTab === "forToday"
                                                         ? filteredTodayOrders
-                                                        : activeTab === 'forTomorrow'
+                                                        : activeTab === "forTomorrow"
                                                             ? filteredTomorrowOrders
                                                             : filteredAllOrders
                                                 }
-                                                onSelectCustomer={(customer) => handleSelectCustomer(customer, category.id)}
+                                                onSelectCustomer={(customer) =>
+                                                    handleSelectCustomer(customer, category.id)
+                                                }
                                                 selectedCustomerId={selectedCustomerId}
                                             />
                                         ))}
-
-                                        {/* Show a message if no customers with orders are found */}
-                                        {!categories.some(category =>
-                                            category.customers?.some(customer =>
-                                                (activeTab === 'forToday'
+                                        {!categories.some((category) =>
+                                            category.customers?.some((customer) =>
+                                                (activeTab === "forToday"
                                                     ? filteredTodayOrders
-                                                    : activeTab === 'forTomorrow'
+                                                    : activeTab === "forTomorrow"
                                                         ? filteredTomorrowOrders
-                                                        : filteredAllOrders).some(order => order.customerId === customer.id)
+                                                        : filteredAllOrders).some(
+                                                            (order) => order.customerId === customer.id
+                                                        )
                                             )
                                         ) && (
                                                 <div className="bg-slate-800/30 rounded-lg border border-slate-700/50 p-6 text-center text-slate-400">
@@ -384,7 +431,7 @@ const OrdersPage: React.FC = () => {
                     onClose={() => {
                         setIsDetailsModalOpen(false);
                         setSelectedOrder(null);
-                        setIsInvoiceConversionModalOpen(false); // Ensure conversion modal closes too
+                        setIsInvoiceConversionModalOpen(false);
                     }}
                     onOrderUpdated={() => {
                         // Refetch data when order is updated
@@ -400,11 +447,8 @@ const OrdersPage: React.FC = () => {
                     isOpen={isInvoiceConversionModalOpen}
                     onClose={() => {
                         setIsInvoiceConversionModalOpen(false);
-                        // Optionally keep OrderDetailsModal open; close it if desired
-                        // setIsDetailsModalOpen(false);
-                        // setSelectedOrder(null);
                     }}
-                    onSuccess={closeAllModals} // Close both modals on successful conversion
+                    onSuccess={closeAllModals}
                 />
             )}
 
@@ -421,7 +465,6 @@ const OrdersPage: React.FC = () => {
             <CategoryManagementModal
                 isOpen={isCategoryModalOpen}
                 onClose={() => setIsCategoryModalOpen(false)}
-
             />
         </div>
     );
