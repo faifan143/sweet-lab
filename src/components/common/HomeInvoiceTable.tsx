@@ -327,7 +327,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                       {invoice.isBreak ? "كسر" : invoice.paidStatus ? "نقدي" : "آجل"}
                     </span>
                   </td>
-                  <td className="p-3 text-center text-center">
+                  <td className="p-3  text-center">
                     <InvoicesActionsMenu
                       invoice={invoice}
                       onViewDetails={onViewDetails}

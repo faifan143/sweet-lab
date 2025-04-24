@@ -1,4 +1,5 @@
 "use client";
+import ActionButton from "@/components/common/ActionButtons";
 import EditInvoiceModal from "@/components/common/EditInvoiceModal";
 import HomeInvoiceTable from "@/components/common/HomeInvoiceTable";
 import { InvoiceDetailsModal } from "@/components/common/InvoiceDetailsModal";
@@ -7,6 +8,7 @@ import DeleteConfirmationModal from "@/components/common/invoices/DeleteConfirma
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import SplineBackground from "@/components/common/SplineBackground";
+import TransactionTypeModal from "@/components/common/TransactionTypeModal";
 import { useMokkBar } from "@/components/providers/MokkBarContext";
 import { useDeleteInvoice, useFundInvoices } from "@/hooks/invoices/useInvoice";
 import {
@@ -14,7 +16,9 @@ import {
   useTransferConfirmation,
 } from "@/hooks/invoices/useTransfers";
 import { Role, useRoles } from "@/hooks/users/useRoles";
-import { Invoice, ProductInvoice } from "@/types/invoice.type";
+import { Invoice, InvoiceCategory, ProductInvoice } from "@/types/invoice.type";
+import { InvoiceType } from "@/types/types";
+import { getFundId } from "@/utils/fund_id";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownCircle,
@@ -123,6 +127,18 @@ const Case = () => {
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<ProductInvoice | null>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [transactionMode, setTransactionMode] = useState<InvoiceType>(
+    InvoiceType.income
+  );
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [selectedInvoiceCategory, setSelectedInvoiceCategory] =
+    useState<InvoiceCategory | null>(null);
+
+  const handleAddTransaction = (mode: InvoiceType) => {
+    setTransactionMode(mode);
+    setShowTransactionModal(true);
+  };
 
   const { setSnackbarConfig } = useMokkBar();
   const [searchTerm, setSearchTerm] = useState("");
@@ -401,193 +417,58 @@ const Case = () => {
                 {/* Action Buttons for Adding Invoices */}
                 {hasAnyRole([Role.ADMIN, Role.TreasuryManager]) && (
                   <div className="mb-8 px-4" dir="rtl">
-                    <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm border border-white/10 rounded-lg shadow-xl overflow-hidden">
-                      <div className="border-b border-white/10 bg-white/5 px-6 py-4">
-                        <h3 className="text-xl font-medium text-white flex items-center gap-2">
-                          <FileText className="h-5 w-5 text-blue-400" />
-                          إضافة فاتورة جديدة
-                        </h3>
-                      </div>
+                    {/* Filter Toggle (Mobile Only) */}
+                    <div className="sm:hidden flex gap-3">
 
-                      <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Income Section */}
-                          <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 rounded-lg border border-emerald-500/20 p-4 shadow-md">
-                            <h4 className="text-emerald-400 font-medium flex items-center gap-2 mb-4 pb-2 border-b border-emerald-500/20">
-                              <ArrowUpCircle className="h-5 w-5" />
-                              إضافة دخل
-                            </h4>
-                            <div className="grid grid-cols-1 gap-3">
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("income", "direct")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-emerald-500/20 rounded-full p-2 group-hover:bg-emerald-500/30 transition-colors">
-                                  <DollarSign className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">دخل مباشر</div>
-                                  <div className="text-xs text-emerald-500/70">
-                                    إضافة دخل نقدي مباشر للخزينة
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
 
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("income", "products")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-emerald-500/20 rounded-full p-2 group-hover:bg-emerald-500/30 transition-colors">
-                                  <FileText className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">فاتورة بيع</div>
-                                  <div className="text-xs text-emerald-500/70">
-                                    إنشاء فاتورة بيع جديدة للعملاء
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("income", "debt")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-emerald-500/20 rounded-full p-2 group-hover:bg-emerald-500/30 transition-colors">
-                                  <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">تحصيل دين</div>
-                                  <div className="text-xs text-emerald-500/70">
-                                    تسجيل تحصيل دين من العملاء
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("income", "advance")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all duration-200 hover:shadow-emerald-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-emerald-500/20 rounded-full p-2 group-hover:bg-emerald-500/30 transition-colors">
-                                  <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">إضافة سلفة</div>
-                                  <div className="text-xs text-emerald-500/70">
-                                    تسجيل سلفة جديدة من العملاء
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Expense Section */}
-                          <div className="bg-gradient-to-br from-red-900/20 to-red-800/10 rounded-lg border border-red-500/20 p-4 shadow-md">
-                            <h4 className="text-red-400 font-medium flex items-center gap-2 mb-4 pb-2 border-b border-red-500/20">
-                              <ArrowDownCircle className="h-5 w-5" />
-                              إضافة مصروف
-                            </h4>
-                            <div className="grid grid-cols-1 gap-3">
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("expense", "direct")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 hover:shadow-red-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-red-500/20 rounded-full p-2 group-hover:bg-red-500/30 transition-colors">
-                                  <DollarSign className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">مصروف مباشر</div>
-                                  <div className="text-xs text-red-500/70">
-                                    إضافة مصروف نقدي مباشر من الخزينة
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("expense", "products")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 hover:shadow-red-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-red-500/20 rounded-full p-2 group-hover:bg-red-500/30 transition-colors">
-                                  <FileText className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">فاتورة شراء</div>
-                                  <div className="text-xs text-red-500/70">
-                                    إنشاء فاتورة شراء جديدة للموردين
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("expense", "debt")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 hover:shadow-red-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-red-500/20 rounded-full p-2 group-hover:bg-red-500/30 transition-colors">
-                                  <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">تسجيل دين</div>
-                                  <div className="text-xs text-red-500/70">
-                                    تسجيل دين جديد للموردين
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  openInvoiceForm("expense", "advance")
-                                }
-                                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 hover:shadow-red-500/10 hover:shadow-md group"
-                              >
-                                <div className="bg-red-500/20 rounded-full p-2 group-hover:bg-red-500/30 transition-colors">
-                                  <CreditCard className="h-5 w-5" />
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">إرجاع سلفة</div>
-                                  <div className="text-xs text-red-500/70">
-                                    تسجيل إرجاع سلفة للعملاء
-                                  </div>
-                                </div>
-                                <div className="mx-auto">
-                                  <Plus className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                              </button>
-                            </div>
-                          </div>
+                      {/* Action Buttons (Mobile) */}
+                      {hasAnyRole([Role.ADMIN, Role.ShiftManager]) && (
+                        <div className="flex gap-2 flex-1">
+                          <ActionButton
+                            icon={<ArrowDownCircle className="h-5 w-5" />}
+                            onClick={() => {
+                              handleAddTransaction(InvoiceType.income)
+                            }}
+                            variant="income"
+                            className="flex-1"
+                            label="إضافة دخل"
+                          />
+                          <ActionButton
+                            icon={<ArrowUpCircle className="h-5 w-5" />}
+                            onClick={() => {
+                              handleAddTransaction(InvoiceType.expense)
+                            }}
+                            variant="expense"
+                            className="flex-1"
+                            label="إضافة صرف"
+                          />
                         </div>
-                      </div>
+                      )}
                     </div>
+
+                    {/* Action Buttons (Desktop) */}
+                    {hasAnyRole([Role.ADMIN, Role.ShiftManager]) && (
+                      <motion.div
+                        className="hidden sm:flex items-center gap-3"
+                      >
+                        <ActionButton
+                          icon={<ArrowDownCircle className="h-5 w-5" />}
+                          label="اضافة دخل"
+                          onClick={() => {
+                            handleAddTransaction(InvoiceType.income)
+                          }}
+                          variant="income"
+                        />
+                        <ActionButton
+                          icon={<ArrowUpCircle className="h-5 w-5" />}
+                          label="اضافة مصروف"
+                          onClick={() => {
+                            handleAddTransaction(InvoiceType.expense)
+                          }}
+                          variant="expense"
+                        />
+                      </motion.div>
+                    )}
                   </div>
                 )}
 
@@ -1080,11 +961,35 @@ const Case = () => {
             setSelectedMethod(null);
             setSelectedInvoiceType(null);
           }}
-          fundId={1}
+          fundId={0}
         />
       )}
 
       <AnimatePresence>
+        {showTransactionModal && (
+          <TransactionTypeModal
+            onClose={() => setShowTransactionModal(false)}
+            onSelect={(category) => {
+              setSelectedInvoiceCategory(category);
+              setShowTransactionModal(false);
+              setShowInvoiceForm(true);
+            }}
+            mode={transactionMode}
+          />
+        )}
+
+        {showInvoiceForm && selectedInvoiceCategory && (
+          <InvoiceForm
+            type={selectedInvoiceCategory}
+            mode={transactionMode}
+            onClose={() => {
+              setShowInvoiceForm(false);
+              setSelectedInvoiceCategory(null);
+            }}
+            fundId={1}
+          />
+        )}
+
         {selectedInvoice && (
           <InvoiceDetailsModal
             invoice={selectedInvoice}

@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Edit, Eye, FileText, Trash } from "lucide-react";
+import { Edit, Eye, FileText, Trash, DollarSign, FileX } from "lucide-react";
 import { Invoice } from "@/types/invoice.type";
+import BreakageConversionModal from "@/components/common/invoices/BreakageConversionModal";
+import { useMarkInvoiceAsBreak } from "@/hooks/invoices/useInvoice";
+import { useMokkBar } from "@/components/providers/MokkBarContext";
+import { useMarkInvoiceAsPaid } from "@/hooks/invoices/useInvoice"; // New hook for marking as paid
 
 interface InvoicesActionsMenuProps {
   invoice: Invoice;
@@ -16,7 +20,11 @@ const InvoicesActionsMenu: React.FC<InvoicesActionsMenuProps> = ({
   onDeleteInvoice,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isBreakageModalOpen, setIsBreakageModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const markAsBreak = useMarkInvoiceAsBreak();
+  const markAsPaid = useMarkInvoiceAsPaid(); // New hook
+  const { setSnackbarConfig } = useMokkBar();
 
   // Handle clicks outside the menu to close it
   useEffect(() => {
@@ -35,6 +43,51 @@ const InvoicesActionsMenu: React.FC<InvoicesActionsMenuProps> = ({
   const handleActionClick = (action: (invoice: Invoice) => void) => {
     action(invoice);
     setIsOpen(false);
+  };
+
+  // Handle marking invoice as paid
+  const handleMarkAsPaid = async (invoice: Invoice) => {
+    try {
+      await markAsPaid.mutateAsync({ id: invoice.id, data: {} });
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم تحويل الفاتورة إلى مدفوع بنجاح",
+      });
+    } catch (error) {
+      console.error("Error marking invoice as paid:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء تحويل الفاتورة إلى مدفوع",
+      });
+    }
+  };
+
+  // Handle breakage conversion
+  const handleConfirmBreakConversion = async (initialPayment: number, notes: string) => {
+    try {
+      await markAsBreak.mutateAsync({
+        id: invoice.id,
+        data: {
+          initialPayment,
+          notes,
+        },
+      });
+      setSnackbarConfig({
+        open: true,
+        severity: "success",
+        message: "تم تحويل الفاتورة إلى فاتورة كسر بنجاح",
+      });
+      setIsBreakageModalOpen(false);
+    } catch (error) {
+      console.error("Error converting to breakage:", error);
+      setSnackbarConfig({
+        open: true,
+        severity: "error",
+        message: "حدث خطأ أثناء تحويل الفاتورة إلى فاتورة كسر",
+      });
+    }
   };
 
   return (
@@ -71,6 +124,33 @@ const InvoicesActionsMenu: React.FC<InvoicesActionsMenuProps> = ({
               <Edit className="h-4 w-4" />
               تعديل
             </button>
+            {/* Show paid/breakage options only for unpaid invoices */}
+            {!invoice.paidStatus && !invoice.isBreak && (
+              <>
+                <button
+                  onClick={() => {
+                    handleMarkAsPaid(invoice);
+                    setIsOpen(false);
+                  }}
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-slate-700/50 w-full justify-start"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  مدفوع
+                </button>
+                {invoice.invoiceType === "income" && (
+                  <button
+                    onClick={() => {
+                      setIsBreakageModalOpen(true);
+                      setIsOpen(false);
+                    }}
+                    className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm px-2 py-1 rounded-md hover:bg-slate-700/50 w-full justify-start"
+                  >
+                    <FileX className="h-4 w-4" />
+                    كسر
+                  </button>
+                )}
+              </>
+            )}
             {onDeleteInvoice && (
               <button
                 onClick={() => handleActionClick(onDeleteInvoice)}
@@ -82,6 +162,16 @@ const InvoicesActionsMenu: React.FC<InvoicesActionsMenuProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Breakage Conversion Modal */}
+      {isBreakageModalOpen && (
+        <BreakageConversionModal
+          invoice={invoice}
+          onClose={() => setIsBreakageModalOpen(false)}
+          onConfirm={handleConfirmBreakConversion}
+          isProcessing={markAsBreak.isPending}
+        />
       )}
     </div>
   );
