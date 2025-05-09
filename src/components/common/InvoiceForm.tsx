@@ -1053,7 +1053,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
           <div className="space-y-6" dir="rtl">
             {/* Customer Information */}
-            {(fundId != 1 || type === "advance") && <CustomerSection />}
+            {(fundId != 1 || type == "direct" || type == "debt" || type == "advance") && <CustomerSection />}
 
             {/* Amount */}
             <div className="space-y-2">
