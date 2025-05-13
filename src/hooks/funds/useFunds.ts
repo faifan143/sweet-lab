@@ -29,14 +29,26 @@ export const useFunds = () => {
 };
 
 export const useTransferToMain = () => {
-  const client = useQueryClient();
+  const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: async (data: TransferToMainDTO) => {
       const response = await apiClient.post("/funds/transfer-to-main", data);
       return response;
     },
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["funds"] });
+      // Invalidate fund queries
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      
+      // Transfers affect shift summaries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      
+      // Transfers are tracked in transfer history
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      
+      // Current invoices might be affected by fund transfers
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
     },
     onError: (error) => {
       console.error("Error transfering funds:", error);
@@ -45,11 +57,24 @@ export const useTransferToMain = () => {
 };
 
 export const useTransferToNextShift = () => {
-  const client = useQueryClient();
+  const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: TransferService.generalToNextShift,
     onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["funds"] });
+      // Invalidate fund queries
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      
+      // Affects pending transfers
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      
+      // Affects transfer history
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      
+      // Affects shift summaries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
     },
     onError: (error) => {
       console.error("Error transfering funds:", error);
@@ -72,6 +97,7 @@ export const useTransferHistory = (
     queryFn: () => TransferService.getTransferHistory(status),
   });
 };
+
 export const useHandlePendingTransfer = () => {
   const queryClient = useQueryClient();
 
@@ -91,13 +117,22 @@ export const useHandlePendingTransfer = () => {
       TransferService.handlePendingTransfer(id, data),
 
     onSuccess: () => {
-      // Invalidate and refetch relevant queries
-      queryClient.invalidateQueries({
-        queryKey: ["pendingTransfers"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["transferHistory"],
-      });
+      // Invalidate pending transfers
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      
+      // Invalidate transfer history
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      
+      // Handling transfers affects fund balances
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      
+      // Affects shift summaries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      
+      // Affects current invoices as they track fund movements
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
     },
 
     onError: (error) => {

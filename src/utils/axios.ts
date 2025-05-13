@@ -81,7 +81,7 @@ const api = createApiClient({
 });
 
 export const apiClient = {
-  get: <T>(url: string): Promise<T> => api.get(url),
+  get: <T>(url: string, params?: any): Promise<T> => api.get(url, params),
   post: <T>(url: string, data?: unknown): Promise<T> => api.post(url, data),
   put: <T>(url: string, data?: unknown): Promise<T> => api.put(url, data),
   patch: <T>(url: string, data?: unknown): Promise<T> => api.patch(url, data),

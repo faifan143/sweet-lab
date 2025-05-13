@@ -260,6 +260,7 @@ export default function Page() {
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [selectedInvoiceCategory, setSelectedInvoiceCategory] =
     useState<InvoiceCategory | null>(null);
+  const [selectedSubType, setSelectedSubType] = useState<string | undefined>(undefined);
 
   // Transfer State
   const [showTransferToGeneralModal, setShowTransferToGeneralModal] = useState(false);
@@ -626,8 +627,9 @@ export default function Page() {
         {showTransactionModal && (
           <TransactionTypeModal
             onClose={() => setShowTransactionModal(false)}
-            onSelect={(category) => {
+            onSelect={(category, subType) => {
               setSelectedInvoiceCategory(category);
+              setSelectedSubType(subType);
               setShowTransactionModal(false);
               setShowInvoiceForm(true);
             }}
@@ -641,8 +643,10 @@ export default function Page() {
             onClose={() => {
               setShowInvoiceForm(false);
               setSelectedInvoiceCategory(null);
+              setSelectedSubType(undefined);
             }}
             fundId={getFundId(activeTab)}
+            subType={selectedSubType}
           />
         )}
 

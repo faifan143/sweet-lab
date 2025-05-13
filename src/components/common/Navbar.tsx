@@ -18,6 +18,7 @@ import {
   Receipt,
   ShoppingBag,
   Store,
+  Users,
   Wallet,
   Warehouse,
   X,
@@ -222,6 +223,12 @@ const Navbar = () => {
           icon: ShoppingBag,
           href: "/orders",
           roles: [Role.ADMIN, Role.MANAGER],
+        },
+        {
+          name: "الموظفين",
+          icon: Users,
+          href: "/employees",
+          roles: [Role.ADMIN, Role.MANAGER, Role.TreasuryManager],
         },
         {
           name: "الورديات",

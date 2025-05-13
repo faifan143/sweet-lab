@@ -56,3 +56,42 @@ export interface Debt {
   relatedInvoices: RelatedInvoice[];
   discount: number
 }
+
+// Employee type for employee debts
+interface DebtEmployee {
+  id: number;
+  username: string;
+}
+
+// Related invoice for employee debt (modified for employee context)
+interface EmployeeRelatedInvoice {
+  id: number;
+  invoiceNumber: string;
+  invoiceType: "expense" | "income";
+  invoiceCategory: string;
+  totalAmount: number;
+  discount: number;
+  paidStatus: boolean;
+  paymentDate: string | null;
+  createdAt: string;
+  notes: string | null;
+  fundId: number;
+  shiftId: number;
+  employeeId: number;
+  relatedEmployeeId: number;
+  employee: Employee;
+  fund: Fund;
+}
+
+export interface EmployeeDebt {
+  id: number;
+  employeeId: number;
+  amount: number;
+  status: "active" | "paid";
+  remainingAmount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee: DebtEmployee;
+  relatedInvoices: EmployeeRelatedInvoice[];
+}

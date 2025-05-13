@@ -22,5 +22,4 @@ export const sweetShopUnits: string[] = [
   "سطل",
   "لتر",
   "برميل",
-  "علبة",
 ];

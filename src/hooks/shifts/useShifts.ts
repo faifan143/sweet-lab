@@ -7,7 +7,7 @@ import {
   ShiftsInvoices,
 } from "@/types/shifts.type";
 import { apiClient } from "@/utils/axios";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface OpenShiftDTO {
   shiftType: "morning" | "evening";
@@ -49,12 +49,28 @@ export const useOpenShift = (options?: {
   onSuccess?: () => void;
   onError?: (error: any) => void;
 }) => {
+  const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: async (data: OpenShiftDTO) => {
       const response = await apiClient.post("shifts", data);
       return response;
     },
-    onSuccess: options?.onSuccess,
+    onSuccess: (data) => {
+      // Invalidate shift queries
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Opening a shift affects fund tracking
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      
+      // Affects pending transfers
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      
+      options?.onSuccess?.();
+    },
     onError: options?.onError,
   });
 };
@@ -63,6 +79,8 @@ export const useCloseShift = (options?: {
   onSuccess?: (data: CloseShiftResponse) => void;
   onError?: (error: any) => void;
 }) => {
+  const queryClient = useQueryClient();
+  
   return useMutation<CloseShiftResponse, any, CloseShiftDTO>({
     mutationFn: async (data: CloseShiftDTO) => {
       // Changed to POST request with only actualAmount in the body
@@ -71,7 +89,26 @@ export const useCloseShift = (options?: {
       });
       return response;
     },
-    onSuccess: options?.onSuccess,
+    onSuccess: (data) => {
+      // Invalidate all shift-related queries
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Closing shift affects fund balances
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      
+      // Affects pending transfers
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      
+      // Affects invoices as they are tied to shifts
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      
+      options?.onSuccess?.(data);
+    },
     onError: options?.onError,
   });
 };
@@ -113,12 +150,19 @@ export const useFetchShiftSummary = (options?: {
   onSuccess?: (data: ShiftSummaryData) => void;
   onError?: (error: any) => void;
 }) => {
+  const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.get(`shifts/${id}/summary`);
       return response as ShiftSummaryData;
     },
-    onSuccess: options?.onSuccess,
+    onSuccess: (data, shiftId) => {
+      // Update the cache for this specific shift summary
+      queryClient.setQueryData(["shiftSummary", shiftId], data);
+      
+      options?.onSuccess?.(data);
+    },
     onError: options?.onError,
   });
 };

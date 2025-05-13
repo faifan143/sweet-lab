@@ -17,6 +17,7 @@ export interface ItemUnit {
 export interface Item extends BaseItem {
   units: ItemUnit[];
   defaultUnit: string;
+  productionRate: number;
   cost?: number;
   groupId?: number;
   group?: ItemGroup;

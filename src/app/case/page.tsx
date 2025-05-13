@@ -162,7 +162,7 @@ const Case = () => {
     "income" | "expense" | null
   >(null);
   const [selectedInvoiceType, setSelectedInvoiceType] = useState<
-    "direct" | "products" | "debt" | "advance" | null
+    InvoiceCategory | null
   >(null);
 
   const itemsPerPage = 10;
@@ -270,7 +270,7 @@ const Case = () => {
   // Handle invoice form modal opener
   const openInvoiceForm = (
     method: "income" | "expense",
-    type: "direct" | "products" | "debt" | "advance"
+    type: InvoiceCategory
   ) => {
     setSelectedMethod(method);
     setSelectedInvoiceType(type);

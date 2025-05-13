@@ -57,8 +57,17 @@ export const useCreateIncomeProducts = (options?: {
   return useMutation({
     mutationFn: InvoiceService.createIncomeProducts,
     onSuccess: () => {
+      // Invalidate all invoice queries as a new invoice was created
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate related queries that might display invoice counts or totals
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      
       options?.onSuccess();
     },
     onError: options?.onError,
@@ -89,9 +98,21 @@ export const useDeleteInvoice = (options?: {
 
   return useMutation({
     mutationFn: (id: number | string) => InvoiceService.deleteInvoice(id),
-    onSuccess: () => {
+    onSuccess: (data, id) => {
+      // Invalidate the specific invoice
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      
+      // Invalidate all invoice lists
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
+      
       options?.onSuccess();
     },
     onError: options?.onError,
@@ -108,9 +129,24 @@ export const useUpdateInvoice = (options?: {
       const { id, ...rest } = data;
       return InvoiceService.updateInvoice(id, rest);
     },
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
+      const { id } = variables;
+      
+      // Invalidate the specific invoice
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      
+      // Invalidate all invoice lists
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      
       options?.onSuccess();
     },
     onError: options?.onError,
@@ -126,8 +162,16 @@ export const useCreateExpenseProducts = (options?: {
   return useMutation({
     mutationFn: InvoiceService.createExpenseProducts,
     onSuccess: () => {
+      // Invalidate all invoice queries
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      
       options?.onSuccess();
     },
     onError: options?.onError,
@@ -143,8 +187,20 @@ export const useCreateDirectDebt = (options?: {
   return useMutation({
     mutationFn: InvoiceService.createDirectDebt,
     onSuccess: () => {
+      // Invalidate all invoice queries
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate debt related queries
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
+      queryClient.invalidateQueries({ queryKey: ["emplDebtsTracking"] });
+      
+      // Invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
+      
       options?.onSuccess();
     },
     onError: options?.onError,
@@ -179,9 +235,22 @@ export const useMarkInvoiceAsPaid = () => {
       // Roll back to the previous cache state
       queryClient.setQueryData(["invoices"], context?.previousInvoices);
     },
-    onSettled: () => {
+    onSettled: (data, error, variables) => {
+      const { id } = variables;
+      
+      // Invalidate the specific invoice
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      
+      // Invalidate all invoice lists
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
     },
   });
 };
@@ -214,13 +283,28 @@ export const useMarkInvoiceAsDebt = () => {
       // Roll back to the previous cache state
       queryClient.setQueryData(["invoices"], context?.previousInvoices);
     },
-    onSettled: () => {
+    onSettled: (data, error, variables) => {
+      const { id } = variables;
+      
+      // Invalidate the specific invoice
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      
+      // Invalidate all invoice lists
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate debt related queries
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
+      queryClient.invalidateQueries({ queryKey: ["emplDebtsTracking"] });
+      
+      // Invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
     },
   });
 };
-
 
 export const useMarkInvoiceAsBreak = () => {
   const queryClient = useQueryClient();
@@ -255,9 +339,25 @@ export const useMarkInvoiceAsBreak = () => {
       // Roll back to the previous cache state
       queryClient.setQueryData(["invoices"], context?.previousInvoices);
     },
-    onSettled: () => {
+    onSettled: (data, error, variables) => {
+      const { id } = variables;
+      
+      // Invalidate the specific invoice
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      
+      // Invalidate all invoice lists
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      
+      // Invalidate debt related queries
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
+      queryClient.invalidateQueries({ queryKey: ["emplDebtsTracking"] });
+      
+      // Invalidate other related queries
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
     },
   });
 };

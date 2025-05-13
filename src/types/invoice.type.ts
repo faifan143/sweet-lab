@@ -1,6 +1,22 @@
-// src/types/invoice.type.ts - Updated types
+// src/types/invoice.type.ts
 
-export type InvoiceCategory = "products" | "direct" | "debt" | "advance";
+export enum InvoiceCategory {
+  PRODUCTS = 'products',
+  DEBT = 'debt',
+  DIRECT = 'direct',
+  EMPLOYEE = 'employee',
+  ADVANCE = 'advance',
+  // Add specific employee operations as separate categories
+  EMPLOYEE_DEBT = 'employee_debt',
+  EMPLOYEE_WITHDRAWAL = 'employee_withdrawal',
+  EMPLOYEE_WITHDRAWAL_RETURN = 'employee_withdrawal_return',
+  DAILY_EMPLOYEE_RENT = 'daily_employee_rent'
+}
+
+// Define employee operation subtypes
+export type EmployeeIncomeOperationType = 'debtPayment' | 'returnWithdrawal';
+export type EmployeeExpenseOperationType = 'debt' | 'salary_advance' | 'production' | 'hours' | 'daily_salary';
+export type EmployeeOperationType = EmployeeIncomeOperationType | EmployeeExpenseOperationType;
 
 export interface Invoice {
   id: number;
@@ -125,7 +141,7 @@ export interface ExpenseProductsDTO extends BaseInvoiceDTO {
 // Direct/Debt Invoice DTO (for both income and expense)
 export interface DirectDebtDTO extends BaseInvoiceDTO {
   invoiceType: InvoiceType;
-  invoiceCategory: "direct" | "debt" | "advance";
+  invoiceCategory: InvoiceCategory;
   customerId?: number;
   totalAmount: number;
   paidStatus: boolean;
@@ -165,8 +181,6 @@ export interface SingleFetchedInvoice {
     employeeId: number;
   };
 }
-
-
 
 // src/types/product-invoice-item.type.ts
 

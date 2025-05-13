@@ -1,14 +1,13 @@
-"use client";
 import { InvoiceCategory } from "@/types/invoice.type";
 import { motion } from "framer-motion";
-import { Receipt, CreditCard, Wallet, X, CreditCardIcon } from "lucide-react";
+import { Receipt, CreditCard, Wallet, X, CreditCardIcon, User, Clock, Package } from "lucide-react";
 import React from "react";
 
 export type TransactionMode = "income" | "expense";
 
 export interface TransactionTypeModalProps {
   onClose: () => void;
-  onSelect: (type: InvoiceCategory) => void;
+  onSelect: (type: InvoiceCategory, subType?: string) => void;
   mode: TransactionMode;
 }
 
@@ -17,40 +16,116 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
   onSelect,
   mode,
 }) => {
-  const types = [
+  const types = mode === "income" ? [
     {
-      id: "products",
+      id: InvoiceCategory.PRODUCTS,
       value: "منتجات",
       icon: Receipt,
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10 hover:bg-emerald-500/20",
-      description:
-        mode === "income" ? "فاتورة بيع منتجات" : "فاتورة شراء منتجات",
+      description: "فاتورة بيع منتجات",
     },
     {
-      id: "direct",
+      id: InvoiceCategory.DIRECT,
       value: "مباشر",
       icon: CreditCard,
       color: "text-blue-400",
       bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
-      description:
-        mode === "income" ? "دخل مباشر بدون فاتورة" : "مصروف مباشر بدون فاتورة",
+      description: "دخل مباشر بدون فاتورة",
     },
     {
-      id: "debt",
+      id: InvoiceCategory.DEBT,
       value: "دين",
       icon: Wallet,
       color: "text-purple-400",
       bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
-      description: mode === "income" ? "تحصيل دين" : "تسجيل دين جديد",
+      description: "تحصيل دين",
     },
     {
-      id: "advance",
+      id: InvoiceCategory.ADVANCE,
       value: "سلفة",
       icon: CreditCardIcon,
       color: "text-yellow-400",
       bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20",
-      description: mode === "income" ? "إضافة سلفة" : "إرجاع سلفة",
+      description: "إضافة سلفة",
+    },
+    {
+      id: InvoiceCategory.EMPLOYEE_DEBT,
+      value: "دين موظف",
+      icon: User,
+      color: "text-indigo-400",
+      bgColor: "bg-indigo-500/10 hover:bg-indigo-500/20",
+      description: "تحصيل دين موظف",
+      subType: "debtPayment"
+    },
+    {
+      id: InvoiceCategory.EMPLOYEE_WITHDRAWAL_RETURN,
+      value: "ارجاع سحب موظف",
+      icon: CreditCard,
+      color: "text-pink-400",
+      bgColor: "bg-pink-500/10 hover:bg-pink-500/20",
+      description: "ارجاع سحب موظف",
+      subType: "returnWithdrawal"
+    },
+  ] : [
+    {
+      id: InvoiceCategory.PRODUCTS,
+      value: "منتجات",
+      icon: Receipt,
+      color: "text-emerald-400",
+      bgColor: "bg-emerald-500/10 hover:bg-emerald-500/20",
+      description: "فاتورة شراء منتجات",
+    },
+    {
+      id: InvoiceCategory.DIRECT,
+      value: "مباشر",
+      icon: CreditCard,
+      color: "text-blue-400",
+      bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
+      description: "مصروف مباشر بدون فاتورة",
+    },
+    {
+      id: InvoiceCategory.DEBT,
+      value: "دين",
+      icon: Wallet,
+      color: "text-purple-400",
+      bgColor: "bg-purple-500/10 hover:bg-purple-500/20",
+      description: "تسجيل دين جديد",
+    },
+    {
+      id: InvoiceCategory.ADVANCE,
+      value: "سلفة",
+      icon: CreditCardIcon,
+      color: "text-yellow-400",
+      bgColor: "bg-yellow-500/10 hover:bg-yellow-500/20",
+      description: "إرجاع سلفة",
+    },
+    {
+      id: InvoiceCategory.EMPLOYEE_WITHDRAWAL,
+      value: "سحب موظف",
+      icon: CreditCard,
+      color: "text-red-400",
+      bgColor: "bg-red-500/10 hover:bg-red-500/20",
+      description: "سحب موظف",
+      subType: "salary_advance"
+    },
+    {
+      id: InvoiceCategory.EMPLOYEE_DEBT,
+      value: "دين موظف",
+      icon: User,
+      color: "text-indigo-400",
+      bgColor: "bg-indigo-500/10 hover:bg-indigo-500/20",
+      description: "دين موظف",
+      subType: "debt"
+    },
+    {
+      id: InvoiceCategory.DAILY_EMPLOYEE_RENT,
+      value: "اجار موظف يومي",
+      icon: CreditCardIcon,
+      color: "text-orange-400",
+      bgColor: "bg-orange-500/10 hover:bg-orange-500/20",
+      description: "اجار موظف يومي",
+      subType: "daily_salary"
     },
   ];
 
@@ -84,8 +159,8 @@ const TransactionTypeModal: React.FC<TransactionTypeModalProps> = ({
         <div className="grid grid-cols-1 gap-4" dir="rtl">
           {types.map((type) => (
             <button
-              key={type.id}
-              onClick={() => onSelect(type.id as InvoiceCategory)}
+              key={`${type.id}-${type.subType || ''}`}
+              onClick={() => onSelect(type.id, type.subType)}
               className={`flex items-center gap-4 p-4 rounded-lg ${type.bgColor} transition-colors group text-right`}
             >
               <div className={`p-3 rounded-lg ${type.bgColor} ${type.color}`}>

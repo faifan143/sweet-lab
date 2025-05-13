@@ -1,5 +1,5 @@
 // services/debts.service.ts
-import { Debt } from "@/types/debts.type";
+import { Debt, EmployeeDebt } from "@/types/debts.type";
 import { apiClient } from "@/utils/axios";
 
 export interface ApplyDiscountRequest {
@@ -10,6 +10,11 @@ export interface ApplyDiscountRequest {
 export class DebtsServices {
   static fetchPDebtsTracking = async (): Promise<Debt[]> => {
     const response = await apiClient.get<Debt[]>("/debts");
+    return response;
+  };
+
+  static fetchEmployeeDebtsTracking = async (): Promise<EmployeeDebt[]> => {
+    const response = await apiClient.get<EmployeeDebt[]>("/debts?type=employee");
     return response;
   };
 

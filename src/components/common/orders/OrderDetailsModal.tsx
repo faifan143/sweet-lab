@@ -160,9 +160,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                 <h4 className="text-slate-300 font-medium mb-3">معلومات الطلب</h4>
                                 <p className="text-slate-300 mb-1">
                                     <span className="text-slate-400">الحالة:</span>
-                                    <span className={`mr-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}>
+                                    <span className={`mx-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}>
                                         {getStatusIcon(order.status!)}
-                                        <span className="mr-1">{getStatusText(order.status!)}</span>
+                                        <span className="mx-1">{getStatusText(order.status!)}</span>
                                     </span>
                                 </p>
                                 <p className="text-slate-300 mb-1"><span className="text-slate-400">التصنيف:</span> {order.category?.name}</p>
@@ -173,7 +173,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                                 <p className="text-slate-300 mb-1"><span className="text-slate-400">إجمالي المبلغ:</span> {formatCurrency(order.totalAmount)}</p>
                                 <p className="text-slate-300 mb-1">
                                     <span className="text-slate-400">حالة الدفع:</span>
-                                    <span className={`mr-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                                    <span className={`mx-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.paidStatus ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
                                         {order.paidStatus ? 'مدفوع' : order.invoice?.isBreak ? 'كسر' : 'غير مدفوع'}
                                     </span>
                                 </p>

@@ -124,9 +124,14 @@ export const useCreateCustomer = () => {
       return response;
     },
     onSuccess: () => {
-      // Invalidate and refetch
+      // Invalidate all customer queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+      
+      // Also invalidate related queries that might show customer information
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
     },
     onError: (error) => {
       console.error("Error creating customer:", error);
@@ -161,6 +166,11 @@ export const useUpdateCustomer = () => {
       queryClient.invalidateQueries({
         queryKey: ["customer-summary", variables.id.toString()],
       });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
     },
     onError: (error) => {
       console.error("Error updating customer:", error);
@@ -182,10 +192,18 @@ export const useDeleteCustomer = () => {
       );
       return response;
     },
-    onSuccess: () => {
-      // Invalidate and refetch
+    onSuccess: (data, customerId) => {
+      // Invalidate and refetch all customer queries
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-summary", customerId.toString()],
+      });
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debtsTracking"] });
     },
     onError: (error) => {
       console.error("Error deleting customer:", error);
@@ -209,8 +227,12 @@ export const useCreateCustomerCategory = () => {
       return response;
     },
     onSuccess: () => {
-      // Invalidate and refetch
+      // Invalidate categories query
       queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
+      
+      // Since customers include category info, invalidate customer queries too
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["all-customers"] });
     },
     onError: (error) => {
       console.error("Error creating customer category:", error);
@@ -239,11 +261,15 @@ export const useUpdateCustomerCategory = () => {
       return response;
     },
     onSuccess: () => {
-      // Invalidate and refetch categories
+      // Invalidate categories query
       queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
-      // Also refresh customer data as it includes category info
+      
+      // Invalidate customer queries as they include category info
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+      
+      // Invalidate all customer summaries as they might display category info
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
     },
     onError: (error) => {
       console.error("Error updating customer category:", error);
@@ -266,11 +292,15 @@ export const useDeleteCustomerCategory = () => {
       return response;
     },
     onSuccess: () => {
-      // Invalidate and refetch
+      // Invalidate categories query
       queryClient.invalidateQueries({ queryKey: ["customer-categories"] });
-      // Also refresh customer data as it includes category info
+      
+      // Invalidate customer queries as they include category info
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["all-customers"] });
+      
+      // Invalidate all customer summaries as they might display category info
+      queryClient.invalidateQueries({ queryKey: ["customer-summary"] });
     },
     onError: (error) => {
       console.error("Error deleting customer category:", error);

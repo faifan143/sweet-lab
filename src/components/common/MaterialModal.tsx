@@ -31,6 +31,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
     groupId: 0,
     defaultUnit: "",
     cost: 0,
+    productionRate: 0,
     units: [{ unit: "", price: 0, factor: 1 }],
   });
 
@@ -44,6 +45,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
         groupId: item.groupId || itemGroups[0]?.id || 0,
         defaultUnit: item.defaultUnit || "",
         cost: item.cost || 0,
+        productionRate: item.productionRate || 0,
         units:
           item.units && item.units.length > 0
             ? [...item.units]
@@ -83,7 +85,7 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "groupId" || name === "cost" ? Number(value) : value,
+      [name]: name === "groupId" || name === "cost" || name === "productionRate" ? Number(value) : value,
     }));
   };
 
@@ -458,6 +460,23 @@ const MaterialModal: React.FC<MaterialModalProps> = ({
                   step="0.01"
                   className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500/50"
                   placeholder="أدخل التكلفة"
+                />
+              </div>
+            )}
+
+            {/* Production Rate field for production items */}
+            {formData.type === "production" && (
+              <div className="space-y-2">
+                <label className="block text-slate-200">سعر الانتاج</label>
+                <input
+                  type="number"
+                  name="productionRate"
+                  value={formData.productionRate || 0}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500/50"
+                  placeholder="أدخل سعر الانتاج"
                 />
               </div>
             )}

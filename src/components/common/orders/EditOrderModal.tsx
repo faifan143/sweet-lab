@@ -591,7 +591,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                             <label htmlFor="isForToday" className="flex items-center gap-2 text-sm font-medium text-slate-300 cursor-pointer w-full">
                                 <Calendar className="h-4 w-4 text-warning" />
                                 تسليم اليوم
-                                <span className="text-xs text-slate-400 mr-2">(إذا لم يتم التحديد، سيتم جدولة التسليم للغد)</span>
+                                <span className="text-xs text-slate-400 mx-2">(إذا لم يتم التحديد، سيتم جدولة التسليم للغد)</span>
                             </label>
                         </div>
                     </div>
@@ -612,7 +612,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                                     key={index}
                                     type="button"
                                     onClick={() => setActiveItemIndex(index)}
-                                    className={`px-3 py-1.5 mr-2 rounded-lg text-sm whitespace-nowrap flex items-center gap-1 transition-all ${activeItemIndex === index
+                                    className={`px-3 py-1.5 mx-2 rounded-lg text-sm whitespace-nowrap flex items-center gap-1 transition-all ${activeItemIndex === index
                                         ? 'bg-primary text-white shadow-md'
                                         : 'bg-slate-700/40 text-slate-300 hover:bg-slate-700/60'
                                         }`}
@@ -625,7 +625,7 @@ const EditOrderModal: React.FC<EditOrderModalProps> = ({
                                                 e.stopPropagation();
                                                 removeItem(index);
                                             }}
-                                            className="ml-2 p-0.5 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                                            className="mx-2 p-0.5 rounded-full hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
                                             aria-label="حذف العنصر"
                                         >
                                             <X className="h-3 w-3" />

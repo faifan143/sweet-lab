@@ -22,6 +22,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { useState } from "react";
+import { InvoiceCategory } from "@/types/invoice.type";
 
 const AdvancesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -336,7 +337,7 @@ const AdvancesPage = () => {
                                     ((selectedAdvance.totalAmount -
                                       selectedAdvance.remainingAmount) /
                                       selectedAdvance.totalAmount) *
-                                      100
+                                    100
                                   )}%`,
                                 }}
                               ></div>
@@ -346,7 +347,7 @@ const AdvancesPage = () => {
                                 ((selectedAdvance.totalAmount -
                                   selectedAdvance.remainingAmount) /
                                   selectedAdvance.totalAmount) *
-                                  100
+                                100
                               )}
                               % مكتمل
                             </div>
@@ -460,7 +461,7 @@ const AdvancesPage = () => {
       {/* Repay Advance Form */}
       {showRepayForm && repayAdvanceId && (
         <InvoiceForm
-          type="advance"
+          type={InvoiceCategory.ADVANCE}
           mode="expense"
           fundId={1}
           onClose={handleCloseRepayForm}
@@ -468,7 +469,7 @@ const AdvancesPage = () => {
             selectedAdvanceId
               ? selectedAdvance?.customer?.id
               : activeAdvances?.find((adv) => adv.id === repayAdvanceId)
-                  ?.customer?.id
+                ?.customer?.id
           }
         />
       )}

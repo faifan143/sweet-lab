@@ -46,7 +46,7 @@ const CustomerOrderCard: React.FC<CustomerOrderCardProps> = ({ order, onViewDeta
                     <h3 className="text-slate-200 font-medium">#{order.orderNumber}</h3>
                     <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status!)}`}>
                         {getStatusIconComponent(order.status!)}
-                        <span className="mr-1">{getStatusText(order.status!)}</span>
+                        <span className="mx-1">{getStatusText(order.status!)}</span>
                     </div>
                 </div>
 
@@ -73,7 +73,7 @@ const CustomerOrderCard: React.FC<CustomerOrderCardProps> = ({ order, onViewDeta
                         onClick={handleViewClick}
                         className="inline-flex items-center text-primary hover:text-primary-dark transition-colors text-sm"
                     >
-                        <EyeIcon className="h-4 w-4 mr-1" />
+                        <EyeIcon className="h-4 w-4 mx-1" />
                         {onViewDetails ? 'عرض التفاصيل' : (showDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل')}
                     </button>
                 </div>
