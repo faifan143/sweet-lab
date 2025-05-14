@@ -156,7 +156,6 @@ export interface CreateWorkshopSettlementDTO {
   amount: number;
   fundId: number;
   notes?: string;
-  distributeImmediately?: boolean;
   distributionType?: 'manual' | 'automatic';
   manualDistributions?: {
     employeeId: number;

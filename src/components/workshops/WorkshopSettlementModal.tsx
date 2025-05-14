@@ -120,7 +120,6 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
         amount: parseFloat(formData.amount),
         fundId: parseInt(formData.fundId),
         notes: formData.notes || undefined,
-        distributeImmediately: formData.distributeImmediately,
         distributionType: formData.distributionType
       };
 
