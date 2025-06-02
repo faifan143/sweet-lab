@@ -1,3 +1,4 @@
+
 // OrdersPage.tsx
 "use client";
 
@@ -187,8 +188,8 @@ const OrdersPage: React.FC = () => {
         if (paymentStatus !== "all") {
             filtered = filtered.filter((order) => {
                 if (paymentStatus === "paid") return order.paidStatus === true;
-                if (paymentStatus === "unpaid") return order.paidStatus === false && !order.invoice?.isBreak;
-                if (paymentStatus === "break") return order.paidStatus == false && order.invoice;
+                if (paymentStatus === "break") return order.invoice && order.invoice.isBreak;
+                if (paymentStatus === "unpaid") return order.paidStatus === false;
                 return true;
             });
         }
@@ -216,8 +217,8 @@ const OrdersPage: React.FC = () => {
         if (paymentStatus !== "all") {
             filtered = filtered.filter((order) => {
                 if (paymentStatus === "paid") return order.paidStatus === true;
-                if (paymentStatus === "unpaid") return order.paidStatus === false && !order.invoice?.isBreak;
-                if (paymentStatus === "break") return order.paidStatus == false && order.invoice;
+                if (paymentStatus === "break") return order.invoice && order.invoice.isBreak;
+                if (paymentStatus === "unpaid") return order.paidStatus === false;
                 return true;
             });
         }

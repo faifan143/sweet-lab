@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { useEmployeesList } from '@/hooks/employees/useEmployees';
+import { useEmployeesDebtsTracking } from '@/hooks/debts/useDebts';
 import { InvoiceCategory } from '@/types/invoice.type';
 import { Employee, WorkType } from '@/types/employees.type';
-import { Loader2, User } from 'lucide-react';
+import { AlertCircle, DollarSign, Loader2, User, WalletIcon } from 'lucide-react';
 import Select, { GroupBase, StylesConfig } from 'react-select';
 
 interface EmployeeOption {
@@ -24,6 +25,7 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({
   mode
 }) => {
   const { data: employees, isLoading } = useEmployeesList();
+  const { data: employeeDebts, isLoading: isLoadingDebts } = useEmployeesDebtsTracking();
 
   // Format employees for react-select
   const employeeOptions: EmployeeOption[] = useMemo(() => {
@@ -51,6 +53,35 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({
         employeeName: ""
       }));
     }
+  };
+
+  // Get employee debt amount
+  const getEmployeeDebtAmount = (employeeId: number): number => {
+    if (!employeeDebts) return 0;
+
+    const activeDebts = employeeDebts.filter(
+      debt => debt.employeeId === employeeId && debt.status === 'active'
+    );
+
+    return activeDebts.reduce((total, debt) => total + debt.remainingAmount, 0);
+  };
+
+  // Get employee total withdrawals
+  const getEmployeeTotalWithdrawals = (employeeId: number): number => {
+    if (!employees) return 0;
+
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (!employee?.withdrawals?.length) return 0;
+
+    return employee.withdrawals.reduce((total, withdrawal) => total + withdrawal.amount, 0);
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('ar-SY', {
+      style: 'decimal',
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   // Determine current selection for controlled component
@@ -148,7 +179,7 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingDebts) {
     return (
       <div className="flex justify-center items-center py-4">
         <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
@@ -188,13 +219,40 @@ const EmployeeSection: React.FC<EmployeeSectionProps> = ({
       )}
 
       {formData.employeeId && employees && (
-        <div>
+        <div className="space-y-2 mt-3">
           {/* Show employee details if available */}
           {currentEmployeeValue?.employee?.workType && (
-            <div className="text-sm text-slate-300 mb-2">
+            <div className="text-sm text-slate-300">
               نوع العمل: {currentEmployeeValue.employee.workType === WorkType.HOURLY ? 'بالساعة' : 'إنتاج'}
             </div>
           )}
+
+          {/* Show Employee Financial Summary */}
+          <div className="mt-3 bg-slate-700/30 p-3 rounded-lg space-y-2">
+            <h4 className="text-sm font-medium text-slate-200 mb-2">ملخص الموظف المالي:</h4>
+
+            {/* Employee Debt */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 text-red-400" />
+                <span className="text-sm text-slate-300">إجمالي الديون:</span>
+              </div>
+              <span className={`text-sm font-medium ${getEmployeeDebtAmount(formData.employeeId) > 0 ? 'text-red-400' : 'text-slate-300'}`}>
+                {formatCurrency(getEmployeeDebtAmount(formData.employeeId))} ل.س
+              </span>
+            </div>
+
+            {/* Employee Withdrawals */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="h-4 w-4 text-blue-400" />
+                <span className="text-sm text-slate-300">إجمالي السحوبات:</span>
+              </div>
+              <span className={`text-sm font-medium ${getEmployeeTotalWithdrawals(formData.employeeId) > 0 ? 'text-blue-400' : 'text-slate-300'}`}>
+                {formatCurrency(getEmployeeTotalWithdrawals(formData.employeeId))} ل.س
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>

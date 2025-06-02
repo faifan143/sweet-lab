@@ -8,11 +8,11 @@ interface FirstPaymentInputProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const FirstPaymentInput: React.FC<FirstPaymentInputProps> = ({ 
-  firstPayment, 
-  totalAmount, 
-  discount, 
-  onChange 
+const FirstPaymentInput: React.FC<FirstPaymentInputProps> = ({
+  firstPayment,
+  totalAmount,
+  discount,
+  onChange
 }) => {
   return (
     <div className="space-y-2">

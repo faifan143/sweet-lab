@@ -16,6 +16,20 @@ import WorkshopHoursModal from "./WorkshopHoursModal";
 import WorkshopProductionModal from "./WorkshopProductionModal";
 import WorkshopSettlementModal from "./WorkshopSettlementModal";
 
+// Enhanced employee withdrawal type that includes employee name and handles both date formats
+interface EnhancedEmployeeWithdrawal {
+  id: number;
+  employeeId: number;
+  amount: number;
+  withdrawalType: string;
+  fundId: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  employeeName: string;
+  date?: string; // Optional date property from the API response
+}
+
 interface WorkshopDetailsModalProps {
   workshop: Workshop;
   password: string;
@@ -218,6 +232,13 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
                 <div className="space-y-3">
                   {workshop.employees.map((employee, index) => {
                     if (!employee || !employee.id) return null;
+
+                    // Calculate total withdrawals for this employee
+                    const totalWithdrawals = employee.withdrawals?.reduce(
+                      (sum, withdrawal) => sum + withdrawal.amount,
+                      0
+                    ) || 0;
+
                     return (
                       <div
                         key={`employee-${employee.id + " - " + index}`}
@@ -225,7 +246,14 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <h4 className="text-white font-medium">{employee.name}</h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-white font-medium">{employee.name}</h4>
+                              {totalWithdrawals > 0 && (
+                                <span className="px-2 py-0.5 rounded-md text-xs bg-red-500/10 text-red-400 border border-red-500/20">
+                                  سحب: {formatCurrency(totalWithdrawals)}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-slate-400">{employee.phone || "لا يوجد رقم هاتف"}</p>
                           </div>
                           <div className="flex items-center gap-3">
@@ -371,6 +399,70 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
               </>
             )}
 
+            {/* Employee Withdrawals (for all workshop types) */}
+            {workshop.employees && workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0) && (
+              <div className="space-y-3">
+                <h4 className="text-sm text-slate-400 font-medium">سحوبات الموظفين</h4>
+
+                {/* Get all withdrawals from all employees, flatten and sort by date (newest first) */}
+                {(() => {
+                  const allWithdrawals = workshop.employees
+                    .filter(emp => emp.withdrawals && emp.withdrawals.length > 0)
+                    .flatMap(emp =>
+                      emp.withdrawals!.map(withdrawal => ({
+                        ...withdrawal,
+                        employeeName: emp.name
+                      }))
+                    )
+                    .sort((a, b) => {
+                      // Use 'date' property if it exists, otherwise fall back to 'createdAt'
+                      const dateA = (a as EnhancedEmployeeWithdrawal).date ? new Date((a as EnhancedEmployeeWithdrawal).date!) : new Date(a.createdAt);
+                      const dateB = (b as EnhancedEmployeeWithdrawal).date ? new Date((b as EnhancedEmployeeWithdrawal).date!) : new Date(b.createdAt);
+                      return dateB.getTime() - dateA.getTime();
+                    });
+
+                  return allWithdrawals.slice(0, 5).map((withdrawal, index) => {
+                    const enhancedWithdrawal = withdrawal as EnhancedEmployeeWithdrawal;
+                    return (
+                      <div
+                        key={`withdrawal-${enhancedWithdrawal.id}-${index}`}
+                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <DollarSign className="h-4 w-4 text-red-400" />
+                            <div>
+                              <span className="text-white">{enhancedWithdrawal.employeeName}</span>
+                              <span className="text-slate-400 text-sm mx-2">
+                                {format(
+                                  // Use 'date' property if it exists, otherwise fall back to 'createdAt'
+                                  enhancedWithdrawal.date ? new Date(enhancedWithdrawal.date) : new Date(enhancedWithdrawal.createdAt),
+                                  "dd MMMM yyyy",
+                                  { locale: ar }
+                                )}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${enhancedWithdrawal.withdrawalType === 'salary_advance'
+                                ? 'bg-blue-500/10 text-blue-400'
+                                : 'bg-purple-500/10 text-purple-400'
+                                }`}>
+                                {enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'سلفة' : 'دين'}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-sm text-red-400">
+                            {formatCurrency(enhancedWithdrawal.amount)}
+                          </span>
+                        </div>
+                        {enhancedWithdrawal.notes && (
+                          <p className="text-xs text-slate-400 mt-1 pr-7">{enhancedWithdrawal.notes}</p>
+                        )}
+                      </div>
+                    );
+                  })
+                })()}
+              </div>
+            )}
+
             {/* Recent Settlements (for both types) */}
             {workshop.settlements && workshop.settlements.length > 0 && (
               <div className="space-y-3">
@@ -408,7 +500,8 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
             {/* No activities message */}
             {workshop.workType === WorkType.HOURLY &&
               (!financialSummary?.dailySummary || financialSummary.dailySummary.filter(ds => ds.employees && ds.employees.length > 0).length === 0) &&
-              (!workshop.settlements || workshop.settlements.length === 0) && (
+              (!workshop.settlements || workshop.settlements.length === 0) &&
+              (!workshop.employees || !workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0)) && (
                 <div className="text-center py-8">
                   <Activity className="h-12 w-12 text-slate-400 mx-auto mb-3" />
                   <p className="text-slate-400">لا توجد أنشطة مسجلة</p>
@@ -417,7 +510,8 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
 
             {workshop.workType === WorkType.PRODUCTION &&
               (!workshop.productionRecords || workshop.productionRecords.length === 0) &&
-              (!workshop.settlements || workshop.settlements.length === 0) && (
+              (!workshop.settlements || workshop.settlements.length === 0) &&
+              (!workshop.employees || !workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0)) && (
                 <div className="text-center py-8">
                   <Activity className="h-12 w-12 text-slate-400 mx-auto mb-3" />
                   <p className="text-slate-400">لا توجد أنشطة مسجلة</p>

@@ -121,21 +121,30 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                     className="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
                     dir="rtl"
                 >
+                    <div className="bg-blue-500/10 p-4 flex items-center justify-between border-b border-slate-700">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500/20 rounded-full">
+                                <ShoppingBag className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <div>
+                                <h4 className="text-blue-400 font-medium">تعديل بيانات الطلب</h4>
+                                <p className="text-sm text-slate-300">يمكنك تعديل جميع تفاصيل الطلب من خلال الضغط على زر التعديل</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleEditClick}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
+                        >
+                            <ShoppingBag className="h-5 w-5" />
+                            تعديل الطلب
+                        </button>
+                    </div>
                     <div className="flex justify-between items-center p-4 border-b border-slate-700">
                         <div className="flex items-center gap-2">
                             <ShoppingBag className="h-5 w-5 text-slate-400" />
                             <h3 className="text-lg font-semibold text-slate-200">تفاصيل الطلب #{order.orderNumber}</h3>
                         </div>
                         <div className="flex gap-2">
-                            <button
-                                onClick={handleEditClick}
-                                className="text-slate-400 hover:text-blue-400 transition-colors  hover:bg-slate-700/50 flex items-center gap-2 border border-white/40 shadow-md rounded-full p-2"
-                                aria-label="تعديل الطلب"
-                                title="تعديل الطلب"
-                            >
-                                <ShoppingBag className="h-5 w-5" />
-                                تعديل الطلب
-                            </button>
                             <button
                                 onClick={onClose}
                                 className="text-slate-400 hover:text-slate-200 transition-colors rounded p-1 hover:bg-slate-700/50"
@@ -234,7 +243,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, isOpen, on
                         </div>
                         {/* Actions */}
                         <div className="flex flex-wrap gap-2 mb-2">
-                            {order.status === OrderStatus.pending && (
+                            {(order.status === OrderStatus.pending || order.status === OrderStatus.processing) && (
                                 <button
                                     onClick={() => handleUpdateStatus(OrderStatus.delivered)}
                                     disabled={isUpdating}

@@ -25,7 +25,8 @@ export interface ConvertToInvoiceRequest {
     discount?: number;
     additionalAmount?: number;
     initialPayment?: number;
-    isBreak?: boolean
+    isBreak?: boolean;
+    paidStatus?: boolean;
 }
 
 export class OrdersService {
@@ -107,5 +108,16 @@ export class OrdersService {
     static getOrderById = async (orderId: number): Promise<OrderResponseDto> => {
         const response = await apiClient.get<OrderResponseDto>(`/orders/${orderId}`);
         return response;
+    };
+
+    // Get the last order for a specific customer
+    static getLastOrderForCustomer = async (customerId: number): Promise<OrderResponseDto | null> => {
+        try {
+            const response = await apiClient.get<OrderResponseDto>(`/orders/last-for-customer/${customerId}`);
+            return response;
+        } catch (error) {
+            console.error("Error fetching last order for customer:", error);
+            return null;
+        }
     };
 }

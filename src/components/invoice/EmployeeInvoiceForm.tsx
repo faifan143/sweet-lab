@@ -292,6 +292,7 @@ const EmployeeInvoiceForm: React.FC<EmployeeInvoiceFormProps> = ({
             totalAmount: formData.totalAmount,
             notes: formData.notes || `أجر يومي للموظف - ${new Date().toLocaleDateString()}`,
             fundId,
+            employeeInvoiceType: "salary",
           };
 
           await createDirectDebt.mutateAsync(dailySalaryData);

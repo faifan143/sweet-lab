@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Save, Loader2, FileText, DollarSign, Plus, Trash2 } from "lucide-react";
+import { X, Save, Loader2, FileText, DollarSign, Plus, Trash2, Info } from "lucide-react";
 import { CreateWorkshopSettlementDTO, Workshop } from "@/types/workshops/workshop.type";
 import { WorkType } from "@/types/employees.type";
 import { useCreateWorkshopSettlement, useWorkshop } from "@/hooks/workshops/useWorkshops";
@@ -64,10 +64,6 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
     // Check total amount
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       newErrors.amount = "المبلغ يجب أن يكون أكبر من صفر";
-    }
-
-    if (parseFloat(formData.amount) > currentBalance) {
-      newErrors.amount = "المبلغ يتجاوز الرصيد الحالي";
     }
 
     // If manual distribution, validate distributions
@@ -192,6 +188,38 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
   // Get already selected employee IDs
   const selectedEmployeeIds = manualDistributions.map(d => d.employeeId).filter(id => id);
 
+  // Format date
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString("ar-SY");
+  };
+
+  // Get total withdrawals for an employee
+  const getTotalWithdrawals = (employeeId: string): number => {
+    const employee = availableEmployees.find(emp => emp.id.toString() === employeeId);
+    if (!employee || !employee.withdrawals || employee.withdrawals.length === 0) {
+      return 0;
+    }
+    return employee.withdrawals.reduce((total, withdrawal) => total + withdrawal.amount, 0);
+  };
+
+  // Get sorted withdrawals for an employee
+  const getSortedWithdrawals = (employeeId: string) => {
+    const employee = availableEmployees.find(emp => emp.id.toString() === employeeId);
+    if (!employee?.withdrawals?.length) {
+      return [];
+    }
+
+    return [...employee.withdrawals].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  };
+
+  // Get the last withdrawal for an employee
+  const getLastWithdrawal = (employeeId: string) => {
+    const sortedWithdrawals = getSortedWithdrawals(employeeId);
+    return sortedWithdrawals.length > 0 ? sortedWithdrawals[0] : null;
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -223,16 +251,6 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
             >
               <X className="h-5 w-5" />
             </button>
-          </div>
-
-          {/* Current Balance Display */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">الرصيد الحالي</span>
-              <span className="text-xl font-bold text-yellow-400">
-                {formatCurrency(currentBalance)}
-              </span>
-            </div>
           </div>
 
           {/* Form */}
@@ -271,7 +289,10 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
                 <option value="">اختر صندوق...</option>
                 {activeFunds.map((fund) => (
                   <option key={fund.id} value={fund.id}>
-                    {fund.fundType} - الرصيد: {formatCurrency(fund.currentBalance)}
+                    {fund.fundType === 'main' ? 'الخزنة' :
+                      fund.fundType === 'booth' ? 'بسطة' :
+                        fund.fundType === 'university' ? 'الجامعة' :
+                          fund.fundType === 'general' ? 'عام' : fund.fundType} - الرصيد: {formatCurrency(fund.currentBalance)}
                   </option>
                 ))}
               </select>
@@ -310,15 +331,98 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
                     <span className="text-white">توزيع تلقائي</span>
                   </label>
                 </div>
+
+                {/* Automatic distribution mode - employee withdrawals summary table */}
+                {formData.distributionType === 'automatic' && availableEmployees.length > 0 && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-3">
+                    <p className="text-sm text-blue-400">
+                      سيتم توزيع المبلغ تلقائياً على الموظفين بناءً على سجلات الإنتاج
+                    </p>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-400 mb-2">سحوبات الموظفين:</h4>
+                      <div className="max-h-[200px] overflow-y-auto border border-blue-500/20 rounded-lg">
+                        <table className="w-full text-xs">
+                          <thead className="bg-blue-500/20 text-blue-300">
+                            <tr>
+                              <th className="p-2 text-right">الموظف</th>
+                              <th className="p-2 text-center">إجمالي السحوبات</th>
+                              <th className="p-2 text-center">آخر سحب</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-blue-500/10">
+                            {availableEmployees.map(employee => (
+                              <tr key={employee.id} className="hover:bg-blue-500/10">
+                                <td className="p-2 text-right text-blue-200">{employee.name}</td>
+                                <td className="p-2 text-center text-blue-300">
+                                  {employee.withdrawals && employee.withdrawals.length > 0
+                                    ? formatCurrency(employee.withdrawals.reduce((total, w) => total + w.amount, 0))
+                                    : "0"}
+                                </td>
+                                <td className="p-2 text-center text-blue-300">
+                                  {(() => {
+                                    const lastWithdrawal = getLastWithdrawal(employee.id.toString());
+                                    if (lastWithdrawal) {
+                                      return `${formatCurrency(lastWithdrawal.amount)} - ${formatDate(lastWithdrawal.createdAt)}`;
+                                    }
+                                    return "لا يوجد";
+                                  })()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* For hourly workshops, show automatic distribution message */}
             {workType === WorkType.HOURLY && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-3">
                 <p className="text-sm text-blue-400">
                   سيتم توزيع المبلغ تلقائياً على الموظفين بناءً على ساعات العمل المسجلة
                 </p>
+
+                {/* Employee Withdrawals Summary Table */}
+                {availableEmployees.length > 0 && (
+                  <div className="mt-2">
+                    <h4 className="text-sm font-medium text-blue-400 mb-2">سحوبات الموظفين:</h4>
+                    <div className="max-h-[200px] overflow-y-auto border border-blue-500/20 rounded-lg">
+                      <table className="w-full text-xs">
+                        <thead className="bg-blue-500/20 text-blue-300">
+                          <tr>
+                            <th className="p-2 text-right">الموظف</th>
+                            <th className="p-2 text-center">إجمالي السحوبات</th>
+                            <th className="p-2 text-center">آخر سحب</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-blue-500/10">
+                          {availableEmployees.map(employee => (
+                            <tr key={employee.id} className="hover:bg-blue-500/10">
+                              <td className="p-2 text-right text-blue-200">{employee.name}</td>
+                              <td className="p-2 text-center text-blue-300">
+                                {employee.withdrawals && employee.withdrawals.length > 0
+                                  ? formatCurrency(employee.withdrawals.reduce((total, w) => total + w.amount, 0))
+                                  : "0"}
+                              </td>
+                              <td className="p-2 text-center text-blue-300">
+                                {(() => {
+                                  const lastWithdrawal = getLastWithdrawal(employee.id.toString());
+                                  if (lastWithdrawal) {
+                                    return `${formatCurrency(lastWithdrawal.amount)} - ${formatDate(lastWithdrawal.createdAt)}`;
+                                  }
+                                  return "لا يوجد";
+                                })()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -395,6 +499,38 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
                         </button>
                       )}
                     </div>
+
+                    {/* Employee Withdrawals Summary */}
+                    {distribution.employeeId && (
+                      <div className="mt-2 bg-blue-500/10 rounded-lg p-2 text-xs text-blue-400">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium">إجمالي السحوبات: {formatCurrency(getTotalWithdrawals(distribution.employeeId))}</p>
+                            {/* Show withdrawal details */}
+                            {(() => {
+                              const employee = availableEmployees.find(emp => emp.id.toString() === distribution.employeeId);
+                              if (employee?.withdrawals?.length) {
+                                const sortedWithdrawals = getSortedWithdrawals(distribution.employeeId);
+                                return (
+                                  <div className="mt-1">
+                                    <p className="mb-1">آخر سحوبات:</p>
+                                    <ul className="space-y-1 list-disc list-inside">
+                                      {sortedWithdrawals.slice(0, 3).map((withdrawal, i) => (
+                                        <li key={`${withdrawal.id}-${i}`}>
+                                          {formatCurrency(withdrawal.amount)} - {formatDate(withdrawal.createdAt)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              }
+                              return <p className="mt-1">لا توجد سحوبات سابقة</p>;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 

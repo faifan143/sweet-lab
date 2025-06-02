@@ -47,6 +47,9 @@ export interface Invoice {
   // New fields for breakage type
   isBreak?: boolean;
   firstPayment?: number;
+  relatedEmployee?: RelatedEmployee | null;
+  relatedEmployeeId?: number | null;
+  employeeInvoiceType?: string | null;
 }
 
 export interface InvoiceItem {
@@ -70,6 +73,7 @@ export interface Item {
 
 export interface Employee {
   username: string;
+  name?: string;
 }
 
 export interface Fund {
@@ -252,4 +256,14 @@ export interface ProductInvoice {
   // New fields for breakage type
   isBreak?: boolean;
   firstPayment?: number;
+}
+
+export interface RelatedEmployee {
+  id: number;
+  name: string;
+  phone?: string;
+  workType?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  workshopId?: number;
 }

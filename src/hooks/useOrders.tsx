@@ -29,7 +29,6 @@ export const useCreateOrderCategory = () => {
     return useMutation({
         mutationFn: (data: OrdersCategoriesCreateDto) => OrdersService.createOrderCategory(data),
         onSuccess: () => {
-            // Invalidate order categories to reflect the new category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
         },
     });
@@ -39,10 +38,14 @@ export const useUpdateOrderCategory = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ orderCategoryId, data }: { orderCategoryId: number, data: OrderCategoryUpdateDto }) =>
-            OrdersService.updateOrderCategory(orderCategoryId, data),
+        mutationFn: ({
+            orderCategoryId,
+            data
+        }: {
+            orderCategoryId: number,
+            data: OrderCategoryUpdateDto
+        }) => OrdersService.updateOrderCategory(orderCategoryId, data),
         onSuccess: () => {
-            // Invalidate order categories to reflect the updated category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
         },
     });
@@ -54,12 +57,7 @@ export const useDeleteOrderCategory = () => {
     return useMutation({
         mutationFn: (orderCategoryId: number) => OrdersService.deleteOrderCategory(orderCategoryId),
         onSuccess: () => {
-            // Invalidate order categories to reflect the deleted category
             queryClient.invalidateQueries({ queryKey: ["orderCategories"] });
-            // Invalidate orders-related queries only if deleting a category affects orders
-            // (e.g., orders are reassigned or deleted). Adjust based on backend logic.
-            queryClient.invalidateQueries({ queryKey: ["orders"] });
-            queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
         },
     });
 };
@@ -77,6 +75,20 @@ export const useOrderById = (orderId: number) => {
         queryKey: ["order", orderId],
         queryFn: () => OrdersService.getOrderById(orderId),
         enabled: !!orderId,
+    });
+};
+
+// Hook to get the last order for a specific customer
+export const useLastOrderForCustomer = (customerId: number | null) => {
+    return useQuery<OrderResponseDto | null, Error>({
+        queryKey: ["lastOrder", customerId],
+        queryFn: () => customerId ? OrdersService.getLastOrderForCustomer(customerId) : null,
+        enabled: !!customerId,
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnMount: true,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true
     });
 };
 
@@ -179,7 +191,6 @@ export const useConvertOrderToInvoice = () => {
             queryClient.invalidateQueries({ queryKey: ["order", orderId] });
             queryClient.invalidateQueries({ queryKey: ["orders"] });
             queryClient.invalidateQueries({ queryKey: ["ordersSummary"] });
-            // Invalidate preparation/delivery lists if conversion affects them
             queryClient.invalidateQueries({ queryKey: ["ordersForPreparation"] });
             queryClient.invalidateQueries({ queryKey: ["ordersForDeliveryToday"] });
         },

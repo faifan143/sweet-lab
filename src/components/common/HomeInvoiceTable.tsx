@@ -194,8 +194,8 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
         valueB = b.invoiceType;
         break;
       case 'customer':
-        valueA = a.customer?.name || '';
-        valueB = b.customer?.name || '';
+        valueA = a.customer?.name || (a.relatedEmployee ? `موظف: ${a.relatedEmployee.name}` : '');
+        valueB = b.customer?.name || (b.relatedEmployee ? `موظف: ${b.relatedEmployee.name}` : '');
         break;
       case 'amount':
         valueA = a.totalAmount - a.discount;
@@ -312,7 +312,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                   </td>
                   <td className="p-3 text-center text-slate-300 text-sm">{formatDate(invoice.createdAt)}</td>
                   <td className="p-3 text-center text-slate-300 text-sm">
-                    {invoice.customer ? invoice.customer.name : "-"}
+                    {invoice.customer ? invoice.customer.name : (invoice.relatedEmployee ? `موظف: ${invoice.relatedEmployee.name}` : "-")}
                   </td>
                   <td className="p-3 text-center text-slate-300 text-sm">
                     {formatSYP(invoice.totalAmount - invoice.discount)}
@@ -453,7 +453,7 @@ export const HomeInvoiceTable: React.FC<HomeInvoiceTableProps> = ({
                     <div className="flex items-center gap-1 text-xs text-slate-400">
                       <User className="h-3 w-3" />
                       <span className="truncate max-w-[150px]">
-                        {invoice.customer ? invoice.customer.name : "-"}
+                        {invoice.customer ? invoice.customer.name : (invoice.relatedEmployee ? `موظف: ${invoice.relatedEmployee.name}` : "-")}
                       </span>
                     </div>
                   </div>

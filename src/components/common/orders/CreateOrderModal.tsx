@@ -18,7 +18,7 @@ import { motion } from 'framer-motion';
 import { useFetchCustomers } from '@/hooks/customers/useCustomers';
 import { useItems } from '@/hooks/items/useItems';
 import { useItemGroups } from '@/hooks/items/useItemGroups';
-import { useCreateOrder, useOrderCategories, useUpdateOrder } from '@/hooks/useOrders';
+import { useCreateOrder, useOrderCategories, useUpdateOrder, useLastOrderForCustomer } from '@/hooks/useOrders';
 import { OrderResponseDto, OrderStatus } from '@/types/orders.type';
 import { AxiosError } from 'axios';
 
@@ -163,6 +163,12 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     const [selectedItemUnit, setSelectedItemUnit] = useState<string>('');
     const [selectedItemFactor, setSelectedItemFactor] = useState<number>(1);
 
+    // Hook to fetch last order for the selected customer - moved after formData declaration
+    const {
+        data: lastOrder,
+        isLoading: isLoadingLastOrder,
+    } = useLastOrderForCustomer(formData.customerId ? Number(formData.customerId) : null);
+
     // Initialize form data for editing
     useEffect(() => {
         if (isOpen && mode === 'edit' && order) {
@@ -283,6 +289,35 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
     }, [errors]);
 
+    const handleItemInputChange = useCallback((index: number, field: keyof OrderItem, value: string | number) => {
+        setFormData(prev => {
+            const updatedItems = [...prev.items];
+            updatedItems[index] = { ...updatedItems[index], [field]: value };
+
+            // If changing the unit, update the price accordingly
+            if (field === 'unit') {
+                const itemId = updatedItems[index].itemId;
+                const itemData = items.find(i => i.id.toString() === itemId.toString());
+                if (itemData) {
+                    const selectedUnit = itemData.units.find(u => u.unit === value);
+                    if (selectedUnit) {
+                        updatedItems[index].unitPrice = selectedUnit.price.toString();
+                    }
+                }
+            }
+
+            return { ...prev, items: updatedItems };
+        });
+    }, [items]);
+
+    const handleRemoveItem = useCallback((index: number) => {
+        setFormData(prev => {
+            const updatedItems = [...prev.items];
+            updatedItems.splice(index, 1);
+            return { ...prev, items: updatedItems };
+        });
+    }, []);
+
     const handlePaymentTypeChange = (type: 'paid' | 'unpaid' | 'breakage') => {
         setFormData(prev => ({
             ...prev,
@@ -357,20 +392,6 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             console.error('Error adding item:', error);
         }
     }, [selectedItem, items, quantity, selectedItemPrice, selectedItemUnit, selectedUnitIndex]);
-
-    const removeItem = useCallback((index: number) => {
-        try {
-            const removedItem = formData.items[index];
-            const removedSubTotal = (parseFloat(removedItem.quantity as string) || 0) * (parseFloat(removedItem.unitPrice as string) || 0);
-            setFormData(prev => ({
-                ...prev,
-                items: prev.items.filter((_, i) => i !== index)
-            }));
-            setTotalAmount(prev => prev - removedSubTotal);
-        } catch (error) {
-            console.error('Error removing item:', error);
-        }
-    }, [formData.items]);
 
     const handleItemSelect = (itemId: number) => {
         setSelectedItem(itemId);
@@ -583,6 +604,75 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         customersError || categoriesError || itemsError || itemGroupsError
     );
 
+    // New function to handle repeating last order
+    const handleRepeatLastOrder = useCallback(() => {
+        if (!lastOrder) return;
+
+        // Map the last order items to the current form structure
+        const orderItems = lastOrder.items.map(item => ({
+            id: undefined, // Don't reuse the original item ID
+            itemId: item.itemId,
+            quantity: item.quantity.toString(),
+            unitPrice: item.unitPrice.toString(),
+            unit: item.unit,
+            notes: item.notes || ''
+        }));
+
+        // Calculate the total amount based on the items
+        const calculatedTotal = lastOrder.totalAmount || orderItems.reduce((sum, item) =>
+            sum + (parseFloat(item.quantity as string) * parseFloat(item.unitPrice as string)), 0);
+
+        // Use the exact payment status from the last order
+        const paymentType = lastOrder.paidStatus ? 'paid' : (lastOrder.invoice?.isBreak ? 'breakage' : 'unpaid');
+
+        // Set all form data at once to ensure consistency
+        setFormData({
+            customerId: lastOrder.customerId.toString(),
+            categoryId: lastOrder.categoryId.toString(),
+            notes: lastOrder.notes || '',
+            paidStatus: lastOrder.paidStatus,
+            isForToday: true, // Default to today for a new order
+            items: orderItems,
+            discount: lastOrder.invoice?.discount || 0,
+            additionalAmount: lastOrder.invoice?.additionalAmount || 0,
+            trayCount: lastOrder.invoice?.trayCount || 0,
+            paymentType: paymentType,
+            initialPayment: lastOrder.invoice?.initialPayment || 0,
+            invoiceNotes: lastOrder.notes || '' // Use order notes as invoice notes
+        });
+
+        // Update the total amount display
+        setTotalAmount(calculatedTotal);
+
+        // If the order has items, set up the item selection UI for potential additional items
+        if (orderItems.length > 0 && orderItems[0].itemId) {
+            const firstItemId = Number(orderItems[0].itemId);
+            const itemObject = items.find(item => item.id === firstItemId);
+
+            if (itemObject) {
+                // Set the selected group and item
+                setSelectedGroupId(itemObject.groupId || 0);
+                setSelectedItem(itemObject.id || 0);
+
+                // Set unit details based on the actual item from the last order
+                const selectedUnit = itemObject.units.find(u => u.unit === orderItems[0].unit);
+                if (selectedUnit) {
+                    const unitIndex = itemObject.units.findIndex(u => u.unit === selectedUnit.unit);
+                    setSelectedUnitIndex(unitIndex >= 0 ? unitIndex : 0);
+                    setSelectedItemUnit(selectedUnit.unit || '');
+                    setSelectedItemPrice(selectedUnit.price || 0);
+                    setSelectedItemFactor(selectedUnit.factor || 1);
+                }
+
+                // Set quantity for the new item form
+                setQuantity(Number(orderItems[0].quantity) || 1);
+            }
+        }
+
+        // Clear any previous errors
+        setErrors({});
+    }, [lastOrder, items]);
+
     // Render
     if (!isOpen) return null;
 
@@ -614,36 +704,63 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6" dir="rtl">
-                    <div className="space-y-4">
-                        <label className="block text-slate-200">العميل<span className="text-red-400 mx-1">*</span></label>
-                        <div className="relative">
-                            <select
-                                id="customerId"
-                                name="customerId"
-                                value={formData.customerId}
-                                onChange={handleInputChange}
-                                className={`w-full bg-slate-700/50 border ${errors.customerId ? 'border-red-500/50' : 'border-slate-600/50'} rounded-lg pl-4 pr-10 py-2.5 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer hover:border-slate-500/50`}
-                                disabled={isLoadingCustomers || !!customersError}
-                            >
-                                <option value="">اختر العميل</option>
-                                {customers.map(customer => (
-                                    <option key={customer.id} value={customer.id}>
-                                        {customer.name} {customer.phone ? `- ${customer.phone}` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+                    <div className="space-y-2">
+                        <label className="block text-slate-100 font-medium">
+                            العميل<span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex gap-2 rtl:space-x-reverse items-center">
+                            <div className="flex-1">
+                                <select
+                                    value={formData.customerId}
+                                    onChange={handleInputChange}
+                                    name="customerId"
+                                    className={`w-full px-4 py-2 bg-slate-700/50 border ${errors.customerId ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}
+                                >
+                                    <option value="">اختر العميل</option>
+                                    {customers.map((customer) => (
+                                        <option key={customer.id} value={customer.id}>
+                                            {customer.name} - {customer.phone}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.customerId && (
+                                    <div className="text-red-500 text-sm mt-1">{errors.customerId}</div>
+                                )}
+                            </div>
+
+                            {/* Repeat Last Order Button */}
+                            {formData.customerId && (
+                                <button
+                                    type="button"
+                                    onClick={handleRepeatLastOrder}
+                                    disabled={isLoadingLastOrder || !lastOrder}
+                                    className={`px-3 py-2 rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-2
+                                        ${lastOrder ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-400'}`}
+                                    title={lastOrder ? 'تكرار آخر طلب للعميل' : 'لا يوجد طلب سابق للعميل'}
+                                >
+                                    {isLoadingLastOrder ? (
+                                        <>
+                                            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                            <span>جارٍ التحميل...</span>
+                                        </>
+                                    ) : !lastOrder ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            <span>لا يوجد طلب سابق</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            <span>تكرار آخر طلب</span>
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </div>
-                        {errors.customerId && (
-                            <div className="text-red-400 text-sm mt-1">
-                                {errors.customerId}
-                            </div>
-                        )}
-                        {formData.customerId && (
-                            <div className="bg-blue-500/10 text-blue-400 rounded-lg py-2 px-4 w-fit">
-                                {getCustomerName()}
-                            </div>
-                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -898,17 +1015,53 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                     {formData.items.map((item, index) => (
                                         <tr key={index} className="border-t border-slate-600/30">
                                             <td className="p-3 text-slate-300">{getItemName(item.itemId)}</td>
-                                            <td className="p-3 text-slate-300">{item.quantity}</td>
-                                            <td className="p-3 text-slate-300">{item.unit}</td>
-                                            <td className="p-3 text-slate-300">{item.unitPrice}</td>
-                                            <td className="p-3 text-slate-300">{selectedItemFactor}</td>
+                                            <td className="p-3">
+                                                <input
+                                                    type="number"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleItemInputChange(index, 'quantity', e.target.value)}
+                                                    className="w-full bg-slate-700/30 border border-slate-500/30 rounded p-1 text-slate-200 text-center"
+                                                    min="0.1"
+                                                    step="0.1"
+                                                />
+                                            </td>
+                                            <td className="p-3">
+                                                <select
+                                                    value={item.unit}
+                                                    onChange={(e) => handleItemInputChange(index, 'unit', e.target.value)}
+                                                    className="w-full bg-slate-700/30 border border-slate-500/30 rounded p-1 text-slate-200 text-center"
+                                                >
+                                                    {items.find(i => i.id.toString() === item.itemId.toString())?.units.map((unitOption, unitIndex) => (
+                                                        <option key={unitIndex} value={unitOption.unit}>
+                                                            {unitOption.unit}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="p-3">
+                                                <input
+                                                    type="number"
+                                                    value={item.unitPrice}
+                                                    onChange={(e) => handleItemInputChange(index, 'unitPrice', e.target.value)}
+                                                    className="w-full bg-slate-700/30 border border-slate-500/30 rounded p-1 text-slate-200 text-center"
+                                                    min="0"
+                                                    step="1"
+                                                />
+                                            </td>
+                                            <td className="p-3 text-slate-300">
+                                                {(() => {
+                                                    const itemData = items.find(i => i.id.toString() === item.itemId.toString());
+                                                    const unitData = itemData?.units.find(u => u.unit === item.unit);
+                                                    return unitData?.factor || 1;
+                                                })()}
+                                            </td>
                                             <td className="p-3 text-slate-300">
                                                 {(parseFloat(item.quantity as string) || 0) * (parseFloat(item.unitPrice as string) || 0)}
                                             </td>
                                             <td className="p-3">
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeItem(index)}
+                                                    onClick={() => handleRemoveItem(index)}
                                                     className="text-red-400 hover:text-red-300 transition-colors"
                                                 >
                                                     <Trash2 className="h-5 w-5" />
