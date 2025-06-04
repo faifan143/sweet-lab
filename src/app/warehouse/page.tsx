@@ -1,26 +1,29 @@
 "use client";
-import { Package, Receipt } from "lucide-react";
+import { ClipboardCheck, Package, Receipt } from "lucide-react";
 import { useState } from "react";
 
 import InvoiceDetailModal from "@/components/common/InvoiceDetailModal";
 import Navbar from "@/components/common/Navbar";
 import SplineBackground from "@/components/common/SplineBackground";
+import { AuditDetailModal } from "@/components/common/warehouse/AuditDetailModal";
+import { AuditHistoryTable } from "@/components/common/warehouse/AuditHistoryTable";
+import { AuditModal } from "@/components/common/warehouse/AuditModal";
 import { InvoicesTable } from "@/components/common/warehouse/InvoicesTable";
 import { PageTitle } from "@/components/common/warehouse/PageTitle";
 import { Pagination } from "@/components/common/warehouse/Pagination";
 import { RawMaterialStatsSummary } from "@/components/common/warehouse/RawMaterialStatsSummary";
 import { SearchBar } from "@/components/common/warehouse/SearchBar";
 import StoredMaterialsGrid from "@/components/common/warehouse/StoredMaterialsGrid";
-import { useRawMaterialExpenses } from "@/hooks/warehouse/useWarehouse";
-import { WareHouseInvoice } from "@/types/warehouse.type";
+import { useAuditHistory, useRawMaterialExpenses } from "@/hooks/warehouse/useWarehouse";
+import { AuditEntry, WareHouseInvoice } from "@/types/warehouse.type";
 
 // Tabs Component
 const WarehouseTabs = ({
   activeTab,
   onTabChange,
 }: {
-  activeTab: "materials" | "invoices";
-  onTabChange: (tab: "materials" | "invoices") => void;
+  activeTab: "materials" | "invoices" | "audit";
+  onTabChange: (tab: "materials" | "invoices" | "audit") => void;
 }) => (
   <div className="flex justify-center mb-8 w-full ">
     <div className="inline-flex bg-white/5 rounded-lg p-1 w-full gap-2">
@@ -29,10 +32,9 @@ const WarehouseTabs = ({
         className={`
         w-full
 justify-center        px-6 py-2 rounded-lg transition-colors flex items-center gap-2
-          ${
-            activeTab === "materials"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-slate-300 hover:bg-white/10"
+          ${activeTab === "materials"
+            ? "bg-purple-500/20 text-purple-400"
+            : "text-slate-300 hover:bg-white/10"
           }
         `}
       >
@@ -44,15 +46,28 @@ justify-center        px-6 py-2 rounded-lg transition-colors flex items-center g
         className={`
         w-full
         justify-center        px-6 py-2 rounded-lg transition-colors flex items-center gap-2
-          ${
-            activeTab === "invoices"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-slate-300 hover:bg-white/10"
+          ${activeTab === "invoices"
+            ? "bg-purple-500/20 text-purple-400"
+            : "text-slate-300 hover:bg-white/10"
           }
         `}
       >
         <Receipt className="h-5 w-5" />
         فواتير المشتريات
+      </button>
+      <button
+        onClick={() => onTabChange("audit")}
+        className={`
+        w-full
+        justify-center        px-6 py-2 rounded-lg transition-colors flex items-center gap-2
+          ${activeTab === "audit"
+            ? "bg-purple-500/20 text-purple-400"
+            : "text-slate-300 hover:bg-white/10"
+          }
+        `}
+      >
+        <ClipboardCheck className="h-5 w-5" />
+        سجل الجرد
       </button>
     </div>
   </div>
@@ -60,20 +75,30 @@ justify-center        px-6 py-2 rounded-lg transition-colors flex items-center g
 
 // Main Warehouse Page Component
 const RawMaterialWarehouse = () => {
-  const [activeTab, setActiveTab] = useState<"materials" | "invoices">(
+  const [activeTab, setActiveTab] = useState<"materials" | "invoices" | "audit">(
     "materials"
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedInvoice, setSelectedInvoice] =
     useState<WareHouseInvoice | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState<AuditEntry | null>(null);
+  const [isAuditDetailModalOpen, setIsAuditDetailModalOpen] = useState(false);
 
   const { data } = useRawMaterialExpenses();
+  const { data: auditData } = useAuditHistory();
 
   // Handle view invoice details
   const handleViewInvoice = (invoice: WareHouseInvoice) => {
     setSelectedInvoice(invoice);
     setIsDetailModalOpen(true);
+  };
+
+  // Handle view audit details
+  const handleViewAudit = (audit: AuditEntry) => {
+    setSelectedAudit(audit);
+    setIsAuditDetailModalOpen(true);
   };
 
   // Handle search change
@@ -108,18 +133,20 @@ const RawMaterialWarehouse = () => {
             {/* Tabs */}
             <WarehouseTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {/* Search Bar */}
-            <SearchBar
-              searchTerm={searchTerm}
-              onSearchChange={handleSearchChange}
-              onClearSearch={handleClearSearch}
-            />
+            {/* Search Bar (only for materials and invoices) */}
+            {activeTab !== "audit" && (
+              <SearchBar
+                searchTerm={searchTerm}
+                onSearchChange={handleSearchChange}
+                onClearSearch={handleClearSearch}
+              />
+            )}
 
             {/* Content Based on Active Tab */}
             <div className="container mx-auto " dir="rtl">
               {activeTab === "materials" ? (
                 data?.rawMaterialStats?.items &&
-                data.rawMaterialStats.items.length > 0 ? (
+                  data.rawMaterialStats.items.length > 0 ? (
                   <>
                     <StoredMaterialsGrid
                       materials={data.rawMaterialStats.items}
@@ -135,32 +162,67 @@ const RawMaterialWarehouse = () => {
                     لا توجد مواد مخزنة
                   </div>
                 )
-              ) : data?.invoices && data.invoices.length > 0 ? (
-                <>
-                  {/* Invoices Table */}
-                  <InvoicesTable
-                    invoices={data.invoices}
-                    onViewInvoice={handleViewInvoice}
-                  />
-
-                  {/* Pagination */}
-                  {data.totalCount > 10 && (
-                    <Pagination
-                      totalCount={data.totalCount}
-                      currentPage={1}
-                      onPageChange={() => {}}
+              ) : activeTab === "invoices" ? (
+                data?.invoices && data.invoices.length > 0 ? (
+                  <>
+                    {/* Invoices Table */}
+                    <InvoicesTable
+                      invoices={data.invoices}
+                      onViewInvoice={handleViewInvoice}
                     />
-                  )}
 
-                  {/* Results Count */}
-                  <div className="mt-4 text-center text-gray-400">
-                    إجمالي النتائج: {data.totalCount}
+                    {/* Pagination */}
+                    {data.totalCount > 10 && (
+                      <Pagination
+                        totalCount={data.totalCount}
+                        currentPage={1}
+                        onPageChange={() => { }}
+                      />
+                    )}
+
+                    {/* Results Count */}
+                    <div className="mt-4 text-center text-gray-400">
+                      إجمالي النتائج: {data.totalCount}
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-8 text-center text-gray-400">
+                    لا توجد فواتير مشتريات
                   </div>
-                </>
+                )
               ) : (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-8 text-center text-gray-400">
-                  لا توجد فواتير مشتريات
-                </div>
+                // Audit History Tab
+                <>
+                  {/* New Audit Button */}
+                  <div className="flex justify-end mb-6">
+                    <button
+                      onClick={() => setIsAuditModalOpen(true)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                    >
+                      <ClipboardCheck className="h-5 w-5" />
+                      جرد جديد
+                    </button>
+                  </div>
+
+                  {/* Audit History Table */}
+                  {auditData?.data && Array.isArray(auditData.data) && auditData.data.length > 0 ? (
+                    <>
+                      <AuditHistoryTable
+                        auditEntries={auditData.data}
+                        onViewDetails={handleViewAudit}
+                      />
+
+                      {/* Results Count */}
+                      <div className="mt-4 text-center text-gray-400">
+                        إجمالي عمليات الجرد: {auditData.count || 0}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-8 text-center text-gray-400">
+                      لا توجد عمليات جرد سابقة
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -172,6 +234,27 @@ const RawMaterialWarehouse = () => {
             isOpen={isDetailModalOpen}
             onClose={() => setIsDetailModalOpen(false)}
             invoice={selectedInvoice}
+          />
+        )}
+
+        {/* Audit Detail Modal */}
+        <AuditDetailModal
+          isOpen={isAuditDetailModalOpen}
+          onClose={() => setIsAuditDetailModalOpen(false)}
+          audit={selectedAudit}
+        />
+
+        {/* New Audit Modal */}
+        {data?.rawMaterialStats?.items && (
+          <AuditModal
+            isOpen={isAuditModalOpen}
+            onClose={() => setIsAuditModalOpen(false)}
+            items={data.rawMaterialStats.items.map(item => ({
+              id: item.itemId,
+              name: item.itemName,
+              currentStock: item.totalQuantity,
+              defaultUnit: "وحدة" // Default unit, can be improved with actual unit
+            }))}
           />
         )}
       </div>

@@ -496,7 +496,7 @@ const Navbar = () => {
 
   // ========== Main Component Return ==========
   return (
-    <nav className="sticky w-full top-0 z-[100]" dir="rtl">
+    <nav className="sticky w-full top-0 z-50" dir="rtl">
       <div className="bg-navbar-bg backdrop-blur-md border-b border-navbar-border">
         {/* Container for max width */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -532,31 +532,27 @@ const Navbar = () => {
             </div>
 
             {/* Mobile Menu Button */}
-            <div className="md:hidden flex items-center order-3 z-50">
+            <div className="flex items-center md:hidden order-3 md:order-3">
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                aria-expanded={isOpen}
-                aria-label="Main menu"
+                className="rounded-lg p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 focus:outline-none transition-colors"
+                aria-label="Toggle Menu"
               >
-                <span className="sr-only">
-                  {isOpen ? "Close main menu" : "Open main menu"}
-                </span>
                 {isOpen ? (
-                  <X className="block h-6 w-6" aria-hidden="true" />
+                  <X className="h-6 w-6" />
                 ) : (
-                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                  <Menu className="h-6 w-6" />
                 )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Navigation Overlay */}
+        {/* Mobile Menu */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="md:hidden fixed inset-0 backdrop-blur-sm"
+              className="md:hidden fixed inset-0 backdrop-blur-sm z-40"
               variants={mobileMenuVariants}
               initial="hidden"
               animate="visible"

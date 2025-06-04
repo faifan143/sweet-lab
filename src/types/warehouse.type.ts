@@ -91,6 +91,12 @@ interface RawMaterialItemStat {
   averageUnitPrice: number;
   invoiceCount: number;
   transactions: RawMaterialTransaction[];
+  defaultUnit?: string;
+  item?: {
+    description?: string;
+    units?: Array<{ unit: string; price: number }>;
+    defaultUnit?: string;
+  };
 }
 
 interface RawMaterialStatSummary {
@@ -118,4 +124,64 @@ export interface RawMaterialApiResponse {
     items: RawMaterialItemStat[];
     summary: RawMaterialStatSummary;
   };
+}
+
+// Audit History Types
+export interface AuditItem {
+  itemId: number;
+  countedStock: number;
+  item?: {
+    id: number;
+    name: string;
+    type: string;
+    units?: Array<{ unit: string; price: number }>;
+    defaultUnit?: string;
+  };
+}
+
+export interface AuditEntry {
+  id: number;
+  createdAt: string;
+  auditDate?: string;
+  employeeId?: number;
+  employee?: {
+    name: string;
+    [key: string]: any;
+  };
+  notes?: string;
+  totalItemsCount?: number;
+  totalValueDifference?: number;
+  items?: AuditItem[];
+  success?: boolean;
+  message?: string;
+  count?: number;
+}
+
+export interface AuditHistoryResponse {
+  success: boolean;
+  data: AuditEntry[];
+  count: number;
+  message: string;
+}
+
+// New type for inventory items with stock
+export interface ItemInventory {
+  id: number;
+  itemId: number;
+  currentStock: number;
+  lastUpdated: string;
+  item: {
+    id: number;
+    name: string;
+    type: string;
+    units: Array<{ unit: string; price: number; factor: number }>;
+    defaultUnit: string;
+    cost: number;
+    price: number;
+    productionRate: number;
+    description: string;
+    groupId: number;
+  };
+  averageUnitPrice: number;
+  totalValue: number;
 }

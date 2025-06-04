@@ -1,4 +1,4 @@
-import { RawMaterialApiResponse } from "@/types/warehouse.type";
+import { AuditHistoryResponse, RawMaterialApiResponse } from "@/types/warehouse.type";
 import { apiClient } from "@/utils/axios";
 
 export const rawMaterialService = {
@@ -13,4 +13,26 @@ export const rawMaterialService = {
       throw error;
     }
   },
+
+  // Get audit history for inventory items
+  getAuditHistory: async (): Promise<AuditHistoryResponse> => {
+    try {
+      const response = await apiClient.get<AuditHistoryResponse>(`/invoices/inventory/audit-history`);
+      return response;
+    } catch (error) {
+      console.error("Error fetching audit history:", error);
+      throw error;
+    }
+  },
+
+  // Create a new audit entry
+  createAudit: async (auditData: { items: Array<{ itemId: number, countedStock: number }> }): Promise<any> => {
+    try {
+      const response = await apiClient.post(`/invoices/inventory/audit`, auditData);
+      return response;
+    } catch (error) {
+      console.error("Error creating audit:", error);
+      throw error;
+    }
+  }
 };
