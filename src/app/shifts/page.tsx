@@ -4,9 +4,11 @@ import InvoicesModal from "@/components/common/InvoicesModal";
 import Navbar from "@/components/common/Navbar";
 import PageSpinner from "@/components/common/PageSpinner";
 import ShiftSummaryModal from "@/components/common/ShiftSummaryModal";
+import CompleteClosureModal from "@/components/common/CompleteClosureModal";
 import SplineBackground from "@/components/common/SplineBackground";
 import { useMokkBar } from "@/components/providers/MokkBarContext";
 import {
+  useCompleteClosure,
   useFetchShiftSummary,
   useShiftInvoices,
   useShifts,
@@ -21,6 +23,7 @@ import {
   Receipt,
   Store,
   User2,
+  CheckCircle,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -70,9 +73,51 @@ const Shifts = () => {
     }
   );
 
+  const { mutate: completeClosure, isPending: isCompleteClosureLoading } = useCompleteClosure();
+
+  // State for complete closure modal
+  const [isCompleteClosureModalOpen, setIsCompleteClosureModalOpen] = useState(false);
+  const [closureShiftId, setClosureShiftId] = useState<number | null>(null);
+
+  const handleOpenCompleteClosureModal = (shiftId: number) => {
+    setClosureShiftId(shiftId);
+    setIsCompleteClosureModalOpen(true);
+  };
+  const handleCloseCompleteClosureModal = () => {
+    setClosureShiftId(null);
+    setIsCompleteClosureModalOpen(false);
+  };
+
+  const handleConfirmCompleteClosure = (amount: number) => {
+    if (closureShiftId) {
+      completeClosure({ id: closureShiftId, data: { actualAmount: amount } }, {
+        onSuccess: () => {
+          setSnackbarConfig({
+            open: true,
+            severity: "success",
+            message: "تم إنهاء الوردية بنجاح"
+          });
+          handleCloseCompleteClosureModal();
+        },
+        onError: () => {
+          setSnackbarConfig({
+            open: true,
+            severity: "error",
+            message: "حدث خطأ أثناء إنهاء الوردية"
+          });
+        }
+      });
+    }
+  };
+
   const handleShiftClick = (shiftId: number) => {
     setSelectedShift(shiftId);
     fetchSummary(shiftId);
+  };
+
+  const handleCompleteClosure = (shiftId: number, differenceValue: number) => {
+    setSelectedShift(shiftId);
+    completeClosure({ id: shiftId, data: { actualAmount: differenceValue } });
   };
 
   // Improved invoice handlers - they now set both states at once
@@ -160,7 +205,7 @@ const Shifts = () => {
 
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
-      {(isLoading || isSummaryLoading || isInvoicesLoading) && <PageSpinner />}
+      {(isLoading || isSummaryLoading || isInvoicesLoading || isCompleteClosureLoading) && <PageSpinner />}
       <SplineBackground activeTab="shifts" />
       <AnimatePresence>
         {selectedShift && (
@@ -178,6 +223,15 @@ const Shifts = () => {
             type={invoicesModalType}
             data={invoicesData}
             onClose={handleCloseInvoiceModal}
+          />
+        )}
+        {isCompleteClosureModalOpen && closureShiftId && (
+          <CompleteClosureModal
+            open={isCompleteClosureModalOpen}
+            onClose={handleCloseCompleteClosureModal}
+            onConfirm={handleConfirmCompleteClosure}
+            isLoading={isCompleteClosureLoading}
+            shiftId={closureShiftId}
           />
         )}
       </AnimatePresence>
@@ -284,7 +338,7 @@ const Shifts = () => {
                             : "bg-red-500/10 text-red-400"
                             }`}
                         >
-                          {shift.status === "open" ? "مفتوحة" : "مغلقة"}
+                          {shift.status === "open" ? "مفتوحة" : shift.status === "partially_closed" ? "مغلقة جزئيا" : "مغلقة"}
                         </div>
                         {shift.differenceStatus && (
                           <div
@@ -344,6 +398,17 @@ const Shifts = () => {
                     {/* Actions Section */}
                     <div className="border-t border-white/10 pt-4 mt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {/* complete closure */}
+                        {shift.status === "partially_closed" && (
+                          <button
+                            onClick={() => handleOpenCompleteClosureModal(shift.id)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            إنهاء الوردية
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleShiftClick(shift.id)}
                           className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"

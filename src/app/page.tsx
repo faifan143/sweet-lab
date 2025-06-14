@@ -22,6 +22,7 @@ import { useCurrentInvoices } from "@/hooks/invoices/useInvoice";
 import {
   QueryShiftType,
   useCloseShift,
+  useCloseShiftPartially,
   useOpenShift,
   useShifts,
   useShiftSummary,
@@ -278,7 +279,7 @@ export default function Page() {
   );
   const lastShift = shifts?.find((item) => item.id === lastShiftId);
   console.log("last shift is : ", lastShift)
-  const theShiftIsOpen = shifts?.length! > 0 && (!lastShift?.closeTime && isShiftsSuccess);
+  const theShiftIsOpen = shifts?.length! > 0 && (!lastShift?.closeTime && isShiftsSuccess) && lastShift?.status !== "partially_closed";
 
   const {
     data: currentInvoices,
@@ -355,6 +356,8 @@ export default function Page() {
         });
       },
     });
+
+  const { mutateAsync: closeShiftPartially, isPending: isClosingShiftPartially } = useCloseShiftPartially();
 
   const {
     data: shiftSummary,
@@ -433,7 +436,7 @@ export default function Page() {
   }) => {
     if (lastShift?.closeTime) return;
     try {
-      await closeShift({ amount });
+      await closeShift({ actualAmount: amount });
     } catch (error) {
       console.error("Failed to close shift:", error);
     }
@@ -526,15 +529,25 @@ export default function Page() {
           variant="success"
         />
       ) : (
-        <ActionButton
-          icon={<StopCircle className="h-5 w-5" />}
-          label="اغلاق وردية"
-          onClick={() => {
-            setShowCloseShiftModal(true);
-            triggerShiftSummary();
-          }}
-          variant="danger"
-        />
+        <>
+          <ActionButton
+            icon={<StopCircle className="h-5 w-5" />}
+            label="اغلاق وردية"
+            onClick={() => {
+              setShowCloseShiftModal(true);
+              triggerShiftSummary();
+            }}
+            variant="danger"
+          />
+          <ActionButton
+            icon={<StopCircle className="h-5 w-5" />}
+            label="اغلاق وردية جزئي"
+            onClick={() => {
+              closeShiftPartially();
+            }}
+            variant="expense"
+          />
+        </>
       )}
       {theShiftIsOpen && (
         <span className="text-muted-foreground">
@@ -599,7 +612,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background relative transition-colors duration-300">
       <SplineBackground activeTab={activeTab} />
-      {(isShiftsLoading || isCurrentInvoicesLoading) && <PageSpinner />}
+      {(isShiftsLoading || isCurrentInvoicesLoading || isClosingShiftPartially) && <PageSpinner />}
       <AnimatePresence>
         {/* Original Modals */}
         {showShiftModal && (

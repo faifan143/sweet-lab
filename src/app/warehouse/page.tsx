@@ -14,7 +14,7 @@ import { Pagination } from "@/components/common/warehouse/Pagination";
 import { RawMaterialStatsSummary } from "@/components/common/warehouse/RawMaterialStatsSummary";
 import { SearchBar } from "@/components/common/warehouse/SearchBar";
 import StoredMaterialsGrid from "@/components/common/warehouse/StoredMaterialsGrid";
-import { useAuditHistory, useRawMaterialExpenses } from "@/hooks/warehouse/useWarehouse";
+import { useAuditHistory, useRawMaterialExpenses, useInventoryItems } from "@/hooks/warehouse/useWarehouse";
 import { AuditEntry, WareHouseInvoice } from "@/types/warehouse.type";
 
 // Tabs Component
@@ -88,6 +88,7 @@ const RawMaterialWarehouse = () => {
 
   const { data } = useRawMaterialExpenses();
   const { data: auditData } = useAuditHistory();
+  const { data: inventoryData } = useInventoryItems();
 
   // Handle view invoice details
   const handleViewInvoice = (invoice: WareHouseInvoice) => {
@@ -145,16 +146,13 @@ const RawMaterialWarehouse = () => {
             {/* Content Based on Active Tab */}
             <div className="container mx-auto " dir="rtl">
               {activeTab === "materials" ? (
-                data?.rawMaterialStats?.items &&
-                  data.rawMaterialStats.items.length > 0 ? (
+                inventoryData?.data?.data && inventoryData.data.data.length > 0 ? (
                   <>
                     <StoredMaterialsGrid
-                      materials={data.rawMaterialStats.items}
+                      materials={inventoryData.data.data}
                     />
-
-                    {/* Results Count */}
                     <div className="mt-4 text-center text-gray-400">
-                      إجمالي المواد: {data.rawMaterialStats.items.length}
+                      إجمالي المواد: {inventoryData.data.data.length}
                     </div>
                   </>
                 ) : (

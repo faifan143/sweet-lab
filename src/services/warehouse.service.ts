@@ -34,5 +34,10 @@ export const rawMaterialService = {
       console.error("Error creating audit:", error);
       throw error;
     }
+  },
+
+  getInventoryItems: async () => {
+    const response = await apiClient.get("/invoices/inventory/items");
+    return response;
   }
 };

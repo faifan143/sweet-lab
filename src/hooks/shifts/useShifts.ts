@@ -41,7 +41,7 @@ interface CloseShiftResponse {
 }
 // Input DTO for closing shift
 export interface CloseShiftDTO {
-  amount: number;
+  actualAmount: number;
 }
 
 // hooks/shifts/useShifts.ts
@@ -50,7 +50,7 @@ export const useOpenShift = (options?: {
   onError?: (error: any) => void;
 }) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: OpenShiftDTO) => {
       const response = await apiClient.post("shifts", data);
@@ -61,14 +61,14 @@ export const useOpenShift = (options?: {
       queryClient.invalidateQueries({ queryKey: ["shifts"] });
       queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
-      
+
       // Opening a shift affects fund tracking
       queryClient.invalidateQueries({ queryKey: ["funds"] });
-      
+
       // Affects pending transfers
       queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
       queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
-      
+
       options?.onSuccess?.();
     },
     onError: options?.onError,
@@ -80,12 +80,12 @@ export const useCloseShift = (options?: {
   onError?: (error: any) => void;
 }) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<CloseShiftResponse, any, CloseShiftDTO>({
     mutationFn: async (data: CloseShiftDTO) => {
       // Changed to POST request with only actualAmount in the body
       const response = await apiClient.post<CloseShiftResponse>("shifts/close", {
-        actualAmount: data.amount
+        actualAmount: data.actualAmount
       });
       return response;
     },
@@ -95,18 +95,18 @@ export const useCloseShift = (options?: {
       queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
       queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
       queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
-      
+
       // Closing shift affects fund balances
       queryClient.invalidateQueries({ queryKey: ["funds"] });
-      
+
       // Affects pending transfers
       queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
       queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
       queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
-      
+
       // Affects invoices as they are tied to shifts
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      
+
       options?.onSuccess?.(data);
     },
     onError: options?.onError,
@@ -151,7 +151,7 @@ export const useFetchShiftSummary = (options?: {
   onError?: (error: any) => void;
 }) => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiClient.get(`shifts/${id}/summary`);
@@ -160,7 +160,7 @@ export const useFetchShiftSummary = (options?: {
     onSuccess: (data, shiftId) => {
       // Update the cache for this specific shift summary
       queryClient.setQueryData(["shiftSummary", shiftId], data);
-      
+
       options?.onSuccess?.(data);
     },
     onError: options?.onError,
@@ -175,7 +175,7 @@ export interface Employee {
 export interface QueryShiftType {
   id: number;
   shiftType: "morning" | "evening";
-  status: "open" | "closed";
+  status: "open" | "closed" | "partially_closed";
   openTime: string;
   closeTime: string;
   employeeId: number;
@@ -193,5 +193,50 @@ export const useShifts = () => {
       return response;
     },
     // enabled: false,
+  });
+};
+
+
+export const useCloseShiftPartially = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CloseShiftResponse, any>({
+    mutationFn: async () => {
+      const response = await apiClient.get<CloseShiftResponse>(`shifts/partial-close`);
+      return response;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+};
+
+
+export const useCompleteClosure = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CloseShiftResponse, any, { id: number, data: CloseShiftDTO }>({
+    mutationFn: async ({ id, data }) => {
+      const response = await apiClient.post<CloseShiftResponse>(`shifts/${id}/complete-closure`, data);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shiftSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["shiftInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["currentInvoices"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+      queryClient.invalidateQueries({ queryKey: ["checkingPendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingTransfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transferHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
   });
 };

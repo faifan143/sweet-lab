@@ -39,3 +39,13 @@ export const useCreateAudit = () => {
     },
   });
 };
+
+export const useInventoryItems = () => {
+  return useQuery({
+    queryKey: ["inventoryItems"],
+    queryFn: async () => {
+      const res: any = await rawMaterialService.getInventoryItems();
+      return res.data; // Unwrap axios response
+    },
+  });
+};
