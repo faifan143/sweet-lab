@@ -357,7 +357,13 @@ export default function Page() {
       },
     });
 
-  const { mutateAsync: closeShiftPartially, isPending: isClosingShiftPartially } = useCloseShiftPartially();
+  const { mutateAsync: closeShiftPartially, isPending: isClosingShiftPartially, isSuccess: isPartiallyCloseSuccess } = useCloseShiftPartially();
+
+  useEffect(() => {
+    if (isPartiallyCloseSuccess) {
+      window.location.reload()
+    }
+  }, [isPartiallyCloseSuccess])
 
   const {
     data: shiftSummary,
