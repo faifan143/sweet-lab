@@ -86,7 +86,7 @@ interface EmployeeRelatedInvoice {
 export interface EmployeeDebt {
   id: number;
   employeeId: number;
-  amount: number;
+  totalAmount: number;
   status: "active" | "paid";
   remainingAmount: number;
   notes: string | null;

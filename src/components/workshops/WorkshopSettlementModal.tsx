@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Save, Loader2, FileText, DollarSign, Plus, Trash2, Info } from "lucide-react";
+import { X, Save, Loader2, FileText, DollarSign, Plus, Trash2, Info, InfoIcon } from "lucide-react";
 import { CreateWorkshopSettlementDTO, Workshop } from "@/types/workshops/workshop.type";
 import { WorkType } from "@/types/employees.type";
 import { useCreateWorkshopSettlement, useWorkshop } from "@/hooks/workshops/useWorkshops";
@@ -255,6 +255,54 @@ const WorkshopSettlementModal: React.FC<WorkshopSettlementModalProps> = ({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+
+
+            {workshop && workshop.financialSummary && <div className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-blue-400" />
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Info className="h-4 w-4 text-blue-400" />
+                    <h3 className="text-sm font-medium text-blue-300">
+                      صافي مبلغ الورشة
+                    </h3>
+                  </div>
+
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={`text-2xl font-bold ${workshop?.financialSummary?.netAmount > 0 ? 'text-green-400' :
+                        workshop?.financialSummary?.netAmount < 0 ? 'text-red-400' :
+                          'text-white'
+                        }`}
+                    >
+                      {formatCurrency(workshop?.financialSummary?.netAmount)}
+                    </span>
+                    <span className="text-sm text-slate-400">ل.س</span>
+                  </div>
+
+                  {workshop?.financialSummary?.netAmount !== null && workshop?.financialSummary?.netAmount !== undefined && (
+                    <div className="mt-1">
+                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${workshop?.financialSummary?.netAmount > 0 ? 'bg-green-500/20 text-green-400' :
+                        workshop?.financialSummary?.netAmount < 0 ? 'bg-red-500/20 text-red-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                        {workshop?.financialSummary?.netAmount > 0 ? '+ ربح' :
+                          workshop?.financialSummary?.netAmount < 0 ? '- خسارة' : 'متوازن'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+
+            </div>
+            }
+
             {/* Total Amount */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">

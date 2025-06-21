@@ -101,7 +101,7 @@ const EmployeeDebtDetailsModal: React.FC<EmployeeDebtDetailsModalProps> = ({
               <div>
                 <span className="text-slate-400 block mb-1">المبلغ الكلي</span>
                 <span className="text-emerald-400 font-semibold text-lg">
-                  {formatCurrency(debt.amount)}
+                  {formatCurrency(debt.totalAmount)}
                 </span>
               </div>
               <div>

@@ -81,7 +81,7 @@ const MobileEmployeeDebtCard: React.FC<MobileEmployeeDebtCardProps> = ({
         <div>
           <p className="text-sm text-slate-400">المبلغ الكلي</p>
           <p className="text-emerald-400 font-semibold">
-            {formatCurrency(debt.amount)}
+            {formatCurrency(debt.totalAmount)}
           </p>
         </div>
         <div>
@@ -135,11 +135,10 @@ const PaginationControls: React.FC<{
           <button
             key={number}
             onClick={() => onPageChange(number)}
-            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-              currentPage === number
-                ? "bg-slate-700/50 text-slate-200"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
-            }`}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors ${currentPage === number
+              ? "bg-slate-700/50 text-slate-200"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/25"
+              }`}
           >
             {number}
           </button>
@@ -251,7 +250,7 @@ export const EmployeeDebtsTable: React.FC<EmployeeDebtsTableProps> = ({
                     </div>
                   </td>
                   <td className="p-4 text-emerald-400">
-                    {formatCurrency(debt.amount)}
+                    {formatCurrency(debt.totalAmount)}
                   </td>
                   <td className="p-4 text-red-400">
                     {formatCurrency(debt.remainingAmount)}
@@ -296,7 +295,7 @@ export const EmployeeDebtsTable: React.FC<EmployeeDebtsTableProps> = ({
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-      />
+        />
       )}
     </>
   );

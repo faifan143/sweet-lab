@@ -66,7 +66,7 @@ interface OrderFormData {
     items: OrderItem[];
     discount: number;
     additionalAmount: number;
-    trayCount: number;
+    trayCount: number | "";
     paymentType: 'paid' | 'unpaid' | 'breakage';
     initialPayment: number;
     invoiceNotes: string;
@@ -99,7 +99,7 @@ const INITIAL_FORM_DATA: OrderFormData = {
     items: [],
     discount: 0,
     additionalAmount: 0,
-    trayCount: 0,
+    trayCount: '',
     initialPayment: 0,
     invoiceNotes: ''
 };
@@ -195,7 +195,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 })),
                 discount: order.invoice?.discount || 0,
                 additionalAmount: order.invoice?.additionalAmount || 0,
-                trayCount: order.invoice?.trayCount || 0,
+                trayCount: order.invoice?.trayCount || '',
                 initialPayment: order.invoice?.initialPayment || 0,
                 invoiceNotes: order.invoice?.notes || ''
             });
@@ -277,8 +277,11 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             setFormData(prev => ({
                 ...prev,
                 [name]: type === 'checkbox' ? checked :
-                    (name === 'discount' || name === 'additionalAmount' || name === 'trayCount' || name === 'initialPayment')
-                        ? parseFloat(value) || 0 : value
+                    (name === 'discount' || name === 'additionalAmount' || name === 'initialPayment')
+                        ? parseFloat(value) || 0
+                        : name === 'trayCount'
+                            ? value === '' ? '' : (isNaN(Number(value)) ? prev.trayCount : Number(value))
+                            : value
             }));
 
             if (errors[name]) {
@@ -476,7 +479,10 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 }
             });
 
-            if (formData.trayCount < 0) {
+            if (formData.trayCount === '' || formData.trayCount === undefined) {
+                newErrors.trayCount = 'لا يمكن ترك عدد الفوارغ فارغًا';
+                isValid = false;
+            } else if (typeof formData.trayCount === 'number' && formData.trayCount < 0) {
                 newErrors.trayCount = 'لا يمكن أن يكون عدد الفوارغ أقل من صفر';
                 isValid = false;
             }
@@ -530,7 +536,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 invoiceData: {
                     discount: formData.discount,
                     additionalAmount: formData.additionalAmount,
-                    trayCount: formData.trayCount,
+                    trayCount: formData.trayCount === '' ? 0 : formData.trayCount,
                     notes: formData.invoiceNotes || '',
                     ...(formData.paymentType === 'breakage' && {
                         isBreak: true,
@@ -635,7 +641,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             items: orderItems,
             discount: lastOrder.invoice?.discount || 0,
             additionalAmount: lastOrder.invoice?.additionalAmount || 0,
-            trayCount: lastOrder.invoice?.trayCount || 0,
+            trayCount: lastOrder.invoice?.trayCount || '',
             paymentType: paymentType,
             initialPayment: lastOrder.invoice?.initialPayment || 0,
             invoiceNotes: lastOrder.notes || '' // Use order notes as invoice notes
@@ -1080,8 +1086,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                                 <label className="block text-slate-200">عدد الفوارغ</label>
                                 <div className="relative">
                                     <input
-                                        type="number"
-                                        min="0"
+                                        type="text"
                                         name="trayCount"
                                         value={formData.trayCount}
                                         onChange={handleInputChange}
