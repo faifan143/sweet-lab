@@ -1,5 +1,5 @@
 import { rawMaterialService } from "@/services/warehouse.service";
-import { AuditHistoryResponse, RawMaterialApiResponse } from "@/types/warehouse.type";
+import { AuditHistoryResponse, InventoryItemsResponse, RawMaterialApiResponse } from "@/types/warehouse.type";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useRawMaterialExpenses = () => {
@@ -41,7 +41,7 @@ export const useCreateAudit = () => {
 };
 
 export const useInventoryItems = () => {
-  return useQuery({
+  return useQuery<InventoryItemsResponse['data']>({
     queryKey: ["inventoryItems"],
     queryFn: async () => {
       const res: any = await rawMaterialService.getInventoryItems();

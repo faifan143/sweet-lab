@@ -185,3 +185,41 @@ export interface ItemInventory {
   averageUnitPrice: number;
   totalValue: number;
 }
+
+
+
+export interface InventoryUnit {
+  unit: string;
+  price: number;
+  factor: number;
+}
+
+export interface InventoryItemDetails {
+  id: number;
+  name: string;
+  type: string;
+  units: InventoryUnit[];
+  defaultUnit: string;
+  cost: number;
+  price: number;
+  productionRate: number;
+  description: string;
+  groupId: number;
+}
+
+export interface InventoryItem {
+  id: number;
+  itemId: number;
+  currentStock: number;
+  lastUpdated: string; // ISO date string
+  item: InventoryItemDetails;
+  averageUnitPrice: number;
+  totalValue: number;
+}
+
+export interface InventoryItemsResponse {
+  success: boolean;
+  data: InventoryItem[];
+  count: number;
+  message: string;
+}

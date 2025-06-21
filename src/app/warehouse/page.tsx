@@ -11,10 +11,9 @@ import { AuditModal } from "@/components/common/warehouse/AuditModal";
 import { InvoicesTable } from "@/components/common/warehouse/InvoicesTable";
 import { PageTitle } from "@/components/common/warehouse/PageTitle";
 import { Pagination } from "@/components/common/warehouse/Pagination";
-import { RawMaterialStatsSummary } from "@/components/common/warehouse/RawMaterialStatsSummary";
 import { SearchBar } from "@/components/common/warehouse/SearchBar";
 import StoredMaterialsGrid from "@/components/common/warehouse/StoredMaterialsGrid";
-import { useAuditHistory, useRawMaterialExpenses, useInventoryItems } from "@/hooks/warehouse/useWarehouse";
+import { useAuditHistory, useInventoryItems, useRawMaterialExpenses } from "@/hooks/warehouse/useWarehouse";
 import { AuditEntry, WareHouseInvoice } from "@/types/warehouse.type";
 
 // Tabs Component
@@ -85,10 +84,11 @@ const RawMaterialWarehouse = () => {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [selectedAudit, setSelectedAudit] = useState<AuditEntry | null>(null);
   const [isAuditDetailModalOpen, setIsAuditDetailModalOpen] = useState(false);
-
   const { data } = useRawMaterialExpenses();
+
   const { data: auditData } = useAuditHistory();
   const { data: inventoryData } = useInventoryItems();
+
 
   // Handle view invoice details
   const handleViewInvoice = (invoice: WareHouseInvoice) => {
@@ -124,13 +124,6 @@ const RawMaterialWarehouse = () => {
             {/* Page Title */}
             <PageTitle />
 
-            {/* Raw Material Stats Summary */}
-            {data?.rawMaterialStats?.summary && (
-              <RawMaterialStatsSummary
-                summary={data.rawMaterialStats.summary}
-              />
-            )}
-
             {/* Tabs */}
             <WarehouseTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -146,13 +139,36 @@ const RawMaterialWarehouse = () => {
             {/* Content Based on Active Tab */}
             <div className="container mx-auto " dir="rtl">
               {activeTab === "materials" ? (
-                inventoryData?.data?.data && inventoryData.data.data.length > 0 ? (
+                inventoryData && inventoryData.length > 0 ? (
                   <>
                     <StoredMaterialsGrid
-                      materials={inventoryData.data.data}
+                      materials={inventoryData.map(item => ({
+                        itemId: item.itemId,
+                        itemName: item.item.name,
+                        totalQuantity: item.currentStock,
+                        totalCost: item.totalValue,
+                        averageUnitPrice: item.averageUnitPrice,
+                        item: {
+                          description: item.item.description,
+                          units: item.item.units?.map(u => ({ unit: u.unit, price: u.price }))
+                        }
+                      }))}
                     />
+                    {/* Simple summary */}
                     <div className="mt-4 text-center text-gray-400">
-                      إجمالي المواد: {inventoryData.data.data.length}
+                      إجمالي المواد: {inventoryData.length}
+                      {(() => {
+                        const totalQuantity = inventoryData.reduce((sum, item) => sum + item.currentStock, 0);
+                        const totalValue = inventoryData.reduce((sum, item) => sum + item.totalValue, 0);
+                        return (
+                          <>
+                            <span className="mx-2">|</span>
+                            إجمالي الكمية: {totalQuantity}
+                            <span className="mx-2">|</span>
+                            إجمالي القيمة: {totalValue.toFixed(2)} ر.س
+                          </>
+                        );
+                      })()}
                     </div>
                   </>
                 ) : (
@@ -161,6 +177,7 @@ const RawMaterialWarehouse = () => {
                   </div>
                 )
               ) : activeTab === "invoices" ? (
+
                 data?.invoices && data.invoices.length > 0 ? (
                   <>
                     {/* Invoices Table */}
@@ -188,6 +205,7 @@ const RawMaterialWarehouse = () => {
                     لا توجد فواتير مشتريات
                   </div>
                 )
+
               ) : (
                 // Audit History Tab
                 <>
@@ -243,18 +261,18 @@ const RawMaterialWarehouse = () => {
         />
 
         {/* New Audit Modal */}
-        {data?.rawMaterialStats?.items && (
+        {/* {rawMaterialExpenses?.rawMaterialStats?.items && (
           <AuditModal
             isOpen={isAuditModalOpen}
-            onClose={() => setIsAuditModalOpen(false)}
-            items={data.rawMaterialStats.items.map(item => ({
+            onClose={() => setIsAuditModalOpen(false)}  
+            items={rawMaterialExpenses.rawMaterialStats.items.map(item => ({
               id: item.itemId,
               name: item.itemName,
               currentStock: item.totalQuantity,
-              defaultUnit: "وحدة" // Default unit, can be improved with actual unit
+              defaultUnit: item.defaultUnit || "وحدة"
             }))}
           />
-        )}
+        )} */}
       </div>
     </div>
   );

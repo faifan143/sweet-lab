@@ -9,12 +9,13 @@ import { Workshop } from "@/types/workshops/workshop.type";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Clock, DollarSign, FileText, Plus, Trash2, Users, X } from "lucide-react";
+import { Activity, Calendar, ChevronDown, ChevronRight, Clock, DollarSign, FileText, Package, PersonStanding, Plus, Trash2, User, Users, X } from "lucide-react";
 import React, { useState } from "react";
 import AddEmployeeToWorkshopModal from "./AddEmployeeToWorkshopModal";
 import WorkshopHoursModal from "./WorkshopHoursModal";
 import WorkshopProductionModal from "./WorkshopProductionModal";
 import WorkshopSettlementModal from "./WorkshopSettlementModal";
+import { formatDate } from "@/utils/formatters";
 
 // Enhanced employee withdrawal type that includes employee name and handles both date formats
 interface EnhancedEmployeeWithdrawal {
@@ -306,55 +307,6 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white mb-4">الأنشطة الأخيرة</h3>
 
-            {/* Recent Hour Records (for hourly workshops) */}
-            {workshop.workType === WorkType.HOURLY && (
-              <>
-                {financialSummary?.dailySummary && financialSummary.dailySummary.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm text-slate-400 font-medium">سجلات ساعات العمل</h4>
-                    {financialSummary.dailySummary.slice(0, 5).map((dailySummary, index) => {
-                      if (!dailySummary.employees || dailySummary.employees.length === 0) return null;
-                      return (
-                        <div key={`daily-${index}`} className="space-y-2">
-                          <div className="text-sm text-slate-400 mb-2">
-                            {format(new Date(dailySummary.date), "dd MMMM yyyy", { locale: ar })}
-                          </div>
-                          {dailySummary.employees.map((employeeRecord, empIndex) => (
-                            <div
-                              key={`hour-${index}-${empIndex}`}
-                              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3"
-                            >
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                  <Clock className="h-4 w-4 text-cyan-400" />
-                                  <div className="flex justify-between gap-4">
-                                    <span className="text-white">{employeeRecord.employeeName}</span>
-                                    <span className="text-slate-400 text-sm mx-2">
-                                      {employeeRecord.hours} ساعة × {formatCurrency(employeeRecord.hourlyRate)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <span className="text-sm text-green-400">
-                                  {formatCurrency(employeeRecord.amount)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                          <div className="text-sm text-slate-400 px-3 flex justify-between items-center">
-                            <span>إجمالي اليوم:</span>
-                            <span className="text-white">
-                              {dailySummary.totalHours} ساعة - {formatCurrency(dailySummary.totalAmount || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Recent Production Records (for production workshops) */}
             {workshop.workType === WorkType.PRODUCTION && (
               <>
                 {workshop.productionRecords && workshop.productionRecords.length > 0 && (
@@ -363,35 +315,87 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
                     {workshop.productionRecords.slice(0, 5).map((record, index) => {
                       if (!record || !record.id) return null;
                       return (
-                        <div
-                          key={`production-${record.id + "-" + index}`}
-                          className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3"
+                        <CollapsibleActivityRow
+                          key={`production-${record.id}-${index}`}
+                          id={`production-${record.id}-${index}`}
+                          title={`إنتاج ${formatDate(record.date)}`}
+                          icon={<Activity className="h-4 w-4 text-green-400" />}
+                          summary={`${record.items.length} منتج • ${formatDate(record.date)}`}
+                          amount={record.totalProduction}
+                          amountColor="text-green-400"
+                          date={record.date}
+                          badge={record.items.length > 3 ? "إنتاج كثيف" : "إنتاج عادي"}
+                          badgeColor={record.items.length > 3 ? "bg-orange-500/10 text-orange-400" : "bg-blue-500/10 text-blue-400"}
                         >
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <Activity className="h-4 w-4 text-green-400" />
-                              <div>
-                                <span className="text-white">{record.items.length} منتج</span>
-                                <span className="text-slate-400 text-sm mx-2">
-                                  {format(new Date(record.date), "dd MMMM yyyy", { locale: ar })}
-                                </span>
-                              </div>
+                          {/* Production Details */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                              <div className="text-green-400 text-sm">إجمالي الإنتاج</div>
+                              <div className="text-white text-xl font-bold">{formatCurrency(record.totalProduction)}</div>
                             </div>
-                            <span className="text-sm text-green-400">
-                              {formatCurrency(record.totalProduction)}
-                            </span>
+                            <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                              <div className="text-blue-400 text-sm">عدد المنتجات</div>
+                              <div className="text-white text-xl font-bold">{record.items.length}</div>
+                            </div>
                           </div>
-                          {/* Show production items */}
-                          {record.items.length > 0 && (
-                            <div className="mt-2 space-y-1">
+
+                          {/* Production Items Details */}
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-medium text-white border-b border-white/10 pb-2">تفاصيل المنتجات</h5>
+                            <div className="grid gap-2">
                               {record.items.map((item, itemIndex) => (
-                                <div key={`production-${record.id}-item-${itemIndex}`} className="text-xs text-slate-400 pr-7">
-                                  • {item.itemName}: {item.quantity} × {formatCurrency(item.rate)} = {formatCurrency(item.total)}
+                                <div key={`production-${record.id}-item-${itemIndex}`}
+                                  className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                                      <Package className="h-4 w-4 text-green-400" />
+                                    </div>
+                                    <div>
+                                      <span className="text-white font-medium">{item.itemName}</span>
+                                      <div className="text-xs text-slate-400">
+                                        الكمية: {item.quantity} • السعر: {formatCurrency(item.rate)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-green-400 font-medium">{formatCurrency(item.total)}</div>
+                                    <div className="text-xs text-slate-400">
+                                      {item.quantity} × {formatCurrency(item.rate)}
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>
-                          )}
-                        </div>
+                          </div>
+
+                          {/* Additional Production Info */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-purple-400" />
+                                <span className="text-slate-400">تاريخ الإنتاج:</span>
+                                <span className="text-white">{formatDate(record.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-cyan-400" />
+                                <span className="text-slate-400">معدل الإنتاج:</span>
+                                <span className="text-white">{(record.totalProduction / record.items.length).toFixed(0)} لكل منتج</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4 text-blue-400" />
+                                <span className="text-slate-400">إجمالي الكمية:</span>
+                                <span className="text-white">{record.items.reduce((sum, item) => sum + item.quantity, 0)} قطعة</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-yellow-400" />
+                                <span className="text-slate-400">متوسط السعر:</span>
+                                <span className="text-white">{formatCurrency(record.totalProduction / record.items.reduce((sum, item) => sum + item.quantity, 0))}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleActivityRow>
                       );
                     })}
                   </div>
@@ -399,12 +403,116 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
               </>
             )}
 
-            {/* Employee Withdrawals (for all workshop types) */}
+            {/* Enhanced Hour Records (for hourly workshops) */}
+            {workshop.workType === WorkType.HOURLY && (
+              <>
+                {financialSummary?.dailySummary && financialSummary.dailySummary.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm text-slate-400 font-medium">سجلات ساعات العمل</h4>
+                    {financialSummary.dailySummary.slice(0, 5).map((dailySummary, index) => {
+                      if (!dailySummary.employees || dailySummary.employees.length === 0) return null;
+                      return (
+                        <CollapsibleActivityRow
+                          key={`daily-${index}`}
+                          id={`daily-${index}`}
+                          title={`ساعات ${formatDate(dailySummary.date)}`}
+                          icon={<Clock className="h-4 w-4 text-cyan-400" />}
+                          summary={`${dailySummary.totalHours} ساعة • ${dailySummary.employees.length} موظف`}
+                          amount={dailySummary.totalAmount || 0}
+                          amountColor="text-cyan-400"
+                          date={dailySummary.date}
+                          badge={dailySummary.totalHours && dailySummary.totalHours > 20 ? "يوم مكثف" : "يوم عادي"}
+                          badgeColor={dailySummary.totalHours && dailySummary.totalHours > 20 ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}
+                        >
+                          {/* Daily Summary Stats */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                              <div className="text-cyan-400 text-sm">إجمالي الساعات</div>
+                              <div className="text-white text-xl font-bold">{dailySummary.totalHours}</div>
+                            </div>
+                            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                              <div className="text-green-400 text-sm">إجمالي المبلغ</div>
+                              <div className="text-white text-xl font-bold">{formatCurrency(dailySummary.totalAmount || 0)}</div>
+                            </div>
+                            <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                              <div className="text-purple-400 text-sm">عدد الموظفين</div>
+                              <div className="text-white text-xl font-bold">{dailySummary.employees.length}</div>
+                            </div>
+                          </div>
+
+                          {/* Employee Details */}
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-medium text-white border-b border-white/10 pb-2">تفاصيل الموظفين</h5>
+                            {dailySummary.employees.map((employeeRecord, empIndex) => (
+                              <div key={`hour-${index}-${empIndex}`}
+                                className="p-3 bg-white/5 rounded-lg">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                                      <User className="h-5 w-5 text-cyan-400" />
+                                    </div>
+                                    <div>
+                                      <span className="text-white font-medium">{employeeRecord.employeeName}</span>
+                                      <div className="grid grid-cols-2 gap-4 text-xs text-slate-400 mt-1">
+                                        <div>ساعات العمل: {employeeRecord.hours}h</div>
+                                        <div>معدل الساعة: {formatCurrency(employeeRecord.hourlyRate)}</div>
+                                        <div>الإجمالي: {formatCurrency(employeeRecord.amount)}</div>
+                                        <div>المعدل/ساعة: {formatCurrency(employeeRecord.amount / employeeRecord.hours)}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-cyan-400 font-medium">
+                                      {formatCurrency(employeeRecord.amount)}
+                                    </div>
+                                    <div className="text-xs text-slate-400">
+                                      {employeeRecord.hours}h × {formatCurrency(employeeRecord.hourlyRate)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Daily Statistics */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div className="text-center p-2 bg-white/5 rounded">
+                              <div className="text-slate-400">متوسط ساعات/موظف</div>
+                              <div className="text-white font-medium">
+                                {(dailySummary.totalHours! / dailySummary.employees.length).toFixed(1)}h
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-white/5 rounded">
+                              <div className="text-slate-400">متوسط معدل/ساعة</div>
+                              <div className="text-white font-medium">
+                                {formatCurrency(dailySummary.totalAmount! / dailySummary.totalHours!)}
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-white/5 rounded">
+                              <div className="text-slate-400">أعلى معدل</div>
+                              <div className="text-white font-medium">
+                                {formatCurrency(Math.max(...dailySummary.employees.map(e => e.hourlyRate)))}
+                              </div>
+                            </div>
+                            <div className="text-center p-2 bg-white/5 rounded">
+                              <div className="text-slate-400">أقل معدل</div>
+                              <div className="text-white font-medium">
+                                {formatCurrency(Math.min(...dailySummary.employees.map(e => e.hourlyRate)))}
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleActivityRow>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Enhanced Employee Withdrawals */}
             {workshop.employees && workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0) && (
               <div className="space-y-3">
                 <h4 className="text-sm text-slate-400 font-medium">سحوبات الموظفين</h4>
-
-                {/* Get all withdrawals from all employees, flatten and sort by date (newest first) */}
                 {(() => {
                   const allWithdrawals = workshop.employees
                     .filter(emp => emp.withdrawals && emp.withdrawals.length > 0)
@@ -415,7 +523,6 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
                       }))
                     )
                     .sort((a, b) => {
-                      // Use 'date' property if it exists, otherwise fall back to 'createdAt'
                       const dateA = (a as EnhancedEmployeeWithdrawal).date ? new Date((a as EnhancedEmployeeWithdrawal).date!) : new Date(a.createdAt);
                       const dateB = (b as EnhancedEmployeeWithdrawal).date ? new Date((b as EnhancedEmployeeWithdrawal).date!) : new Date(b.createdAt);
                       return dateB.getTime() - dateA.getTime();
@@ -423,100 +530,161 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
 
                   return allWithdrawals.slice(0, 5).map((withdrawal, index) => {
                     const enhancedWithdrawal = withdrawal as EnhancedEmployeeWithdrawal;
+                    const withdrawalDate = enhancedWithdrawal.date ? new Date(enhancedWithdrawal.date) : new Date(enhancedWithdrawal.createdAt);
+
                     return (
-                      <div
+                      <CollapsibleActivityRow
                         key={`withdrawal-${enhancedWithdrawal.id}-${index}`}
-                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3"
+                        id={`withdrawal-${enhancedWithdrawal.id}-${index}`}
+                        title={`سحب ${enhancedWithdrawal.employeeName}`}
+                        icon={<DollarSign className="h-4 w-4 text-red-400" />}
+                        summary={`${format(withdrawalDate, "dd MMMM yyyy", { locale: ar })} • ${enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'سلفة' : 'دين'}`}
+                        amount={enhancedWithdrawal.amount}
+                        amountColor="text-red-400"
+                        date={enhancedWithdrawal.date || enhancedWithdrawal.createdAt}
+                        badge={enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'سلفة' : 'دين'}
+                        badgeColor={enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}
                       >
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-3">
-                            <DollarSign className="h-4 w-4 text-red-400" />
-                            <div>
-                              <span className="text-white">{enhancedWithdrawal.employeeName}</span>
-                              <span className="text-slate-400 text-sm mx-2">
-                                {format(
-                                  // Use 'date' property if it exists, otherwise fall back to 'createdAt'
-                                  enhancedWithdrawal.date ? new Date(enhancedWithdrawal.date) : new Date(enhancedWithdrawal.createdAt),
-                                  "dd MMMM yyyy",
-                                  { locale: ar }
-                                )}
-                              </span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${enhancedWithdrawal.withdrawalType === 'salary_advance'
-                                ? 'bg-blue-500/10 text-blue-400'
-                                : 'bg-purple-500/10 text-purple-400'
-                                }`}>
-                                {enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'سلفة' : 'دين'}
-                              </span>
+                        {/* Withdrawal Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                            <div className="text-red-400 text-sm">مبلغ السحب</div>
+                            <div className="text-white text-xl font-bold">{formatCurrency(enhancedWithdrawal.amount)}</div>
+                          </div>
+                          <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                            <div className="text-blue-400 text-sm">نوع السحب</div>
+                            <div className="text-white text-lg font-medium">
+                              {enhancedWithdrawal.withdrawalType === 'salary_advance' ? 'سلفة راتب' : 'دين شخصي'}
                             </div>
                           </div>
-                          <span className="text-sm text-red-400">
-                            {formatCurrency(enhancedWithdrawal.amount)}
-                          </span>
                         </div>
+
+                        {/* Additional Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-blue-400" />
+                              <span className="text-slate-400">اسم الموظف:</span>
+                              <span className="text-white">{enhancedWithdrawal.employeeName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-purple-400" />
+                              <span className="text-slate-400">تاريخ السحب:</span>
+                              <span className="text-white">{format(withdrawalDate, "dd MMMM yyyy", { locale: ar })}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-cyan-400" />
+                              <span className="text-slate-400">وقت السحب:</span>
+                              <span className="text-white">{format(withdrawalDate, "HH:mm", { locale: ar })}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-yellow-400" />
+                              <span className="text-slate-400">رقم المعاملة:</span>
+                              <span className="text-white">#{enhancedWithdrawal.id}</span>
+                            </div>
+                          </div>
+                        </div>
+
                         {enhancedWithdrawal.notes && (
-                          <p className="text-xs text-slate-400 mt-1 pr-7">{enhancedWithdrawal.notes}</p>
+                          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <FileText className="h-4 w-4 text-blue-400 mt-0.5" />
+                              <div>
+                                <span className="text-blue-400 text-sm font-medium">ملاحظات:</span>
+                                <p className="text-white text-sm mt-1">{enhancedWithdrawal.notes}</p>
+                              </div>
+                            </div>
+                          </div>
                         )}
-                      </div>
+                      </CollapsibleActivityRow>
                     );
-                  })
+                  });
                 })()}
               </div>
             )}
 
-            {/* Recent Settlements (for both types) */}
+            {/* Enhanced Settlements */}
             {workshop.settlements && workshop.settlements.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-sm text-slate-400 font-medium">المحاسبات الأخيرة</h4>
                 {workshop.settlements.slice(0, 5).map((settlement, index) => {
                   if (!settlement || !settlement.id) return null;
                   return (
-                    <div
-                      key={`settlement-${settlement.id + "-" + index}`}
-                      className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3"
+                    <CollapsibleActivityRow
+                      key={`settlement-${settlement.id}-${index}`}
+                      id={`settlement-${settlement.id}-${index}`}
+                      title={`محاسبة ${formatDate(settlement.date)}`}
+                      icon={<FileText className="h-4 w-4 text-blue-400" />}
+                      summary={`فاتورة #${settlement.invoiceId} • ${formatDate(settlement.date)}`}
+                      amount={settlement.paidAmount}
+                      amountColor="text-blue-400"
+                      date={settlement.date}
+                      badge={settlement.amount === settlement.paidAmount ? "مكتملة" : "جزئية"}
+                      badgeColor={settlement.amount === settlement.paidAmount ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}
                     >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-blue-400" />
-                          <div>
-                            <span className="text-white">محاسبة مالية</span>
-                            <span className="text-slate-400 text-sm mx-2">
-                              {format(new Date(settlement.date), "dd MMMM yyyy", { locale: ar })}
-                            </span>
+                      {/* Settlement Summary */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                          <div className="text-blue-400 text-sm">إجمالي المحاسبة</div>
+                          <div className="text-white text-xl font-bold">{formatCurrency(settlement.amount)}</div>
+                        </div>
+                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                          <div className="text-green-400 text-sm">المبلغ المدفوع</div>
+                          <div className="text-white text-xl font-bold">{formatCurrency(settlement.paidAmount)}</div>
+                        </div>
+                        <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                          <div className="text-orange-400 text-sm">المتبقي</div>
+                          <div className="text-white text-xl font-bold">{formatCurrency(settlement.amount - settlement.paidAmount)}</div>
+                        </div>
+                      </div>
+
+                      {/* Settlement Details */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-purple-400" />
+                            <span className="text-slate-400">تاريخ المحاسبة:</span>
+                            <span className="text-white">{formatDate(settlement.date)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-cyan-400" />
+                            <span className="text-slate-400">رقم الفاتورة:</span>
+                            <span className="text-white">#{settlement.invoiceId}</span>
                           </div>
                         </div>
-                        <span className="text-sm text-green-400">
-                          {formatCurrency(settlement.paidAmount)}
-                        </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-green-400" />
+                            <span className="text-slate-400">رقم الصندوق:</span>
+                            <span className="text-white">#{settlement.fundId}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <PersonStanding className="h-4 w-4 text-green-400" />
+                            <span className="text-slate-400">اسم الموظف:</span>
+                            <span className="text-white">{settlement.invoice.employee.username}</span>
+                          </div>
+                        </div>
+
                       </div>
                       {settlement.notes && (
-                        <p className="text-xs text-slate-400 mt-1 pr-7">{settlement.notes}</p>
+                        <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <FileText className="h-4 w-4 text-blue-400 mt-0.5" />
+                            <div>
+                              <span className="text-blue-400 text-sm font-medium">ملاحظات:</span>
+                              <p className="text-white text-sm mt-1">{settlement.notes}</p>
+                            </div>
+                          </div>
+                        </div>
                       )}
-                    </div>
+                    </CollapsibleActivityRow>
                   );
                 })}
               </div>
             )}
 
-            {/* No activities message */}
-            {workshop.workType === WorkType.HOURLY &&
-              (!financialSummary?.dailySummary || financialSummary.dailySummary.filter(ds => ds.employees && ds.employees.length > 0).length === 0) &&
-              (!workshop.settlements || workshop.settlements.length === 0) &&
-              (!workshop.employees || !workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0)) && (
-                <div className="text-center py-8">
-                  <Activity className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400">لا توجد أنشطة مسجلة</p>
-                </div>
-              )}
-
-            {workshop.workType === WorkType.PRODUCTION &&
-              (!workshop.productionRecords || workshop.productionRecords.length === 0) &&
-              (!workshop.settlements || workshop.settlements.length === 0) &&
-              (!workshop.employees || !workshop.employees.some(emp => emp.withdrawals && emp.withdrawals.length > 0)) && (
-                <div className="text-center py-8">
-                  <Activity className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400">لا توجد أنشطة مسجلة</p>
-                </div>
-              )}
           </div>
         );
 
@@ -524,6 +692,77 @@ const WorkshopDetailsModal: React.FC<WorkshopDetailsModalProps> = ({ workshop, p
         return null;
     }
   };
+
+
+  const [expandedItems, setExpandedItems] = useState<{ [key: string]: boolean }>({});
+
+  const toggleExpanded = (key: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Enhanced CollapsibleActivityRow component
+  const CollapsibleActivityRow: React.FC<{
+    id: string;
+    title: string;
+    icon: React.ReactNode;
+    summary: string;
+    amount: number;
+    amountColor: string;
+    children: React.ReactNode;
+    badge?: string;
+    badgeColor?: string;
+    date: string;
+  }> = ({ id, title, icon, summary, amount, amountColor, children, badge, badgeColor, date }) => {
+    const isExpanded = expandedItems[id];
+
+    return (
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleExpanded(id)}
+          className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            {icon}
+            <div className="text-right">
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium">{title}</span>
+                {badge && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${badgeColor}`}>
+                    {badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-slate-400 text-sm">{summary}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-medium ${amountColor}`}>
+              {formatCurrency(amount)}
+            </span>
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            )}
+          </div>
+        </button>
+
+        {isExpanded && (
+          <div className="border-t border-white/10 p-4 bg-white/[0.02] space-y-4">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+
+
+
 
   return (
     <AnimatePresence>
